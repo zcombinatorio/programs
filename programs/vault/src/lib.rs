@@ -28,7 +28,11 @@ pub mod vault {
         instructions::add_option::add_option_handler(ctx)
     }
 
-    pub fn activate_vault(ctx: Context<ActivateVault>) -> Result<()> {
+    pub fn activate(ctx: Context<ActivateVault>) -> Result<()> {
         instructions::activate_vault::activate_vault_handler(ctx)
+    }
+
+    pub fn finalize(ctx: Context<FinalizeVault>, winning_idx: u8) -> Result<()> {
+        instructions::finalize::finalize_vault_handler(ctx, winning_idx)
     }
 }

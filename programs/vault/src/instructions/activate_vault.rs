@@ -26,6 +26,7 @@ pub struct ActivateVault<'info> {
 pub fn activate_vault_handler(ctx: Context<ActivateVault>) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
+    // Never should be flagged, just a sanity check
     require!(
         vault.num_options >= MIN_OPTIONS,
         VaultError::NotEnoughOptions
@@ -33,7 +34,7 @@ pub fn activate_vault_handler(ctx: Context<ActivateVault>) -> Result<()> {
 
     vault.state = VaultState::Active;
 
-    msg!("Vault Activated with {:?} options", vault.num_options);
+    msg!("Vault activated with {:?} options", vault.num_options);
 
     Ok(())
 }

@@ -88,7 +88,7 @@ pub fn initialize_handler(
     vault.vault_type = vault_type;
     vault.num_options = MIN_OPTIONS; // First 2 options generated atomically
     vault.state = VaultState::Setup;
-    vault.winning_cond_mint = None;
+    vault.winning_option = None;
     vault.bump = ctx.bumps.vault;
 
     msg!("Vault initialized!");

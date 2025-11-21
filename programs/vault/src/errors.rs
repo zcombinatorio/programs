@@ -19,4 +19,7 @@ pub enum VaultError {
 
     #[msg("Unauthorized")]
     Unauthorized,
+
+    #[msg("Index out of bounds")]
+    IndexOutOfBounds
 }

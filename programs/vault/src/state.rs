@@ -20,8 +20,8 @@ pub enum VaultState {
 #[derive(InitSpace)]
 #[account]
 pub struct VaultAccount {
-    pub owner: Pubkey,  // Vault creator
-    pub mint: Pubkey,   // Regular mint
+    pub owner: Pubkey, // Vault creator
+    pub mint: Pubkey,  // Regular mint
     pub proposal_id: u8,
     pub vault_type: VaultType,
     pub state: VaultState,
@@ -30,6 +30,7 @@ pub struct VaultAccount {
     pub num_options: u8,
 
     // Set after finalization
-    pub winning_cond_mint: Option<Pubkey>,
+    // (index, cond. mint PDA bump)
+    pub winning_option: Option<(u8, u8)>,
     pub bump: u8,
 }

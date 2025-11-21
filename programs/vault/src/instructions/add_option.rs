@@ -65,7 +65,7 @@ pub fn add_option_handler(ctx: Context<AddOption>) -> Result<()> {
 
     vault.num_options += 1;
 
-    msg!("Added Option {:?}", vault.num_options);
+    msg!("Added option {:?}", vault.num_options);
 
     Ok(())
 }
