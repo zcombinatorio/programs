@@ -11,9 +11,6 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    // Regular mint
-    pub mint: Account<'info, Mint>,
-
     #[account(
         init,
         payer = signer,
@@ -28,7 +25,20 @@ pub struct Initialize<'info> {
     )]
     pub vault: Account<'info, VaultAccount>,
 
-    // Create initial 2 conditional mints & vault ATAs
+    // Regular mint
+    pub mint: Account<'info, Mint>,
+
+    // Escrow ATA for regular mint
+    #[account(
+        init,
+        payer = signer,
+        associated_token::mint = mint,
+        associated_token::authority = vault,
+        associated_token::token_program = token_program,
+    )]
+    pub vault_token_acc: Account<'info, TokenAccount>,
+
+    // Create initial 2 conditional mints
     // Conditional mint 0
     #[account(
         init,
@@ -40,15 +50,6 @@ pub struct Initialize<'info> {
     )]
     pub cond_mint_0: Account<'info, Mint>,
 
-    // Escrow ATA for conditional mint 0
-    #[account(
-        init,
-        payer = signer,
-        associated_token::mint = cond_mint_0,
-        associated_token::authority = vault,
-    )]
-    pub vault_cond_token_acc_0: Account<'info, TokenAccount>,
-
     // Conditional mint 1
     #[account(
         init,
@@ -59,15 +60,6 @@ pub struct Initialize<'info> {
         bump,
     )]
     pub cond_mint_1: Account<'info, Mint>,
-
-    // Escrow ATA for conditional mint 1
-    #[account(
-        init,
-        payer = signer,
-        associated_token::mint = cond_mint_1,
-        associated_token::authority = vault,
-    )]
-    pub vault_cond_token_acc_1: Account<'info, TokenAccount>,
 
     // Programs
     pub system_program: Program<'info, System>,

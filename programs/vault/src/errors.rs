@@ -21,5 +21,17 @@ pub enum VaultError {
     Unauthorized,
 
     #[msg("Index out of bounds")]
-    IndexOutOfBounds
+    IndexOutOfBounds,
+
+    #[msg("Invalid number of accounts")]
+    InvalidNumberOfAccounts,
+
+    #[msg("Invalid conditional mint")]
+    InvalidConditionalMint,
+
+    #[msg("Invalid user ATA")]
+    InvalidUserAta,
+
+    #[msg("Invalid account owner")]
+    InvalidAccountOwner
 }

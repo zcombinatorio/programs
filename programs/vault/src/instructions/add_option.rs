@@ -46,6 +46,7 @@ pub struct AddOption<'info> {
         payer = signer,
         associated_token::mint = cond_mint,
         associated_token::authority = vault,
+        associated_token::token_program = token_program,
     )]
     pub vault_cond_token_acc: Account<'info, TokenAccount>,
 
