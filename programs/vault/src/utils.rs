@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token;
-use anchor_spl::token::{self, MintTo, Transfer};
+use anchor_spl::token::{self, MintTo, Transfer, Burn};
 
 // User-signed token transfer
 pub fn transfer_tokens<'info>(
@@ -56,6 +56,24 @@ pub fn mint_to_signed<'info>(
     let cpi_program = token_program;
     let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
     token::mint_to(cpi_ctx, amount)
+}
+
+// User-signed token burn
+pub fn burn_tokens<'info>(
+    mint: AccountInfo<'info>,
+    from: AccountInfo<'info>,
+    authority: AccountInfo<'info>,
+    token_program: AccountInfo<'info>,
+    amount: u64,
+) -> Result<()> {
+    let cpi_accounts = Burn {
+        mint,
+        from,
+        authority,
+    };
+    let cpi_program = token_program;
+    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+    token::burn(cpi_ctx, amount)
 }
 
 // Create ATA

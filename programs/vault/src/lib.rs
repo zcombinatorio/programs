@@ -37,4 +37,18 @@ pub mod vault {
     pub fn finalize(ctx: Context<FinalizeVault>, winning_idx: u8) -> Result<()> {
         instructions::finalize::finalize_vault_handler(ctx, winning_idx)
     }
+
+    pub fn deposit<'info>(
+        ctx: Context<'_, '_, '_, 'info, Deposit<'info>>,
+        amount: u64,
+    ) -> Result<()> {
+        instructions::deposit::deposit_handler(ctx, amount)
+    }
+
+    pub fn withdraw<'info>(
+        ctx: Context<'_, '_, '_, 'info, Withdrawal<'info>>,
+        amount: u64,
+    ) -> Result<()> {
+        instructions::withdrawal::withdrawal_handler(ctx, amount)
+    }
 }
