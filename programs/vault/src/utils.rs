@@ -98,3 +98,18 @@ pub fn create_associated_token_account<'info>(
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
     associated_token::create(cpi_ctx)
 }
+
+pub fn close_token_account<'info>(
+    account: AccountInfo<'info>,
+    destination: AccountInfo<'info>,
+    authority: AccountInfo<'info>,
+    token_program: AccountInfo<'info>,
+) -> Result<()> {
+    let cpi_accounts = anchor_spl::token::CloseAccount {
+        account,
+        destination,
+        authority,
+    };
+    let cpi_ctx = CpiContext::new(token_program, cpi_accounts);
+    anchor_spl::token::close_account(cpi_ctx)
+}

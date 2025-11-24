@@ -33,5 +33,17 @@ pub enum VaultError {
     InvalidUserAta,
 
     #[msg("Invalid account owner")]
-    InvalidAccountOwner
+    InvalidAccountOwner,
+
+    #[msg("No winning option set")]
+    NoWinningOption,
+
+    #[msg("Winning mint not provided in accounts")]
+    WinningMintNotProvided,
+
+    #[msg("No winning tokens to redeem")]
+    NoWinningTokens,
+
+    #[msg("No conditional tokens")]
+    NoConditionalTokens
 }

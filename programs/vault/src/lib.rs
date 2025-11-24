@@ -51,4 +51,10 @@ pub mod vault {
     ) -> Result<()> {
         instructions::withdrawal::withdrawal_handler(ctx, amount)
     }
+
+    pub fn redeem_winnings<'info>(
+        ctx: Context<'_, '_, 'info, 'info, RedeemWinnings<'info>>
+    ) -> Result<()> {
+        instructions::redeem_winnings::redeem_winnings_handler(ctx)
+    }
 }
