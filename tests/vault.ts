@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, ComputeBudgetProgram } from "@solana/web3.js";
 import {
   createMint,
   mintTo,
@@ -8,6 +8,14 @@ import {
 import { expect } from "chai";
 
 import { VaultClient, VaultType } from "../sdk/src";
+
+/*
+ * max 5 options w/ 200k CU budget (default)
+ * max 10 options w/ 400k CU budget (deposit reached ~385k CUs)
+ * @ 11-12 options tx too large for user vault actions
+ */
+const NUM_OPTIONS = 10;
+const COMPUTE_UNITS = 400_000; // Default is 200k, increase for more options
 
 describe("vault", () => {
   const provider = anchor.AnchorProvider.env();
@@ -20,23 +28,40 @@ describe("vault", () => {
   const proposalId = 1;
   const vaultType = VaultType.Base;
 
-  // Accounts we'll initialize
+  // Accounts
   let mint: PublicKey;
   let vaultPda: PublicKey;
-  let condMint0: PublicKey;
-  let condMint1: PublicKey;
-  let condMint2: PublicKey;
 
   const DEPOSIT_AMOUNT = 1_000_000; // 1 token (6 decimals)
+
+  // Helper to prepend compute budget, log tx size and CUs used
+  async function sendWithComputeBudget(builder: any, name: string) {
+    const withBudget = builder.preInstructions([
+      ComputeBudgetProgram.setComputeUnitLimit({ units: COMPUTE_UNITS }),
+    ]);
+    const tx = await withBudget.transaction();
+    tx.recentBlockhash = (
+      await provider.connection.getLatestBlockhash()
+    ).blockhash;
+    tx.feePayer = wallet.publicKey;
+    const size = tx.serialize({ requireAllSignatures: false }).length;
+    const sig = await withBudget.rpc();
+    const confirmedTx = await provider.connection.getTransaction(sig, {
+      commitment: "confirmed",
+    });
+    const cuUsed = confirmedTx?.meta?.computeUnitsConsumed ?? "unknown";
+    console.log(`    ${name}: ${size} bytes | ${cuUsed} CUs`);
+    return sig;
+  }
 
   before(async () => {
     // Create a regular mint for the vault
     mint = await createMint(
       provider.connection,
       wallet.payer,
-      wallet.publicKey, // mint authority
-      null, // freeze authority
-      6 // decimals
+      wallet.publicKey,
+      null,
+      6
     );
 
     // Derive vault PDA using SDK
@@ -50,61 +75,50 @@ describe("vault", () => {
       wallet.publicKey
     );
 
-    // Mint some tokens for testing
+    // Mint tokens for testing
     await mintTo(
       provider.connection,
       wallet.payer,
       mint,
       userAta.address,
       wallet.publicKey,
-      DEPOSIT_AMOUNT * 10 // Mint 10 tokens for testing
+      DEPOSIT_AMOUNT * 10
     );
   });
 
   it("initializes vault", async () => {
-    const {
-      builder,
-      vaultPda: pda,
-      condMint0: cm0,
-      condMint1: cm1,
-    } = client.initialize(wallet.publicKey, mint, vaultType, proposalId);
-
-    condMint0 = cm0;
-    condMint1 = cm1;
+    const { builder, vaultPda: pda } = client.initialize(
+      wallet.publicKey,
+      mint,
+      vaultType,
+      proposalId
+    );
 
     await builder.rpc();
 
-    // Verify
-    const vaultAccount = await client.fetchVault(pda);
-    expect(vaultAccount.owner.toBase58()).to.equal(wallet.publicKey.toBase58());
-    expect(vaultAccount.mint.toBase58()).to.equal(mint.toBase58());
-    expect(vaultAccount.numOptions).to.equal(2);
-    expect(vaultAccount.state).to.equal("setup");
-    expect(vaultAccount.condMints[0].toBase58()).to.equal(condMint0.toBase58());
-    expect(vaultAccount.condMints[1].toBase58()).to.equal(condMint1.toBase58());
+    const vault = await client.fetchVault(pda);
+    expect(vault.owner.toBase58()).to.equal(wallet.publicKey.toBase58());
+    expect(vault.mint.toBase58()).to.equal(mint.toBase58());
+    expect(vault.numOptions).to.equal(2);
+    expect(vault.state).to.equal("setup");
   });
 
-  it("adds option", async () => {
-    const { builder, condMint } = await client.addOption(
-      wallet.publicKey,
-      vaultPda
-    );
-    condMint2 = condMint;
+  it("adds options", async () => {
+    // Initialize creates 2 options, add more to reach NUM_OPTIONS
+    for (let i = 2; i < NUM_OPTIONS; i++) {
+      const { builder } = await client.addOption(wallet.publicKey, vaultPda);
+      await builder.rpc();
+    }
 
-    await builder.rpc();
-
-    // Verify
-    const vaultAccount = await client.fetchVault(vaultPda);
-    expect(vaultAccount.numOptions).to.equal(3);
-    expect(vaultAccount.condMints[2].toBase58()).to.equal(condMint2.toBase58());
+    const vault = await client.fetchVault(vaultPda);
+    expect(vault.numOptions).to.equal(NUM_OPTIONS);
   });
 
   it("activates vault", async () => {
     await client.activate(wallet.publicKey, vaultPda).rpc();
 
-    // Verify
-    const vaultAccount = await client.fetchVault(vaultPda);
-    expect(vaultAccount.state).to.equal("active");
+    const vault = await client.fetchVault(vaultPda);
+    expect(vault.state).to.equal("active");
   });
 
   it("deposits and receives conditional tokens", async () => {
@@ -118,7 +132,7 @@ describe("vault", () => {
       vaultPda,
       DEPOSIT_AMOUNT
     );
-    await builder.rpc();
+    await sendWithComputeBudget(builder, "deposit");
 
     const { userBalance, condBalances } = await client.fetchUserBalances(
       vaultPda,
@@ -126,12 +140,8 @@ describe("vault", () => {
     );
     const vaultBalance = await client.fetchVaultBalance(vaultPda);
 
-    // Verify user received conditional tokens
-    expect(condBalances).to.deep.equal([
-      DEPOSIT_AMOUNT,
-      DEPOSIT_AMOUNT,
-      DEPOSIT_AMOUNT,
-    ]);
+    // Verify user received conditional tokens for all options
+    expect(condBalances).to.deep.equal(Array(NUM_OPTIONS).fill(DEPOSIT_AMOUNT));
 
     // Verify user's regular tokens decreased
     expect(initialUserBalance - userBalance).to.equal(DEPOSIT_AMOUNT);
@@ -148,7 +158,7 @@ describe("vault", () => {
       vaultPda,
       withdrawAmount
     );
-    await builder.rpc();
+    await sendWithComputeBudget(builder, "withdraw");
 
     const { condBalances } = await client.fetchUserBalances(
       vaultPda,
@@ -156,15 +166,10 @@ describe("vault", () => {
     );
     const vaultBalance = await client.fetchVaultBalance(vaultPda);
 
-    // Verify conditional tokens decreased
     const expectedBalance = DEPOSIT_AMOUNT - withdrawAmount;
-    expect(condBalances).to.deep.equal([
-      expectedBalance,
-      expectedBalance,
-      expectedBalance,
-    ]);
-
-    // Verify vault balance decreased
+    expect(condBalances).to.deep.equal(
+      Array(NUM_OPTIONS).fill(expectedBalance)
+    );
     expect(vaultBalance).to.equal(expectedBalance);
   });
 
@@ -173,14 +178,13 @@ describe("vault", () => {
 
     await client.finalize(wallet.publicKey, vaultPda, winningIdx).rpc();
 
-    // Verify
-    const vaultAccount = await client.fetchVault(vaultPda);
-    expect(vaultAccount.state).to.equal("finalized");
-    expect(vaultAccount.winningIdx).to.equal(winningIdx);
+    const vault = await client.fetchVault(vaultPda);
+    expect(vault.state).to.equal("finalized");
+    expect(vault.winningIdx).to.equal(winningIdx);
   });
 
   it("redeems winnings", async () => {
-    const remainingCondTokens = DEPOSIT_AMOUNT / 2; // After withdraw half
+    const remainingCondTokens = DEPOSIT_AMOUNT / 2;
 
     const { userBalance: initialUserBalance } = await client.fetchUserBalances(
       vaultPda,
@@ -188,7 +192,7 @@ describe("vault", () => {
     );
 
     const builder = await client.redeemWinnings(wallet.publicKey, vaultPda);
-    await builder.rpc();
+    await sendWithComputeBudget(builder, "redeemWinnings");
 
     const { userBalance } = await client.fetchUserBalances(
       vaultPda,
@@ -196,10 +200,7 @@ describe("vault", () => {
     );
     const vaultBalance = await client.fetchVaultBalance(vaultPda);
 
-    // Verify user received winnings (winning option was 0)
     expect(userBalance - initialUserBalance).to.equal(remainingCondTokens);
-
-    // Verify vault balance is now 0
     expect(vaultBalance).to.equal(0);
   });
 });

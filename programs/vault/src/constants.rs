@@ -1,5 +1,5 @@
 // Maximum number of conditional options per vault
-pub const MAX_OPTIONS: u8 = 4;
+pub const MAX_OPTIONS: u8 = 12;
 
 // Minimum number of conditional options required
 pub const MIN_OPTIONS: u8 = 2;
