@@ -1,9 +1,13 @@
 import { Program, AnchorProvider, Idl, BN } from "@coral-xyz/anchor";
-import { PublicKey, Connection } from "@solana/web3.js";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
 import {
   getAccount,
   getAssociatedTokenAddressSync,
   TokenAccountNotFoundError,
+  NATIVE_MINT,
+  createSyncNativeInstruction,
+  createCloseAccountInstruction,
+  createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
 import { PROGRAM_ID } from "./constants";
 import { VaultType, VaultAccount } from "./types";
@@ -169,7 +173,7 @@ export class VaultClient {
 
   async deposit(signer: PublicKey, vaultPda: PublicKey, amount: BN | number) {
     const vault = await this.fetchVault(vaultPda);
-    return deposit(
+    const builder = deposit(
       this.program,
       signer,
       vaultPda,
@@ -177,11 +181,33 @@ export class VaultClient {
       vault.condMints,
       amount
     );
+
+    if (vault.mint.equals(NATIVE_MINT)) {
+      const amountBN = typeof amount === "number" ? new BN(amount) : amount;
+      const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
+      const wrapIxs = [
+        createAssociatedTokenAccountIdempotentInstruction(
+          signer,
+          wsolAta,
+          signer,
+          NATIVE_MINT
+        ),
+        SystemProgram.transfer({
+          fromPubkey: signer,
+          toPubkey: wsolAta,
+          lamports: BigInt(amountBN.toString()),
+        }),
+        createSyncNativeInstruction(wsolAta),
+      ];
+      return builder.preInstructions(wrapIxs);
+    }
+
+    return builder;
   }
 
   async withdraw(signer: PublicKey, vaultPda: PublicKey, amount: BN | number) {
     const vault = await this.fetchVault(vaultPda);
-    return withdraw(
+    const builder = withdraw(
       this.program,
       signer,
       vaultPda,
@@ -189,6 +215,14 @@ export class VaultClient {
       vault.condMints,
       amount
     );
+
+    if (vault.mint.equals(NATIVE_MINT)) {
+      const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
+      const unwrapIx = createCloseAccountInstruction(wsolAta, signer, signer);
+      return builder.postInstructions([unwrapIx]);
+    }
+
+    return builder;
   }
 
   finalize(signer: PublicKey, vaultPda: PublicKey, winningIdx: number) {
@@ -197,12 +231,20 @@ export class VaultClient {
 
   async redeemWinnings(signer: PublicKey, vaultPda: PublicKey) {
     const vault = await this.fetchVault(vaultPda);
-    return redeemWinnings(
+    const builder = redeemWinnings(
       this.program,
       signer,
       vaultPda,
       vault.mint,
       vault.condMints
     );
+
+    if (vault.mint.equals(NATIVE_MINT)) {
+      const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
+      const unwrapIx = createCloseAccountInstruction(wsolAta, signer, signer);
+      return builder.postInstructions([unwrapIx]);
+    }
+
+    return builder;
   }
 }
