@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
 export const PROGRAM_ID = new PublicKey(
-  "4oiXvA71BdpWsdcmjMysn57W3FzB9uqbujtq7Vpzt7ag"
+  "cq3CGs4Z2Xw6wL5QLb72MQVNE9gLPS1wpDcQ5vKD1uU"
 );
 
 export const VAULT_SEED = Buffer.from("vault");
