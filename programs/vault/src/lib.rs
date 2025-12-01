@@ -24,7 +24,7 @@ pub mod vault {
      * Admin Actions
      */
     pub fn initialize(
-        ctx: Context<Initialize>,
+        ctx: Context<InitializeVault>,
         vault_type: VaultType,
         proposal_id: u8,
     ) -> Result<()> {

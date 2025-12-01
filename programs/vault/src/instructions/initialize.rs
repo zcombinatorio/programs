@@ -7,7 +7,7 @@ use crate::state::*;
 
 #[derive(Accounts)]
 #[instruction(vault_type: VaultType, proposal_id: u8)]
-pub struct Initialize<'info> {
+pub struct InitializeVault<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
@@ -68,7 +68,7 @@ pub struct Initialize<'info> {
 }
 
 pub fn initialize_handler(
-    ctx: Context<Initialize>,
+    ctx: Context<InitializeVault>,
     vault_type: VaultType,
     proposal_id: u8,
 ) -> Result<()> {
