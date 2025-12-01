@@ -5,14 +5,18 @@ use anchor_spl::token::TokenAccount;
 use crate::common::UserVaultAction;
 use crate::constants::*;
 use crate::errors::*;
-use crate::state::*;
+use crate::state::VaultState;
 use crate::utils::*;
 
 pub fn redeem_winnings_handler<'info>(
     ctx: Context<'_, '_, 'info, 'info, UserVaultAction<'info>>,
-    expected_state: VaultState,
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
+
+    require!(
+        vault.state == VaultState::Finalized,
+        VaultError::InvalidState
+    );
 
     let num_options = vault.num_options as usize;
 

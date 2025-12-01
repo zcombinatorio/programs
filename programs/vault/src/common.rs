@@ -3,11 +3,9 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::constants::*;
-use crate::errors::*;
 use crate::state::*;
 
 #[derive(Accounts)]
-#[instruction(expected_state: VaultState)]
 pub struct UserVaultAction<'info> {
     #[account(mut)]
     pub signer: Signer<'info>, // User
@@ -21,7 +19,6 @@ pub struct UserVaultAction<'info> {
             &[vault.vault_type as u8]
         ],
         bump = vault.bump,
-        constraint = vault.state == expected_state @ VaultError::InvalidState,
     )]
     pub vault: Account<'info, VaultAccount>,
 

@@ -4,15 +4,16 @@ use anchor_spl::associated_token::get_associated_token_address;
 use crate::common::UserVaultAction;
 use crate::constants::*;
 use crate::errors::*;
+use crate::state::VaultState;
 use crate::utils::*;
-use crate::VaultState;
 
 pub fn withdrawal_handler<'info>(
     ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
-    expected_state: VaultState,
     amount: u64,
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
+
+    require!(vault.state == VaultState::Active, VaultError::InvalidState);
 
     let num_options = vault.num_options as usize;
 

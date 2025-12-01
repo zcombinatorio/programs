@@ -50,19 +50,19 @@ pub mod vault {
         ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
         amount: u64,
     ) -> Result<()> {
-        instructions::deposit::deposit_handler(ctx, VaultState::Active, amount)
+        instructions::deposit::deposit_handler(ctx, amount)
     }
 
     pub fn withdraw<'info>(
         ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
         amount: u64,
     ) -> Result<()> {
-        instructions::withdrawal::withdrawal_handler(ctx, VaultState::Active, amount)
+        instructions::withdrawal::withdrawal_handler(ctx, amount)
     }
 
     pub fn redeem_winnings<'info>(
         ctx: Context<'_, '_, 'info, 'info, UserVaultAction<'info>>,
     ) -> Result<()> {
-        instructions::redeem_winnings::redeem_winnings_handler(ctx, VaultState::Finalized)
+        instructions::redeem_winnings::redeem_winnings_handler(ctx)
     }
 }
