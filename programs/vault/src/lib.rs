@@ -2,12 +2,14 @@ use anchor_lang::prelude::*;
 
 declare_id!("4oiXvA71BdpWsdcmjMysn57W3FzB9uqbujtq7Vpzt7ag");
 
+pub mod common;
 pub mod constants;
 pub mod errors;
 pub mod instructions;
 pub mod state;
 pub mod utils;
 
+pub use common::*;
 pub use constants::*;
 pub use errors::*;
 pub use instructions::*;
@@ -18,6 +20,9 @@ pub use utils::*;
 pub mod vault {
     use super::*;
 
+    /*
+     * Admin Actions
+     */
     pub fn initialize(
         ctx: Context<Initialize>,
         vault_type: VaultType,
@@ -38,23 +43,26 @@ pub mod vault {
         instructions::finalize::finalize_vault_handler(ctx, winning_idx)
     }
 
+    /*
+     * User Vault Actions
+     */
     pub fn deposit<'info>(
-        ctx: Context<'_, '_, '_, 'info, Deposit<'info>>,
+        ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
         amount: u64,
     ) -> Result<()> {
-        instructions::deposit::deposit_handler(ctx, amount)
+        instructions::deposit::deposit_handler(ctx, VaultState::Active, amount)
     }
 
     pub fn withdraw<'info>(
-        ctx: Context<'_, '_, '_, 'info, Withdrawal<'info>>,
+        ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
         amount: u64,
     ) -> Result<()> {
-        instructions::withdrawal::withdrawal_handler(ctx, amount)
+        instructions::withdrawal::withdrawal_handler(ctx, VaultState::Active, amount)
     }
 
     pub fn redeem_winnings<'info>(
-        ctx: Context<'_, '_, 'info, 'info, RedeemWinnings<'info>>
+        ctx: Context<'_, '_, 'info, 'info, UserVaultAction<'info>>,
     ) -> Result<()> {
-        instructions::redeem_winnings::redeem_winnings_handler(ctx)
+        instructions::redeem_winnings::redeem_winnings_handler(ctx, VaultState::Finalized)
     }
 }

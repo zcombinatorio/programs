@@ -1,67 +1,16 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::associated_token::get_associated_token_address;
+use anchor_spl::token::TokenAccount;
 
+use crate::common::UserVaultAction;
 use crate::constants::*;
 use crate::errors::*;
 use crate::state::*;
 use crate::utils::*;
 
-#[derive(Accounts)]
-pub struct RedeemWinnings<'info> {
-    #[account(mut)]
-    pub signer: Signer<'info>, // User
-
-    #[account(
-        mut,
-        seeds = [
-            VAULT_SEED,
-            vault.owner.as_ref(),
-            &[vault.proposal_id],
-            &[vault.vault_type as u8]
-        ],
-        bump = vault.bump,
-        constraint = vault.state == VaultState::Finalized @ VaultError::InvalidState,
-    )]
-    pub vault: Account<'info, VaultAccount>,
-
-    // Regular Mint
-    #[account(
-        address = vault.mint
-    )]
-    mint: Account<'info, Mint>,
-
-    // Escrow ATA for regular mint
-    #[account(
-        mut,
-        associated_token::mint = mint,
-        associated_token::authority = vault,
-        associated_token::token_program = token_program,
-    )]
-    pub vault_ata: Account<'info, TokenAccount>,
-
-    // User ATA for regular mint
-    #[account(
-        init_if_needed,
-        payer = signer,
-        associated_token::mint = mint,
-        associated_token::authority = signer,
-        associated_token::token_program = token_program,
-    )]
-    pub user_ata: Account<'info, TokenAccount>,
-
-    // Programs
-    token_program: Program<'info, Token>,
-    associated_token_program: Program<'info, AssociatedToken>,
-    system_program: Program<'info, System>,
-    // Conditional mints passed via remaining_accounts
-    // Expected order for each option i:
-    // - remaining_accounts[i * 2 + 0]: cond_mint_i
-    // - remaining_accounts[i * 2 + 1]: user_cond_ata_i (must exist)
-}
-
 pub fn redeem_winnings_handler<'info>(
-    ctx: Context<'_, '_, 'info, 'info, RedeemWinnings<'info>>,
+    ctx: Context<'_, '_, 'info, 'info, UserVaultAction<'info>>,
+    expected_state: VaultState,
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
 
