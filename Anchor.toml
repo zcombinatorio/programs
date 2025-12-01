@@ -9,7 +9,7 @@ skip-lint = false
 vault = "cq3CGs4Z2Xw6wL5QLb72MQVNE9gLPS1wpDcQ5vKD1uU"
 
 [programs.devnet]
-vault = "cq3CGs4Z2Xw6wL5QLb72MQVNE9gLPS1wpDcQ5vKD1uU"
+vault = "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
 
 [registry]
 url = "https://api.apr.dev"
