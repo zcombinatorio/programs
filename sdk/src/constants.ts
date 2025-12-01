@@ -7,5 +7,5 @@ export const PROGRAM_ID = new PublicKey(
 export const VAULT_SEED = Buffer.from("vault");
 export const CONDITIONAL_MINT_SEED = Buffer.from("cmint");
 
-export const MAX_OPTIONS = 4;
+export const MAX_OPTIONS = 10;
 export const MIN_OPTIONS = 2;
