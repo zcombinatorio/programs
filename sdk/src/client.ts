@@ -1,5 +1,10 @@
 import { Program, AnchorProvider, Idl, BN } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Connection } from "@solana/web3.js";
+import {
+  getAccount,
+  getAssociatedTokenAddressSync,
+  TokenAccountNotFoundError,
+} from "@solana/spl-token";
 import { PROGRAM_ID } from "./constants";
 import { VaultType, VaultAccount } from "./types";
 import {
@@ -53,6 +58,58 @@ export class VaultClient {
 
   async fetchVault(vaultPda: PublicKey): Promise<VaultAccount> {
     return fetchVaultAccount(this.program, vaultPda);
+  }
+
+  async fetchUserATAs(vaultPda: PublicKey, user: PublicKey) {
+    const vault = await this.fetchVault(vaultPda);
+    return {
+      userAta: getAssociatedTokenAddressSync(vault.mint, user),
+      userCondATAs: vault.condMints.map((m) =>
+        getAssociatedTokenAddressSync(m, user)
+      ),
+    };
+  }
+
+  async fetchVaultATA(vaultPda: PublicKey) {
+    const vault = await this.fetchVault(vaultPda);
+    return getAssociatedTokenAddressSync(vault.mint, vaultPda, true);
+  }
+
+  async fetchUserBalances(vaultPda: PublicKey, user: PublicKey) {
+    const { userAta, userCondATAs } = await this.fetchUserATAs(vaultPda, user);
+    const connection = this.program.provider.connection;
+
+    const getBalanceSafe = async (ata: PublicKey) => {
+      try {
+        const acc = await getAccount(connection, ata);
+        return Number(acc.amount);
+      } catch (e) {
+        if (e instanceof TokenAccountNotFoundError) {
+          return 0;
+        }
+        throw e;
+      }
+    };
+
+    const [userBalance, ...condBalances] = await Promise.all([
+      getBalanceSafe(userAta),
+      ...userCondATAs.map(getBalanceSafe),
+    ]);
+
+    return { userBalance, condBalances };
+  }
+
+  async fetchVaultBalance(vaultPda: PublicKey) {
+    const vaultAta = await this.fetchVaultATA(vaultPda);
+    try {
+      const acc = await getAccount(this.program.provider.connection, vaultAta);
+      return Number(acc.amount);
+    } catch (e) {
+      if (e instanceof TokenAccountNotFoundError) {
+        return 0;
+      }
+      throw e;
+    }
   }
 
   // ===========================================================================

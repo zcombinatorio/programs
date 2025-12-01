@@ -1,7 +1,7 @@
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { VaultType } from "./types";
-import { getAssociatedTokenAddressSync } from "./utils";
 
 // =============================================================================
 // Instruction Builders

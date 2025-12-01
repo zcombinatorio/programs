@@ -1,9 +1,5 @@
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import {
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
 import { VAULT_SEED, CONDITIONAL_MINT_SEED, PROGRAM_ID } from "./constants";
 import { VaultType, VaultState, VaultAccount } from "./types";
 
@@ -37,17 +33,6 @@ export function deriveConditionalMint(
     [CONDITIONAL_MINT_SEED, vaultPda.toBuffer(), Buffer.from([index])],
     programId
   );
-}
-
-export function getAssociatedTokenAddressSync(
-  mint: PublicKey,
-  owner: PublicKey
-): PublicKey {
-  const [address] = PublicKey.findProgramAddressSync(
-    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  );
-  return address;
 }
 
 // =============================================================================
