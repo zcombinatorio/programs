@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Mint;
 
 use crate::constants::*;
 use crate::errors::*;
@@ -23,13 +22,6 @@ pub struct FinalizeVault<'info> {
         constraint = vault.state == VaultState::Active @ VaultError::InvalidState,
     )]
     pub vault: Account<'info, VaultAccount>,
-
-    // Conditional mint corresponding to the winning index
-    #[account(
-        seeds = [CONDITIONAL_MINT_SEED, vault.key().as_ref(), &[winning_idx]],
-        bump,
-    )]
-    pub winning_mint: Account<'info, Mint>,
 }
 
 pub fn finalize_vault_handler(ctx: Context<FinalizeVault>, winning_idx: u8) -> Result<()> {
@@ -41,11 +33,11 @@ pub fn finalize_vault_handler(ctx: Context<FinalizeVault>, winning_idx: u8) -> R
 
     // Finalize state
     vault.state = VaultState::Finalized;
-    vault.winning_option = Some((winning_idx, ctx.bumps.winning_mint));
+    vault.winning_idx = Some(winning_idx);
 
     msg!("Vault finalized");
     msg!("Winning idx {:?}", winning_idx);
-    msg!("Winning mint {:?}", ctx.accounts.winning_mint.key());
+    msg!("Winning mint {:?}", vault.cond_mints[winning_idx as usize]);
 
     Ok(())
 }

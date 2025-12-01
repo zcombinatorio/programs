@@ -78,9 +78,14 @@ pub fn initialize_handler(
     vault.mint = ctx.accounts.mint.key();
     vault.proposal_id = proposal_id;
     vault.vault_type = vault_type;
-    vault.num_options = MIN_OPTIONS; // First 2 options generated atomically
+    vault.num_options = 2; // First 2 options generated atomically
+
+    // Store conditional mints
+    vault.cond_mints[0] = ctx.accounts.cond_mint_0.key();
+    vault.cond_mints[1] = ctx.accounts.cond_mint_1.key();
+
     vault.state = VaultState::Setup;
-    vault.winning_option = None;
+    vault.winning_idx = None;
     vault.bump = ctx.bumps.vault;
 
     msg!("Vault initialized!");

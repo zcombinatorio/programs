@@ -30,12 +30,8 @@ pub fn withdrawal_handler<'info>(
         let user_cond_ata_info = &ctx.remaining_accounts[i * 2 + 1];
 
         // Validate the conditional mint PDA
-        let (expected_mint, _bump) = Pubkey::find_program_address(
-            &[CONDITIONAL_MINT_SEED, vault.key().as_ref(), &[i as u8]],
-            ctx.program_id,
-        );
         require!(
-            cond_mint_info.key() == expected_mint,
+            cond_mint_info.key() == vault.cond_mints[i],
             VaultError::InvalidConditionalMint
         );
 

@@ -14,6 +14,9 @@ pub enum VaultError {
     #[msg("Minimum 2 options required")]
     NotEnoughOptions,
 
+    #[msg("Too many options")]
+    TooManyOptions,
+
     #[msg("Option limit reached")]
     OptionLimitReached,
 
@@ -38,12 +41,6 @@ pub enum VaultError {
     #[msg("No winning option set")]
     NoWinningOption,
 
-    #[msg("Winning mint not provided in accounts")]
-    WinningMintNotProvided,
-
-    #[msg("No winning tokens to redeem")]
-    NoWinningTokens,
-
     #[msg("No conditional tokens")]
-    NoConditionalTokens
+    NoConditionalTokens,
 }

@@ -31,6 +31,7 @@ pub fn activate_vault_handler(ctx: Context<ActivateVault>) -> Result<()> {
         vault.num_options >= MIN_OPTIONS,
         VaultError::NotEnoughOptions
     );
+    require!(vault.num_options <= MAX_OPTIONS, VaultError::TooManyOptions);
 
     vault.state = VaultState::Active;
 

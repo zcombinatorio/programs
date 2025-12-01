@@ -23,36 +23,19 @@ pub fn redeem_winnings_handler<'info>(
     );
 
     // Extract winning option
-    let (winning_idx, winning_bump) = vault
-        .winning_option
+    let winning_idx = vault
+        .winning_idx
         .ok_or(error!(VaultError::NoWinningOption))?;
 
-    // Reconstruct the winning mint PDA
-    let winning_mint_pubkey = Pubkey::create_program_address(
-        &[
-            CONDITIONAL_MINT_SEED,
-            vault.key().as_ref(),
-            &[winning_idx],
-            &[winning_bump],
-        ],
-        ctx.program_id,
-    )
-    .unwrap(); // Safe because bump was validated during finalization
-
     let mut winning_amount = 0u64;
-    let mut found_winning_mint = false;
 
     for i in 0..num_options {
         let cond_mint_info = &ctx.remaining_accounts[i * 2];
         let user_cond_ata_info = &ctx.remaining_accounts[i * 2 + 1];
 
         // Validate the conditional mint PDA
-        let (expected_mint, _bump) = Pubkey::find_program_address(
-            &[CONDITIONAL_MINT_SEED, vault.key().as_ref(), &[i as u8]],
-            ctx.program_id,
-        );
         require!(
-            cond_mint_info.key() == expected_mint,
+            cond_mint_info.key() == vault.cond_mints[i],
             VaultError::InvalidConditionalMint
         );
 
@@ -77,10 +60,9 @@ pub fn redeem_winnings_handler<'info>(
         let user_cond_ata = Account::<TokenAccount>::try_from(user_cond_ata_info)?;
         let balance = user_cond_ata.amount;
 
-        // Check if THIS is the winning mint by comparing pubkeys
-        if cond_mint_info.key() == winning_mint_pubkey {
+        // Save balance for winning optio
+        if i == winning_idx as usize {
             winning_amount = balance;
-            found_winning_mint = true;
         }
 
         // Burn all tokens and close user ATA
@@ -102,12 +84,12 @@ pub fn redeem_winnings_handler<'info>(
         )?;
     }
 
-    // Ensure winning mint was in remaining_accounts
-    require!(found_winning_mint, VaultError::WinningMintNotProvided);
+    // Exit if no winnings
+    if winning_amount == 0 {
+        return Ok(());
+    }
 
-    // Transfer collateral based on winning amount
-    require!(winning_amount > 0, VaultError::NoWinningTokens);
-
+    // 2. Transfer winning amount of regular tokens: vault -> user
     let vault_seeds: &[&[u8]] = &[
         VAULT_SEED,
         vault.owner.as_ref(),
@@ -115,8 +97,6 @@ pub fn redeem_winnings_handler<'info>(
         &[vault.vault_type as u8],
         &[vault.bump],
     ];
-
-    // 2. Transfer regular tokens: vault -> user
     transfer_signed(
         ctx.accounts.vault_ata.to_account_info(),
         ctx.accounts.user_ata.to_account_info(),

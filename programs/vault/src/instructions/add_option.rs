@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token::{Mint, Token};
 
 use crate::constants::*;
 use crate::errors::*;
@@ -40,16 +40,6 @@ pub struct AddOption<'info> {
     )]
     pub cond_mint: Account<'info, Mint>,
 
-    // Escrow ATA for conditional mint
-    #[account(
-        init,
-        payer = signer,
-        associated_token::mint = cond_mint,
-        associated_token::authority = vault,
-        associated_token::token_program = token_program,
-    )]
-    pub vault_cond_token_acc: Account<'info, TokenAccount>,
-
     // Programs
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
@@ -58,12 +48,14 @@ pub struct AddOption<'info> {
 
 pub fn add_option_handler(ctx: Context<AddOption>) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
+    let curr_num_options = vault.num_options;
 
     require!(
-        vault.num_options < MAX_OPTIONS,
+        curr_num_options < MAX_OPTIONS,
         VaultError::OptionLimitReached
     );
 
+    vault.cond_mints[curr_num_options as usize] = ctx.accounts.cond_mint.key();
     vault.num_options += 1;
 
     msg!("Added option {:?}", vault.num_options);
