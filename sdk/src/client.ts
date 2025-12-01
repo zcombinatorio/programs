@@ -39,10 +39,11 @@ export class VaultClient {
 
   deriveVaultPDA(
     owner: PublicKey,
+    nonce: number,
     proposalId: number,
     vaultType: VaultType
   ): [PublicKey, number] {
-    return deriveVaultPDA(owner, proposalId, vaultType, this.programId);
+    return deriveVaultPDA(owner, nonce, proposalId, vaultType, this.programId);
   }
 
   deriveConditionalMint(
@@ -120,9 +121,15 @@ export class VaultClient {
     signer: PublicKey,
     mint: PublicKey,
     vaultType: VaultType,
+    nonce: number,
     proposalId: number
   ) {
-    const [vaultPda] = this.deriveVaultPDA(signer, proposalId, vaultType);
+    const [vaultPda] = this.deriveVaultPDA(
+      signer,
+      nonce,
+      proposalId,
+      vaultType
+    );
     const [condMint0] = this.deriveConditionalMint(vaultPda, 0);
     const [condMint1] = this.deriveConditionalMint(vaultPda, 1);
 
@@ -134,6 +141,7 @@ export class VaultClient {
       condMint0,
       condMint1,
       vaultType,
+      nonce,
       proposalId
     );
 

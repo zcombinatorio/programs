@@ -9,6 +9,7 @@ import { VaultType, VaultState, VaultAccount } from "./types";
 
 export function deriveVaultPDA(
   owner: PublicKey,
+  nonce: number,
   proposalId: number,
   vaultType: VaultType,
   programId: PublicKey = PROGRAM_ID
@@ -17,6 +18,7 @@ export function deriveVaultPDA(
     [
       VAULT_SEED,
       owner.toBuffer(),
+      Buffer.from([nonce]),
       Buffer.from([proposalId]),
       Buffer.from([vaultType]),
     ],
@@ -65,6 +67,7 @@ export async function fetchVaultAccount(
   return {
     owner: raw.owner,
     mint: raw.mint,
+    nonce: raw.nonce,
     proposalId: raw.proposalId,
     vaultType: parseVaultType(raw.vaultType),
     state: parseVaultState(raw.state),

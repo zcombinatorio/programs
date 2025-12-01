@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::MAX_OPTIONS;
+use crate::constants::MAX_OPTIONS;
 
 #[derive(Copy, Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub enum VaultType {
@@ -24,6 +24,7 @@ pub enum VaultState {
 pub struct VaultAccount {
     pub owner: Pubkey, // Vault creator
     pub mint: Pubkey,  // Regular mint
+    pub nonce: u8,     // Unique identifier (e.g. protocol_id)
     pub proposal_id: u8,
     pub vault_type: VaultType,
     pub state: VaultState,

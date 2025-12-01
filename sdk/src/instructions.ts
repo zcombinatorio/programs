@@ -15,12 +15,13 @@ export function initialize(
   condMint0: PublicKey,
   condMint1: PublicKey,
   vaultType: VaultType,
+  nonce: number,
   proposalId: number
 ) {
   const vaultTypeArg =
     vaultType === VaultType.Base ? { base: {} } : { quote: {} };
 
-  return program.methods.initialize(vaultTypeArg, proposalId).accounts({
+  return program.methods.initialize(vaultTypeArg, nonce, proposalId).accounts({
     signer,
     vault: vaultPda,
     mint,

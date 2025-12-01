@@ -39,6 +39,7 @@ pub fn deposit_handler<'info>(
     let vault_seeds: &[&[u8]] = &[
         VAULT_SEED,
         vault.owner.as_ref(),
+        &[vault.nonce],
         &[vault.proposal_id],
         &[vault.vault_type as u8],
         &[vault.bump],

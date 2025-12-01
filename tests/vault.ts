@@ -15,7 +15,7 @@ import { VaultClient, VaultType } from "../sdk/src";
  * @ 11-12 options tx too large for user vault actions
  */
 const NUM_OPTIONS = 10;
-const COMPUTE_UNITS = 400_000; // Default is 200k, increase for more options
+const COMPUTE_UNITS = 450_000; // Default is 200k, increase for more options
 
 describe("vault", () => {
   const provider = anchor.AnchorProvider.env();
@@ -25,6 +25,7 @@ describe("vault", () => {
   const client = new VaultClient(provider);
 
   // Test params
+  const nonce = 0; // unique identifier (e.g. protocol_id)
   const proposalId = 1;
   const vaultType = VaultType.Base;
 
@@ -65,7 +66,12 @@ describe("vault", () => {
     );
 
     // Derive vault PDA using SDK
-    [vaultPda] = client.deriveVaultPDA(wallet.publicKey, proposalId, vaultType);
+    [vaultPda] = client.deriveVaultPDA(
+      wallet.publicKey,
+      nonce,
+      proposalId,
+      vaultType
+    );
 
     // Create user ATA for regular mint and fund it
     const userAta = await getOrCreateAssociatedTokenAccount(
@@ -91,6 +97,7 @@ describe("vault", () => {
       wallet.publicKey,
       mint,
       vaultType,
+      nonce,
       proposalId
     );
 

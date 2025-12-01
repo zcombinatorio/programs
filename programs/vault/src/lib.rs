@@ -26,9 +26,10 @@ pub mod vault {
     pub fn initialize(
         ctx: Context<InitializeVault>,
         vault_type: VaultType,
+        nonce: u8,
         proposal_id: u8,
     ) -> Result<()> {
-        instructions::initialize::initialize_handler(ctx, vault_type, proposal_id)
+        instructions::initialize::initialize_handler(ctx, vault_type, nonce, proposal_id)
     }
 
     pub fn add_option(ctx: Context<AddOption>) -> Result<()> {

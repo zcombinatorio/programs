@@ -14,6 +14,7 @@ export enum VaultState {
 export interface VaultAccount {
   owner: PublicKey;
   mint: PublicKey;
+  nonce: number;
   proposalId: number;
   vaultType: VaultType;
   state: VaultState;

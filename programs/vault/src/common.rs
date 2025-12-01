@@ -15,6 +15,7 @@ pub struct UserVaultAction<'info> {
         seeds = [
             VAULT_SEED,
             vault.owner.as_ref(),
+            &[vault.nonce],
             &[vault.proposal_id],
             &[vault.vault_type as u8]
         ],

@@ -6,7 +6,7 @@ use crate::constants::*;
 use crate::state::*;
 
 #[derive(Accounts)]
-#[instruction(vault_type: VaultType, proposal_id: u8)]
+#[instruction(vault_type: VaultType, nonce: u8, proposal_id: u8)]
 pub struct InitializeVault<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -18,6 +18,7 @@ pub struct InitializeVault<'info> {
         seeds = [
             VAULT_SEED,
             signer.key().as_ref(),
+            &[nonce],
             &[proposal_id],
             &[vault_type as u8]
         ],
@@ -70,12 +71,14 @@ pub struct InitializeVault<'info> {
 pub fn initialize_handler(
     ctx: Context<InitializeVault>,
     vault_type: VaultType,
+    nonce: u8,
     proposal_id: u8,
 ) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
     vault.owner = ctx.accounts.signer.key();
     vault.mint = ctx.accounts.mint.key();
+    vault.nonce = nonce;
     vault.proposal_id = proposal_id;
     vault.vault_type = vault_type;
     vault.num_options = 2; // First 2 options generated atomically
