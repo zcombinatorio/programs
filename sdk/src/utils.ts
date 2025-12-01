@@ -1,0 +1,91 @@
+import { Program } from "@coral-xyz/anchor";
+import { PublicKey } from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import { VAULT_SEED, CONDITIONAL_MINT_SEED, PROGRAM_ID } from "./constants";
+import { VaultType, VaultState, VaultAccount } from "./types";
+
+// =============================================================================
+// PDA Helpers
+// =============================================================================
+
+export function deriveVaultPDA(
+  owner: PublicKey,
+  proposalId: number,
+  vaultType: VaultType,
+  programId: PublicKey = PROGRAM_ID
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [
+      VAULT_SEED,
+      owner.toBuffer(),
+      Buffer.from([proposalId]),
+      Buffer.from([vaultType]),
+    ],
+    programId
+  );
+}
+
+export function deriveConditionalMint(
+  vaultPda: PublicKey,
+  index: number,
+  programId: PublicKey = PROGRAM_ID
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [CONDITIONAL_MINT_SEED, vaultPda.toBuffer(), Buffer.from([index])],
+    programId
+  );
+}
+
+export function getAssociatedTokenAddressSync(
+  mint: PublicKey,
+  owner: PublicKey
+): PublicKey {
+  const [address] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
+  return address;
+}
+
+// =============================================================================
+// Parsers
+// =============================================================================
+
+export function parseVaultState(state: any): VaultState {
+  if ("setup" in state) return VaultState.Setup;
+  if ("active" in state) return VaultState.Active;
+  if ("finalized" in state) return VaultState.Finalized;
+  throw new Error("Unknown vault state");
+}
+
+export function parseVaultType(vaultType: any): VaultType {
+  if ("base" in vaultType) return VaultType.Base;
+  if ("quote" in vaultType) return VaultType.Quote;
+  throw new Error("Unknown vault type");
+}
+
+// =============================================================================
+// Fetch
+// =============================================================================
+
+export async function fetchVaultAccount(
+  program: Program,
+  vaultPda: PublicKey
+): Promise<VaultAccount> {
+  const raw = await (program.account as any).vaultAccount.fetch(vaultPda);
+
+  return {
+    owner: raw.owner,
+    mint: raw.mint,
+    proposalId: raw.proposalId,
+    vaultType: parseVaultType(raw.vaultType),
+    state: parseVaultState(raw.state),
+    numOptions: raw.numOptions,
+    condMints: raw.condMints.slice(0, raw.numOptions),
+    winningIdx: raw.winningIdx ?? null,
+    bump: raw.bump,
+  };
+}

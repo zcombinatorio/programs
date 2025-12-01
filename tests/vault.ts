@@ -1,36 +1,28 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
-import { Vault } from "../target/types/vault";
-import { PublicKey, Keypair, SystemProgram } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import {
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
   createMint,
-  getAssociatedTokenAddress,
   getAccount,
   mintTo,
   getOrCreateAssociatedTokenAccount,
 } from "@solana/spl-token";
 import { expect } from "chai";
 
+import { VaultClient, VaultType } from "../sdk/src";
+
 describe("vault", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Vault as Program<Vault>;
   const wallet = provider.wallet as anchor.Wallet;
-
-  // Seeds (must match Rust constants)
-  const VAULT_SEED = Buffer.from("vault");
-  const CONDITIONAL_MINT_SEED = Buffer.from("cmint");
+  const client = new VaultClient(provider);
 
   // Test params
   const proposalId = 1;
-  const vaultType = { base: {} }; // or { quote: {} }
+  const vaultType = VaultType.Base;
 
   // Accounts we'll initialize
   let mint: PublicKey;
-  let vaultBump: number;
   let vaultPda: PublicKey;
   let vaultTokenAcc: PublicKey;
   let condMint0: PublicKey;
@@ -39,9 +31,6 @@ describe("vault", () => {
 
   // User token accounts
   let userAta: PublicKey;
-  let userCondAta0: PublicKey;
-  let userCondAta1: PublicKey;
-  let userCondAta2: PublicKey;
 
   const DEPOSIT_AMOUNT = 1_000_000; // 1 token (6 decimals)
 
@@ -55,41 +44,14 @@ describe("vault", () => {
       6 // decimals
     );
 
-    // Derive vault PDA
-    [vaultPda, vaultBump] = PublicKey.findProgramAddressSync(
-      [
-        VAULT_SEED,
-        wallet.publicKey.toBuffer(),
-        Buffer.from([proposalId]),
-        Buffer.from([0]), // vaultType as u8 (Base = 0)
-      ],
-      program.programId
-    );
+    // Derive vault PDA using SDK
+    [vaultPda] = client.deriveVaultPDA(wallet.publicKey, proposalId, vaultType);
 
     // Derive vault's token account (ATA)
     vaultTokenAcc = anchor.utils.token.associatedAddress({
       mint: mint,
       owner: vaultPda,
     });
-
-    // Derive conditional mints
-    [condMint0] = PublicKey.findProgramAddressSync(
-      [CONDITIONAL_MINT_SEED, vaultPda.toBuffer(), Buffer.from([0])],
-      program.programId
-    );
-    [condMint1] = PublicKey.findProgramAddressSync(
-      [CONDITIONAL_MINT_SEED, vaultPda.toBuffer(), Buffer.from([1])],
-      program.programId
-    );
-    [condMint2] = PublicKey.findProgramAddressSync(
-      [CONDITIONAL_MINT_SEED, vaultPda.toBuffer(), Buffer.from([2])],
-      program.programId
-    );
-
-    // Derive user ATAs for conditional mints (created later by deposit)
-    userCondAta0 = await getAssociatedTokenAddress(condMint0, wallet.publicKey);
-    userCondAta1 = await getAssociatedTokenAddress(condMint1, wallet.publicKey);
-    userCondAta2 = await getAssociatedTokenAddress(condMint2, wallet.publicKey);
 
     // Create user ATA for regular mint and fund it
     const userAtaAccount = await getOrCreateAssociatedTokenAccount(
@@ -112,78 +74,76 @@ describe("vault", () => {
   });
 
   it("initializes vault", async () => {
-    await program.methods
-      .initialize(vaultType, proposalId)
-      .accounts({
-        signer: wallet.publicKey,
-        vault: vaultPda,
-        mint: mint,
-        condMint0: condMint0,
-        condMint1: condMint1,
-      })
-      .rpc();
+    const {
+      builder,
+      vaultPda: pda,
+      condMint0: cm0,
+      condMint1: cm1,
+    } = client.initialize(wallet.publicKey, mint, vaultType, proposalId);
+
+    condMint0 = cm0;
+    condMint1 = cm1;
+
+    await builder.rpc();
 
     // Verify
-    const vaultAccount = await program.account.vaultAccount.fetch(vaultPda);
+    const vaultAccount = await client.fetchVault(pda);
     expect(vaultAccount.owner.toBase58()).to.equal(wallet.publicKey.toBase58());
     expect(vaultAccount.mint.toBase58()).to.equal(mint.toBase58());
     expect(vaultAccount.numOptions).to.equal(2);
-    expect(vaultAccount.state).to.deep.equal({ setup: {} });
+    expect(vaultAccount.state).to.equal("setup");
     expect(vaultAccount.condMints[0].toBase58()).to.equal(condMint0.toBase58());
     expect(vaultAccount.condMints[1].toBase58()).to.equal(condMint1.toBase58());
   });
 
   it("adds option", async () => {
-    await program.methods
-      .addOption()
-      .accounts({
-        signer: wallet.publicKey,
-        vault: vaultPda,
-        mint: mint,
-        condMint: condMint2,
-      })
-      .rpc();
+    const { builder, condMint } = await client.addOption(
+      wallet.publicKey,
+      vaultPda
+    );
+    condMint2 = condMint;
+
+    await builder.rpc();
 
     // Verify
-    const vaultAccount = await program.account.vaultAccount.fetch(vaultPda);
+    const vaultAccount = await client.fetchVault(vaultPda);
     expect(vaultAccount.numOptions).to.equal(3);
     expect(vaultAccount.condMints[2].toBase58()).to.equal(condMint2.toBase58());
   });
 
   it("activates vault", async () => {
-    await program.methods
-      .activate()
-      .accounts({
-        signer: wallet.publicKey,
-        vault: vaultPda,
-      })
-      .rpc();
+    await client.activate(wallet.publicKey, vaultPda).rpc();
 
     // Verify
-    const vaultAccount = await program.account.vaultAccount.fetch(vaultPda);
-    expect(vaultAccount.state).to.deep.equal({ active: {} });
+    const vaultAccount = await client.fetchVault(vaultPda);
+    expect(vaultAccount.state).to.equal("active");
   });
 
   it("deposits and receives conditional tokens", async () => {
     const initialUserBalance = (await getAccount(provider.connection, userAta))
       .amount;
 
-    await program.methods
-      .deposit(new anchor.BN(DEPOSIT_AMOUNT))
-      .accounts({
-        signer: wallet.publicKey,
-        vault: vaultPda,
-        mint: mint,
-      })
-      .remainingAccounts([
-        { pubkey: condMint0, isSigner: false, isWritable: true },
-        { pubkey: userCondAta0, isSigner: false, isWritable: true },
-        { pubkey: condMint1, isSigner: false, isWritable: true },
-        { pubkey: userCondAta1, isSigner: false, isWritable: true },
-        { pubkey: condMint2, isSigner: false, isWritable: true },
-        { pubkey: userCondAta2, isSigner: false, isWritable: true },
-      ])
-      .rpc();
+    const builder = await client.deposit(
+      wallet.publicKey,
+      vaultPda,
+      DEPOSIT_AMOUNT
+    );
+    await builder.rpc();
+
+    // Fetch vault to get user conditional token addresses
+    const vault = await client.fetchVault(vaultPda);
+    const userCondAta0 = anchor.utils.token.associatedAddress({
+      mint: vault.condMints[0],
+      owner: wallet.publicKey,
+    });
+    const userCondAta1 = anchor.utils.token.associatedAddress({
+      mint: vault.condMints[1],
+      owner: wallet.publicKey,
+    });
+    const userCondAta2 = anchor.utils.token.associatedAddress({
+      mint: vault.condMints[2],
+      owner: wallet.publicKey,
+    });
 
     // Verify user received conditional tokens
     const userCond0 = await getAccount(provider.connection, userCondAta0);
@@ -210,22 +170,27 @@ describe("vault", () => {
   it("withdraws half", async () => {
     const withdrawAmount = DEPOSIT_AMOUNT / 2;
 
-    await program.methods
-      .withdraw(new anchor.BN(withdrawAmount))
-      .accounts({
-        signer: wallet.publicKey,
-        vault: vaultPda,
-        mint: mint,
-      })
-      .remainingAccounts([
-        { pubkey: condMint0, isSigner: false, isWritable: true },
-        { pubkey: userCondAta0, isSigner: false, isWritable: true },
-        { pubkey: condMint1, isSigner: false, isWritable: true },
-        { pubkey: userCondAta1, isSigner: false, isWritable: true },
-        { pubkey: condMint2, isSigner: false, isWritable: true },
-        { pubkey: userCondAta2, isSigner: false, isWritable: true },
-      ])
-      .rpc();
+    const builder = await client.withdraw(
+      wallet.publicKey,
+      vaultPda,
+      withdrawAmount
+    );
+    await builder.rpc();
+
+    // Fetch vault to get user conditional token addresses
+    const vault = await client.fetchVault(vaultPda);
+    const userCondAta0 = anchor.utils.token.associatedAddress({
+      mint: vault.condMints[0],
+      owner: wallet.publicKey,
+    });
+    const userCondAta1 = anchor.utils.token.associatedAddress({
+      mint: vault.condMints[1],
+      owner: wallet.publicKey,
+    });
+    const userCondAta2 = anchor.utils.token.associatedAddress({
+      mint: vault.condMints[2],
+      owner: wallet.publicKey,
+    });
 
     // Verify conditional tokens decreased
     const userCond0 = await getAccount(provider.connection, userCondAta0);
@@ -245,17 +210,11 @@ describe("vault", () => {
   it("finalizes vault with winning option", async () => {
     const winningIdx = 0;
 
-    await program.methods
-      .finalize(winningIdx)
-      .accounts({
-        signer: wallet.publicKey,
-        vault: vaultPda,
-      })
-      .rpc();
+    await client.finalize(wallet.publicKey, vaultPda, winningIdx).rpc();
 
     // Verify
-    const vaultAccount = await program.account.vaultAccount.fetch(vaultPda);
-    expect(vaultAccount.state).to.deep.equal({ finalized: {} });
+    const vaultAccount = await client.fetchVault(vaultPda);
+    expect(vaultAccount.state).to.equal("finalized");
     expect(vaultAccount.winningIdx).to.equal(winningIdx);
   });
 
@@ -265,22 +224,8 @@ describe("vault", () => {
     const initialUserBalance = (await getAccount(provider.connection, userAta))
       .amount;
 
-    await program.methods
-      .redeemWinnings()
-      .accounts({
-        signer: wallet.publicKey,
-        vault: vaultPda,
-        mint: mint,
-      })
-      .remainingAccounts([
-        { pubkey: condMint0, isSigner: false, isWritable: true },
-        { pubkey: userCondAta0, isSigner: false, isWritable: true },
-        { pubkey: condMint1, isSigner: false, isWritable: true },
-        { pubkey: userCondAta1, isSigner: false, isWritable: true },
-        { pubkey: condMint2, isSigner: false, isWritable: true },
-        { pubkey: userCondAta2, isSigner: false, isWritable: true },
-      ])
-      .rpc();
+    const builder = await client.redeemWinnings(wallet.publicKey, vaultPda);
+    await builder.rpc();
 
     // Verify user received winnings (winning option was 0)
     const finalUserBalance = (await getAccount(provider.connection, userAta))
