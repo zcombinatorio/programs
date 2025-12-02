@@ -839,7 +839,7 @@ export type Vault = {
             "type": {
               "array": [
                 "pubkey",
-                10
+                8
               ]
             }
           },
