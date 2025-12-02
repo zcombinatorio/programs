@@ -1,11 +1,20 @@
 {
-  "name": "@combinator/vault-sdk",
+  "name": "@zcomb/vault-sdk",
   "version": "0.1.0",
+  "description": "TS SDK for Combinator's QM Conditional Token Vault",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zcombinatorio/programs"
+  },
+  "keywords": ["solana", "anchor", "vault"],
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
