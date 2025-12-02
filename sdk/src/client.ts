@@ -1,5 +1,5 @@
 import { Program, AnchorProvider, Idl, BN } from "@coral-xyz/anchor";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { PublicKey, SystemProgram, ComputeBudgetProgram } from "@solana/web3.js";
 import {
   getAccount,
   getAssociatedTokenAddressSync,
@@ -27,6 +27,9 @@ import {
 } from "./instructions";
 
 import IDL from "./generated/vault.json";
+
+// Max compute units for deposit/withdraw/redeem operations
+const MAX_COMPUTE_UNITS = 450_000;
 
 export class VaultClient {
   public program: Program;
@@ -182,10 +185,15 @@ export class VaultClient {
       amount
     );
 
+    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
+      units: MAX_COMPUTE_UNITS,
+    });
+
     if (vault.mint.equals(NATIVE_MINT)) {
       const amountBN = typeof amount === "number" ? new BN(amount) : amount;
       const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
       const wrapIxs = [
+        computeBudgetIx,
         createAssociatedTokenAccountIdempotentInstruction(
           signer,
           wsolAta,
@@ -202,7 +210,7 @@ export class VaultClient {
       return builder.preInstructions(wrapIxs);
     }
 
-    return builder;
+    return builder.preInstructions([computeBudgetIx]);
   }
 
   async withdraw(signer: PublicKey, vaultPda: PublicKey, amount: BN | number) {
@@ -216,13 +224,19 @@ export class VaultClient {
       amount
     );
 
+    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
+      units: MAX_COMPUTE_UNITS,
+    });
+
     if (vault.mint.equals(NATIVE_MINT)) {
       const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
       const unwrapIx = createCloseAccountInstruction(wsolAta, signer, signer);
-      return builder.postInstructions([unwrapIx]);
+      return builder
+        .preInstructions([computeBudgetIx])
+        .postInstructions([unwrapIx]);
     }
 
-    return builder;
+    return builder.preInstructions([computeBudgetIx]);
   }
 
   finalize(signer: PublicKey, vaultPda: PublicKey, winningIdx: number) {
@@ -239,12 +253,18 @@ export class VaultClient {
       vault.condMints
     );
 
+    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
+      units: MAX_COMPUTE_UNITS,
+    });
+
     if (vault.mint.equals(NATIVE_MINT)) {
       const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
       const unwrapIx = createCloseAccountInstruction(wsolAta, signer, signer);
-      return builder.postInstructions([unwrapIx]);
+      return builder
+        .preInstructions([computeBudgetIx])
+        .postInstructions([unwrapIx]);
     }
 
-    return builder;
+    return builder.preInstructions([computeBudgetIx]);
   }
 }
