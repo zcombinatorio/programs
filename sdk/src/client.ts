@@ -26,7 +26,7 @@ import {
   redeemWinnings,
 } from "./instructions";
 
-import IDL from "../../target/idl/vault.json";
+import IDL from "./generated/vault.json";
 
 export class VaultClient {
   public program: Program;
