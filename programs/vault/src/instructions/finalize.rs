@@ -33,8 +33,7 @@ pub struct FinalizeVault<'info> {
             VAULT_SEED,
             vault.owner.as_ref(),
             &[vault.nonce],
-            &[vault.proposal_id],
-            &[vault.vault_type as u8]
+            &[vault.proposal_id]
         ],
         bump = vault.bump,
         constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
@@ -56,7 +55,8 @@ pub fn finalize_vault_handler(ctx: Context<FinalizeVault>, winning_idx: u8) -> R
 
     msg!("Vault finalized");
     msg!("Winning idx {:?}", winning_idx);
-    msg!("Winning mint {:?}", vault.cond_mints[winning_idx as usize]);
+    msg!("Winning base mint {:?}", vault.cond_base_mints[winning_idx as usize]);
+    msg!("Winning quote mint {:?}", vault.cond_quote_mints[winning_idx as usize]);
 
     Ok(())
 }

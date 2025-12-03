@@ -43,4 +43,7 @@ pub enum VaultError {
 
     #[msg("No conditional tokens")]
     NoConditionalTokens,
+
+    #[msg("Invalid mint for vault type")]
+    InvalidMint,
 }

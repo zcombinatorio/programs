@@ -35,8 +35,7 @@ pub struct AddOption<'info> {
             VAULT_SEED,
             vault.owner.as_ref(),
             &[vault.nonce],
-            &[vault.proposal_id],
-            &[vault.vault_type as u8]
+            &[vault.proposal_id]
         ],
         bump = vault.bump,
         constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
@@ -44,20 +43,45 @@ pub struct AddOption<'info> {
     )]
     pub vault: Account<'info, VaultAccount>,
 
-    // Regular mint
-    #[account(address = vault.mint)]
-    pub mint: Account<'info, Mint>,
+    // Base mint
+    #[account(address = vault.base_mint)]
+    pub base_mint: Account<'info, Mint>,
 
-    // Conditional mint
+    // Quote mint
+    #[account(address = vault.base_mint)]
+    pub quote_mint: Account<'info, Mint>,
+
+    // Conditional base mint
     #[account(
         init,
         payer = signer,
-        mint::decimals = mint.decimals,
+        mint::decimals = base_mint.decimals,
         mint::authority = vault,
-        seeds = [CONDITIONAL_MINT_SEED, vault.key().as_ref(), &[vault.num_options]],
+        seeds = [
+            CONDITIONAL_MINT_SEED, 
+            vault.key().as_ref(), 
+            &[VaultType::Base as u8], 
+            &[vault.num_options]
+        ],
         bump,
     )]
-    pub cond_mint: Account<'info, Mint>,
+    pub cond_base_mint: Account<'info, Mint>,
+
+    // Conditional quote mint
+    #[account(
+        init,
+        payer = signer,
+        mint::decimals = quote_mint.decimals,
+        mint::authority = vault,
+        seeds = [
+            CONDITIONAL_MINT_SEED, 
+            vault.key().as_ref(), 
+            &[VaultType::Quote as u8], 
+            &[vault.num_options]
+        ],
+        bump,
+    )]
+    pub cond_quote_mint: Account<'info, Mint>,
 
     // Programs
     pub system_program: Program<'info, System>,
@@ -74,7 +98,8 @@ pub fn add_option_handler(ctx: Context<AddOption>) -> Result<()> {
         VaultError::OptionLimitReached
     );
 
-    vault.cond_mints[curr_num_options as usize] = ctx.accounts.cond_mint.key();
+    vault.cond_base_mints[curr_num_options as usize] = ctx.accounts.cond_base_mint.key();
+    vault.cond_quote_mints[curr_num_options as usize] = ctx.accounts.cond_quote_mint.key();
     vault.num_options += 1;
 
     msg!("Added option {:?}", vault.num_options);

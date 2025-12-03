@@ -24,9 +24,11 @@ use crate::constants::*;
 use crate::errors::*;
 use crate::state::VaultState;
 use crate::utils::*;
+use crate::VaultType;
 
 pub fn withdrawal_handler<'info>(
     ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
+    vault_type: VaultType,
     amount: u64,
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
@@ -44,13 +46,19 @@ pub fn withdrawal_handler<'info>(
     // Validate that amount is non-zero
     require!(amount > 0, VaultError::InvalidAmount);
 
+    let vault_cond_mints = if vault_type == VaultType::Base {
+        vault.cond_base_mints
+    } else {
+        vault.cond_quote_mints
+    };
+
     for i in 0..num_options {
         let cond_mint_info = &ctx.remaining_accounts[i * 2];
         let user_cond_ata_info = &ctx.remaining_accounts[i * 2 + 1];
 
         // Validate the conditional mint PDA
         require!(
-            cond_mint_info.key() == vault.cond_mints[i],
+            cond_mint_info.key() == vault_cond_mints[i],
             VaultError::InvalidConditionalMint
         );
 
@@ -86,7 +94,6 @@ pub fn withdrawal_handler<'info>(
         vault.owner.as_ref(),
         &[vault.nonce],
         &[vault.proposal_id],
-        &[vault.vault_type as u8],
         &[vault.bump],
     ];
 

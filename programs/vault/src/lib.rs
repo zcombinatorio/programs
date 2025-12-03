@@ -43,11 +43,10 @@ pub mod vault {
      */
     pub fn initialize(
         ctx: Context<InitializeVault>,
-        vault_type: VaultType,
-        nonce: u8,
         proposal_id: u8,
+        nonce: u8,
     ) -> Result<()> {
-        instructions::initialize::initialize_handler(ctx, vault_type, nonce, proposal_id)
+        instructions::initialize::initialize_handler(ctx, proposal_id, nonce)
     }
 
     pub fn add_option(ctx: Context<AddOption>) -> Result<()> {
@@ -67,21 +66,24 @@ pub mod vault {
      */
     pub fn deposit<'info>(
         ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
+        vault_type: VaultType,
         amount: u64,
     ) -> Result<()> {
-        instructions::deposit::deposit_handler(ctx, amount)
+        instructions::deposit::deposit_handler(ctx, vault_type, amount)
     }
 
     pub fn withdraw<'info>(
         ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
+        vault_type: VaultType,
         amount: u64,
     ) -> Result<()> {
-        instructions::withdrawal::withdrawal_handler(ctx, amount)
+        instructions::withdrawal::withdrawal_handler(ctx, vault_type, amount)
     }
 
     pub fn redeem_winnings<'info>(
         ctx: Context<'_, '_, 'info, 'info, UserVaultAction<'info>>,
+        vault_type: VaultType,
     ) -> Result<()> {
-        instructions::redeem_winnings::redeem_winnings_handler(ctx)
+        instructions::redeem_winnings::redeem_winnings_handler(ctx, vault_type)
     }
 }

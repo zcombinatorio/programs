@@ -24,7 +24,7 @@ use crate::constants::*;
 use crate::state::*;
 
 #[derive(Accounts)]
-#[instruction(vault_type: VaultType, nonce: u8, proposal_id: u8)]
+#[instruction(proposal_id: u8, nonce: u8)]
 pub struct InitializeVault<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -37,48 +37,100 @@ pub struct InitializeVault<'info> {
             VAULT_SEED,
             signer.key().as_ref(),
             &[nonce],
-            &[proposal_id],
-            &[vault_type as u8]
+            &[proposal_id]
         ],
         bump,
     )]
     pub vault: Account<'info, VaultAccount>,
 
-    // Regular mint
-    pub mint: Account<'info, Mint>,
+    pub base_mint: Account<'info, Mint>,
+    pub quote_mint: Account<'info, Mint>,
 
-    // Escrow ATA for regular mint
+    // Escrow ATA for base mint
     #[account(
         init,
         payer = signer,
-        associated_token::mint = mint,
+        associated_token::mint = base_mint,
         associated_token::authority = vault,
         associated_token::token_program = token_program,
     )]
-    pub vault_token_acc: Account<'info, TokenAccount>,
+    pub base_token_acc: Account<'info, TokenAccount>,
 
-    // Create initial 2 conditional mints
+    // Escrow ATA for quote mint
+    #[account(
+        init,
+        payer = signer,
+        associated_token::mint = quote_mint,
+        associated_token::authority = vault,
+        associated_token::token_program = token_program,
+    )]
+    pub quote_token_acc: Account<'info, TokenAccount>,
+
+    // Create initial 2 base conditional mints
     // Conditional mint 0
     #[account(
         init,
         payer = signer,
-        mint::decimals = mint.decimals,
+        mint::decimals = base_mint.decimals,
         mint::authority = vault,
-        seeds = [CONDITIONAL_MINT_SEED, vault.key().as_ref(), &[0]],
+        seeds = [
+            CONDITIONAL_MINT_SEED, 
+            vault.key().as_ref(), 
+            &[VaultType::Base as u8], 
+            &[0]
+        ],
         bump,
     )]
-    pub cond_mint_0: Account<'info, Mint>,
+    pub cond_base_mint_0: Account<'info, Mint>,
 
     // Conditional mint 1
     #[account(
         init,
         payer = signer,
-        mint::decimals = mint.decimals,
+        mint::decimals = base_mint.decimals,
         mint::authority = vault,
-        seeds = [CONDITIONAL_MINT_SEED, vault.key().as_ref(), &[1]],
+        seeds = [
+            CONDITIONAL_MINT_SEED, 
+            vault.key().as_ref(), 
+            &[VaultType::Base as u8], 
+            &[1]
+        ],
         bump,
     )]
-    pub cond_mint_1: Account<'info, Mint>,
+    pub cond_base_mint_1: Account<'info, Mint>,
+
+    // Create initial 2 quote conditional mints
+    // Conditional quote mint 0
+    #[account(
+        init,
+        payer = signer,
+        mint::decimals = base_mint.decimals,
+        mint::authority = vault,
+        seeds = [
+            CONDITIONAL_MINT_SEED, 
+            vault.key().as_ref(), 
+            &[VaultType::Quote as u8], 
+            &[0]
+        ],
+        bump,
+    )]
+    pub cond_quote_mint_0: Account<'info, Mint>,
+
+    // Conditional quote mint 1
+    #[account(
+        init,
+        payer = signer,
+        mint::decimals = base_mint.decimals,
+        mint::authority = vault,
+        seeds = [
+            CONDITIONAL_MINT_SEED, 
+            vault.key().as_ref(), 
+            &[VaultType::Quote as u8], 
+            &[1]
+        ],
+        bump,
+    )]
+    pub cond_quote_mint_1: Account<'info, Mint>,
 
     // Programs
     pub system_program: Program<'info, System>,
@@ -88,22 +140,24 @@ pub struct InitializeVault<'info> {
 
 pub fn initialize_handler(
     ctx: Context<InitializeVault>,
-    vault_type: VaultType,
-    nonce: u8,
     proposal_id: u8,
+    nonce: u8,
 ) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
     vault.owner = ctx.accounts.signer.key();
-    vault.mint = ctx.accounts.mint.key();
+    vault.base_mint = ctx.accounts.base_mint.key();
+    vault.quote_mint = ctx.accounts.quote_mint.key();
     vault.nonce = nonce;
     vault.proposal_id = proposal_id;
-    vault.vault_type = vault_type;
     vault.num_options = 2; // First 2 options generated atomically
 
     // Store conditional mints
-    vault.cond_mints[0] = ctx.accounts.cond_mint_0.key();
-    vault.cond_mints[1] = ctx.accounts.cond_mint_1.key();
+    vault.cond_base_mints[0] = ctx.accounts.cond_base_mint_0.key();
+    vault.cond_base_mints[1] = ctx.accounts.cond_base_mint_1.key();
+
+    vault.cond_quote_mints[0] = ctx.accounts.cond_quote_mint_0.key();
+    vault.cond_quote_mints[1] = ctx.accounts.cond_quote_mint_1.key();
 
     vault.state = VaultState::Setup;
     vault.winning_idx = None;

@@ -20,7 +20,7 @@ use anchor_lang::prelude::*;
 
 use crate::constants::MAX_OPTIONS;
 
-#[derive(Copy, Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
+#[derive(Copy, Clone, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
 pub enum VaultType {
     Base,  // 0
     Quote, // 1
@@ -41,15 +41,16 @@ pub enum VaultState {
 #[account]
 pub struct VaultAccount {
     pub owner: Pubkey, // Vault creator
-    pub mint: Pubkey,  // Regular mint
+    pub base_mint: Pubkey,  // Base mint
+    pub quote_mint: Pubkey, // Quote mint
     pub nonce: u8,     // Unique identifier (e.g. protocol_id)
     pub proposal_id: u8,
-    pub vault_type: VaultType,
     pub state: VaultState,
 
     // Number of markets (2 <= n <= MAX_OPTIONS)
     pub num_options: u8,
-    pub cond_mints: [Pubkey; MAX_OPTIONS as usize], // allocate for max options
+    pub cond_base_mints: [Pubkey; MAX_OPTIONS as usize], // allocate for max options
+    pub cond_quote_mints: [Pubkey; MAX_OPTIONS as usize], // allocate for max options
 
     // Set after finalization
     // index in cond_mints

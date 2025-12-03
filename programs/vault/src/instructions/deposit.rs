@@ -24,9 +24,11 @@ use crate::constants::*;
 use crate::errors::*;
 use crate::state::VaultState;
 use crate::utils::*;
+use crate::VaultType;
 
 pub fn deposit_handler<'info>(
     ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
+    vault_type: VaultType,
     amount: u64,
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
@@ -44,6 +46,12 @@ pub fn deposit_handler<'info>(
     // Validate that amount is non-zero
     require!(amount > 0, VaultError::InvalidAmount);
 
+    let vault_cond_mints = if vault_type == VaultType::Base {
+        vault.cond_base_mints
+    } else {
+        vault.cond_quote_mints
+    };
+
     // 1. Transfer regular tokens: user -> vault
     transfer_tokens(
         ctx.accounts.user_ata.to_account_info(),
@@ -59,7 +67,6 @@ pub fn deposit_handler<'info>(
         vault.owner.as_ref(),
         &[vault.nonce],
         &[vault.proposal_id],
-        &[vault.vault_type as u8],
         &[vault.bump],
     ];
 
@@ -69,7 +76,7 @@ pub fn deposit_handler<'info>(
 
         // Validate the conditional mint PDA
         require!(
-            cond_mint_info.key() == vault.cond_mints[i],
+            cond_mint_info.key() == vault_cond_mints[i],
             VaultError::InvalidConditionalMint
         );
 

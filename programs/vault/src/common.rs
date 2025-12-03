@@ -21,9 +21,11 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::constants::*;
+use crate::errors::VaultError;
 use crate::state::*;
 
 #[derive(Accounts)]
+#[instruction(vault_type: VaultType)]
 pub struct UserVaultAction<'info> {
     #[account(mut)]
     pub signer: Signer<'info>, // User
@@ -35,17 +37,20 @@ pub struct UserVaultAction<'info> {
             vault.owner.as_ref(),
             &[vault.nonce],
             &[vault.proposal_id],
-            &[vault.vault_type as u8]
         ],
         bump = vault.bump,
     )]
     pub vault: Account<'info, VaultAccount>,
 
-    // Regular Mint
+    // Regular Mint (base or quote depending on vault_type)
     #[account(
-        address = vault.mint
+        constraint = mint.key() == if vault_type == VaultType::Base {
+            vault.base_mint
+        } else {
+            vault.quote_mint
+        } @ VaultError::InvalidMint
     )]
-    mint: Account<'info, Mint>,
+    pub mint: Account<'info, Mint>,
 
     // Escrow ATA for regular mint
     #[account(

@@ -25,9 +25,11 @@ use crate::constants::*;
 use crate::errors::*;
 use crate::state::VaultState;
 use crate::utils::*;
+use crate::VaultType;
 
 pub fn redeem_winnings_handler<'info>(
     ctx: Context<'_, '_, 'info, 'info, UserVaultAction<'info>>,
+    vault_type: VaultType,
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
 
@@ -44,6 +46,12 @@ pub fn redeem_winnings_handler<'info>(
         VaultError::InvalidNumberOfAccounts
     );
 
+    let vault_cond_mints = if vault_type == VaultType::Base {
+        vault.cond_base_mints
+    } else {
+        vault.cond_quote_mints
+    };    
+
     // Extract winning option
     let winning_idx = vault
         .winning_idx
@@ -57,7 +65,7 @@ pub fn redeem_winnings_handler<'info>(
 
         // Validate the conditional mint PDA
         require!(
-            cond_mint_info.key() == vault.cond_mints[i],
+            cond_mint_info.key() == vault_cond_mints[i],
             VaultError::InvalidConditionalMint
         );
 
@@ -117,7 +125,6 @@ pub fn redeem_winnings_handler<'info>(
         vault.owner.as_ref(),
         &[vault.nonce],
         &[vault.proposal_id],
-        &[vault.vault_type as u8],
         &[vault.bump],
     ];
     transfer_signed(
