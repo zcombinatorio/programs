@@ -11,7 +11,6 @@ export function deriveVaultPDA(
   owner: PublicKey,
   nonce: number,
   proposalId: number,
-  vaultType: VaultType,
   programId: PublicKey = PROGRAM_ID
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
@@ -20,7 +19,6 @@ export function deriveVaultPDA(
       owner.toBuffer(),
       Buffer.from([nonce]),
       Buffer.from([proposalId]),
-      Buffer.from([vaultType]),
     ],
     programId
   );
@@ -28,11 +26,17 @@ export function deriveVaultPDA(
 
 export function deriveConditionalMint(
   vaultPda: PublicKey,
+  vaultType: VaultType,
   index: number,
   programId: PublicKey = PROGRAM_ID
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [CONDITIONAL_MINT_SEED, vaultPda.toBuffer(), Buffer.from([index])],
+    [
+      CONDITIONAL_MINT_SEED,
+      vaultPda.toBuffer(),
+      Buffer.from([vaultType]),
+      Buffer.from([index]),
+    ],
     programId
   );
 }
@@ -48,12 +52,6 @@ export function parseVaultState(state: any): VaultState {
   throw new Error("Unknown vault state");
 }
 
-export function parseVaultType(vaultType: any): VaultType {
-  if ("base" in vaultType) return VaultType.Base;
-  if ("quote" in vaultType) return VaultType.Quote;
-  throw new Error("Unknown vault type");
-}
-
 // =============================================================================
 // Fetch
 // =============================================================================
@@ -66,13 +64,14 @@ export async function fetchVaultAccount(
 
   return {
     owner: raw.owner,
-    mint: raw.mint,
+    baseMint: raw.baseMint,
+    quoteMint: raw.quoteMint,
     nonce: raw.nonce,
     proposalId: raw.proposalId,
-    vaultType: parseVaultType(raw.vaultType),
     state: parseVaultState(raw.state),
     numOptions: raw.numOptions,
-    condMints: raw.condMints.slice(0, raw.numOptions),
+    condBaseMints: raw.condBaseMints.slice(0, raw.numOptions),
+    condQuoteMints: raw.condQuoteMints.slice(0, raw.numOptions),
     winningIdx: raw.winningIdx ?? null,
     bump: raw.bump,
   };

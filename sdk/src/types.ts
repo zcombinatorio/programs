@@ -13,13 +13,14 @@ export enum VaultState {
 
 export interface VaultAccount {
   owner: PublicKey;
-  mint: PublicKey;
+  baseMint: PublicKey;
+  quoteMint: PublicKey;
   nonce: number;
   proposalId: number;
-  vaultType: VaultType;
   state: VaultState;
   numOptions: number;
-  condMints: PublicKey[];
+  condBaseMints: PublicKey[];
+  condQuoteMints: PublicKey[];
   winningIdx: number | null;
   bump: number;
 }

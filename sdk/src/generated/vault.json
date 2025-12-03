@@ -54,10 +54,17 @@
           "writable": true
         },
         {
-          "name": "mint"
+          "name": "base_mint"
         },
         {
-          "name": "cond_mint",
+          "name": "quote_mint"
+        },
+        {
+          "name": "cond_base_mint",
+          "writable": true
+        },
+        {
+          "name": "cond_quote_mint",
           "writable": true
         },
         {
@@ -229,6 +236,14 @@
       ],
       "args": [
         {
+          "name": "vault_type",
+          "type": {
+            "defined": {
+              "name": "VaultType"
+            }
+          }
+        },
+        {
           "name": "amount",
           "type": "u64"
         }
@@ -286,10 +301,13 @@
           "writable": true
         },
         {
-          "name": "mint"
+          "name": "base_mint"
         },
         {
-          "name": "vault_token_acc",
+          "name": "quote_mint"
+        },
+        {
+          "name": "base_token_acc",
           "writable": true,
           "pda": {
             "seeds": [
@@ -303,7 +321,7 @@
               },
               {
                 "kind": "account",
-                "path": "mint"
+                "path": "base_mint"
               }
             ],
             "program": {
@@ -346,11 +364,76 @@
           }
         },
         {
-          "name": "cond_mint_0",
+          "name": "quote_token_acc",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "quote_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "cond_base_mint_0",
           "writable": true
         },
         {
-          "name": "cond_mint_1",
+          "name": "cond_base_mint_1",
+          "writable": true
+        },
+        {
+          "name": "cond_quote_mint_0",
+          "writable": true
+        },
+        {
+          "name": "cond_quote_mint_1",
           "writable": true
         },
         {
@@ -368,19 +451,11 @@
       ],
       "args": [
         {
-          "name": "vault_type",
-          "type": {
-            "defined": {
-              "name": "VaultType"
-            }
-          }
-        },
-        {
-          "name": "nonce",
+          "name": "proposal_id",
           "type": "u8"
         },
         {
-          "name": "proposal_id",
+          "name": "nonce",
           "type": "u8"
         }
       ]
@@ -537,7 +612,16 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "vault_type",
+          "type": {
+            "defined": {
+              "name": "VaultType"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "withdraw",
@@ -693,6 +777,14 @@
       ],
       "args": [
         {
+          "name": "vault_type",
+          "type": {
+            "defined": {
+              "name": "VaultType"
+            }
+          }
+        },
+        {
           "name": "amount",
           "type": "u64"
         }
@@ -784,6 +876,11 @@
       "code": 6013,
       "name": "NoConditionalTokens",
       "msg": "No conditional tokens"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidMint",
+      "msg": "Invalid mint for vault type"
     }
   ],
   "types": [
@@ -797,7 +894,11 @@
             "type": "pubkey"
           },
           {
-            "name": "mint",
+            "name": "base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
             "type": "pubkey"
           },
           {
@@ -807,14 +908,6 @@
           {
             "name": "proposal_id",
             "type": "u8"
-          },
-          {
-            "name": "vault_type",
-            "type": {
-              "defined": {
-                "name": "VaultType"
-              }
-            }
           },
           {
             "name": "state",
@@ -829,7 +922,16 @@
             "type": "u8"
           },
           {
-            "name": "cond_mints",
+            "name": "cond_base_mints",
+            "type": {
+              "array": [
+                "pubkey",
+                8
+              ]
+            }
+          },
+          {
+            "name": "cond_quote_mints",
             "type": {
               "array": [
                 "pubkey",

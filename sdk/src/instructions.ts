@@ -11,22 +11,24 @@ export function initialize(
   program: Program,
   signer: PublicKey,
   vaultPda: PublicKey,
-  mint: PublicKey,
-  condMint0: PublicKey,
-  condMint1: PublicKey,
-  vaultType: VaultType,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
+  condBaseMint0: PublicKey,
+  condBaseMint1: PublicKey,
+  condQuoteMint0: PublicKey,
+  condQuoteMint1: PublicKey,
   nonce: number,
   proposalId: number
 ) {
-  const vaultTypeArg =
-    vaultType === VaultType.Base ? { base: {} } : { quote: {} };
-
-  return program.methods.initialize(vaultTypeArg, nonce, proposalId).accounts({
+  return program.methods.initialize(proposalId, nonce).accounts({
     signer,
     vault: vaultPda,
-    mint,
-    condMint0,
-    condMint1,
+    baseMint,
+    quoteMint,
+    condBaseMint0,
+    condBaseMint1,
+    condQuoteMint0,
+    condQuoteMint1,
   });
 }
 
@@ -34,14 +36,18 @@ export function addOption(
   program: Program,
   signer: PublicKey,
   vaultPda: PublicKey,
-  mint: PublicKey,
-  condMint: PublicKey
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
+  condBaseMint: PublicKey,
+  condQuoteMint: PublicKey
 ) {
   return program.methods.addOption().accounts({
     signer,
     vault: vaultPda,
-    mint,
-    condMint,
+    baseMint,
+    quoteMint,
+    condBaseMint,
+    condQuoteMint,
   });
 }
 
@@ -62,12 +68,15 @@ export function deposit(
   vaultPda: PublicKey,
   mint: PublicKey,
   condMints: PublicKey[],
+  vaultType: VaultType,
   amount: BN | number
 ) {
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
+  const vaultTypeArg =
+    vaultType === VaultType.Base ? { base: {} } : { quote: {} };
 
   return program.methods
-    .deposit(amountBN)
+    .deposit(vaultTypeArg, amountBN)
     .accounts({
       signer,
       vault: vaultPda,
@@ -91,12 +100,15 @@ export function withdraw(
   vaultPda: PublicKey,
   mint: PublicKey,
   condMints: PublicKey[],
+  vaultType: VaultType,
   amount: BN | number
 ) {
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
+  const vaultTypeArg =
+    vaultType === VaultType.Base ? { base: {} } : { quote: {} };
 
   return program.methods
-    .withdraw(amountBN)
+    .withdraw(vaultTypeArg, amountBN)
     .accounts({
       signer,
       vault: vaultPda,
@@ -131,10 +143,14 @@ export function redeemWinnings(
   signer: PublicKey,
   vaultPda: PublicKey,
   mint: PublicKey,
-  condMints: PublicKey[]
+  condMints: PublicKey[],
+  vaultType: VaultType
 ) {
+  const vaultTypeArg =
+    vaultType === VaultType.Base ? { base: {} } : { quote: {} };
+
   return program.methods
-    .redeemWinnings()
+    .redeemWinnings(vaultTypeArg)
     .accounts({
       signer,
       vault: vaultPda,

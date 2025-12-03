@@ -60,10 +60,17 @@ export type Vault = {
           "writable": true
         },
         {
-          "name": "mint"
+          "name": "baseMint"
         },
         {
-          "name": "condMint",
+          "name": "quoteMint"
+        },
+        {
+          "name": "condBaseMint",
+          "writable": true
+        },
+        {
+          "name": "condQuoteMint",
           "writable": true
         },
         {
@@ -235,6 +242,14 @@ export type Vault = {
       ],
       "args": [
         {
+          "name": "vaultType",
+          "type": {
+            "defined": {
+              "name": "vaultType"
+            }
+          }
+        },
+        {
           "name": "amount",
           "type": "u64"
         }
@@ -292,10 +307,13 @@ export type Vault = {
           "writable": true
         },
         {
-          "name": "mint"
+          "name": "baseMint"
         },
         {
-          "name": "vaultTokenAcc",
+          "name": "quoteMint"
+        },
+        {
+          "name": "baseTokenAcc",
           "writable": true,
           "pda": {
             "seeds": [
@@ -309,7 +327,7 @@ export type Vault = {
               },
               {
                 "kind": "account",
-                "path": "mint"
+                "path": "baseMint"
               }
             ],
             "program": {
@@ -352,11 +370,76 @@ export type Vault = {
           }
         },
         {
-          "name": "condMint0",
+          "name": "quoteTokenAcc",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault"
+              },
+              {
+                "kind": "account",
+                "path": "tokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "quoteMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "condBaseMint0",
           "writable": true
         },
         {
-          "name": "condMint1",
+          "name": "condBaseMint1",
+          "writable": true
+        },
+        {
+          "name": "condQuoteMint0",
+          "writable": true
+        },
+        {
+          "name": "condQuoteMint1",
           "writable": true
         },
         {
@@ -374,19 +457,11 @@ export type Vault = {
       ],
       "args": [
         {
-          "name": "vaultType",
-          "type": {
-            "defined": {
-              "name": "vaultType"
-            }
-          }
-        },
-        {
-          "name": "nonce",
+          "name": "proposalId",
           "type": "u8"
         },
         {
-          "name": "proposalId",
+          "name": "nonce",
           "type": "u8"
         }
       ]
@@ -543,7 +618,16 @@ export type Vault = {
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "vaultType",
+          "type": {
+            "defined": {
+              "name": "vaultType"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "withdraw",
@@ -699,6 +783,14 @@ export type Vault = {
       ],
       "args": [
         {
+          "name": "vaultType",
+          "type": {
+            "defined": {
+              "name": "vaultType"
+            }
+          }
+        },
+        {
           "name": "amount",
           "type": "u64"
         }
@@ -790,6 +882,11 @@ export type Vault = {
       "code": 6013,
       "name": "noConditionalTokens",
       "msg": "No conditional tokens"
+    },
+    {
+      "code": 6014,
+      "name": "invalidMint",
+      "msg": "Invalid mint for vault type"
     }
   ],
   "types": [
@@ -803,7 +900,11 @@ export type Vault = {
             "type": "pubkey"
           },
           {
-            "name": "mint",
+            "name": "baseMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quoteMint",
             "type": "pubkey"
           },
           {
@@ -813,14 +914,6 @@ export type Vault = {
           {
             "name": "proposalId",
             "type": "u8"
-          },
-          {
-            "name": "vaultType",
-            "type": {
-              "defined": {
-                "name": "vaultType"
-              }
-            }
           },
           {
             "name": "state",
@@ -835,7 +928,16 @@ export type Vault = {
             "type": "u8"
           },
           {
-            "name": "condMints",
+            "name": "condBaseMints",
+            "type": {
+              "array": [
+                "pubkey",
+                8
+              ]
+            }
+          },
+          {
+            "name": "condQuoteMints",
             "type": {
               "array": [
                 "pubkey",

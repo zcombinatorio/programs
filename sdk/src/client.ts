@@ -47,17 +47,17 @@ export class VaultClient {
   deriveVaultPDA(
     owner: PublicKey,
     nonce: number,
-    proposalId: number,
-    vaultType: VaultType
+    proposalId: number
   ): [PublicKey, number] {
-    return deriveVaultPDA(owner, nonce, proposalId, vaultType, this.programId);
+    return deriveVaultPDA(owner, nonce, proposalId, this.programId);
   }
 
   deriveConditionalMint(
     vaultPda: PublicKey,
+    vaultType: VaultType,
     index: number
   ): [PublicKey, number] {
-    return deriveConditionalMint(vaultPda, index, this.programId);
+    return deriveConditionalMint(vaultPda, vaultType, index, this.programId);
   }
 
   // ===========================================================================
@@ -68,23 +68,26 @@ export class VaultClient {
     return fetchVaultAccount(this.program, vaultPda);
   }
 
-  async fetchUserATAs(vaultPda: PublicKey, user: PublicKey) {
+  async fetchUserATAs(vaultPda: PublicKey, user: PublicKey, vaultType: VaultType) {
     const vault = await this.fetchVault(vaultPda);
+    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    const condMints = vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints;
     return {
-      userAta: getAssociatedTokenAddressSync(vault.mint, user),
-      userCondATAs: vault.condMints.map((m) =>
+      userAta: getAssociatedTokenAddressSync(mint, user),
+      userCondATAs: condMints.map((m) =>
         getAssociatedTokenAddressSync(m, user)
       ),
     };
   }
 
-  async fetchVaultATA(vaultPda: PublicKey) {
+  async fetchVaultATA(vaultPda: PublicKey, vaultType: VaultType) {
     const vault = await this.fetchVault(vaultPda);
-    return getAssociatedTokenAddressSync(vault.mint, vaultPda, true);
+    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    return getAssociatedTokenAddressSync(mint, vaultPda, true);
   }
 
-  async fetchUserBalances(vaultPda: PublicKey, user: PublicKey) {
-    const { userAta, userCondATAs } = await this.fetchUserATAs(vaultPda, user);
+  async fetchUserBalances(vaultPda: PublicKey, user: PublicKey, vaultType: VaultType) {
+    const { userAta, userCondATAs } = await this.fetchUserATAs(vaultPda, user, vaultType);
     const connection = this.program.provider.connection;
 
     const getBalanceSafe = async (ata: PublicKey) => {
@@ -107,8 +110,8 @@ export class VaultClient {
     return { userBalance, condBalances };
   }
 
-  async fetchVaultBalance(vaultPda: PublicKey) {
-    const vaultAta = await this.fetchVaultATA(vaultPda);
+  async fetchVaultBalance(vaultPda: PublicKey, vaultType: VaultType) {
+    const vaultAta = await this.fetchVaultATA(vaultPda, vaultType);
     try {
       const acc = await getAccount(this.program.provider.connection, vaultAta);
       return Number(acc.amount);
@@ -126,62 +129,80 @@ export class VaultClient {
 
   initialize(
     signer: PublicKey,
-    mint: PublicKey,
-    vaultType: VaultType,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
     nonce: number,
     proposalId: number
   ) {
-    const [vaultPda] = this.deriveVaultPDA(
-      signer,
-      nonce,
-      proposalId,
-      vaultType
-    );
-    const [condMint0] = this.deriveConditionalMint(vaultPda, 0);
-    const [condMint1] = this.deriveConditionalMint(vaultPda, 1);
+    const [vaultPda] = this.deriveVaultPDA(signer, nonce, proposalId);
+    const [condBaseMint0] = this.deriveConditionalMint(vaultPda, VaultType.Base, 0);
+    const [condBaseMint1] = this.deriveConditionalMint(vaultPda, VaultType.Base, 1);
+    const [condQuoteMint0] = this.deriveConditionalMint(vaultPda, VaultType.Quote, 0);
+    const [condQuoteMint1] = this.deriveConditionalMint(vaultPda, VaultType.Quote, 1);
 
     const builder = initialize(
       this.program,
       signer,
       vaultPda,
-      mint,
-      condMint0,
-      condMint1,
-      vaultType,
+      baseMint,
+      quoteMint,
+      condBaseMint0,
+      condBaseMint1,
+      condQuoteMint0,
+      condQuoteMint1,
       nonce,
       proposalId
     );
 
-    return { builder, vaultPda, condMint0, condMint1 };
+    return {
+      builder,
+      vaultPda,
+      condBaseMint0,
+      condBaseMint1,
+      condQuoteMint0,
+      condQuoteMint1,
+    };
   }
 
   async addOption(signer: PublicKey, vaultPda: PublicKey) {
     const vault = await this.fetchVault(vaultPda);
-    const [condMint] = this.deriveConditionalMint(vaultPda, vault.numOptions);
+    const [condBaseMint] = this.deriveConditionalMint(vaultPda, VaultType.Base, vault.numOptions);
+    const [condQuoteMint] = this.deriveConditionalMint(vaultPda, VaultType.Quote, vault.numOptions);
 
     const builder = addOption(
       this.program,
       signer,
       vaultPda,
-      vault.mint,
-      condMint
+      vault.baseMint,
+      vault.quoteMint,
+      condBaseMint,
+      condQuoteMint
     );
 
-    return { builder, condMint };
+    return { builder, condBaseMint, condQuoteMint };
   }
 
   activate(signer: PublicKey, vaultPda: PublicKey) {
     return activate(this.program, signer, vaultPda);
   }
 
-  async deposit(signer: PublicKey, vaultPda: PublicKey, amount: BN | number) {
+  async deposit(
+    signer: PublicKey,
+    vaultPda: PublicKey,
+    vaultType: VaultType,
+    amount: BN | number
+  ) {
     const vault = await this.fetchVault(vaultPda);
+    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    const condMints = vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints;
+
     const builder = deposit(
       this.program,
       signer,
       vaultPda,
-      vault.mint,
-      vault.condMints,
+      mint,
+      condMints,
+      vaultType,
       amount
     );
 
@@ -189,7 +210,7 @@ export class VaultClient {
       units: MAX_COMPUTE_UNITS,
     });
 
-    if (vault.mint.equals(NATIVE_MINT)) {
+    if (mint.equals(NATIVE_MINT)) {
       const amountBN = typeof amount === "number" ? new BN(amount) : amount;
       const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
       const wrapIxs = [
@@ -213,14 +234,23 @@ export class VaultClient {
     return builder.preInstructions([computeBudgetIx]);
   }
 
-  async withdraw(signer: PublicKey, vaultPda: PublicKey, amount: BN | number) {
+  async withdraw(
+    signer: PublicKey,
+    vaultPda: PublicKey,
+    vaultType: VaultType,
+    amount: BN | number
+  ) {
     const vault = await this.fetchVault(vaultPda);
+    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    const condMints = vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints;
+
     const builder = withdraw(
       this.program,
       signer,
       vaultPda,
-      vault.mint,
-      vault.condMints,
+      mint,
+      condMints,
+      vaultType,
       amount
     );
 
@@ -228,7 +258,7 @@ export class VaultClient {
       units: MAX_COMPUTE_UNITS,
     });
 
-    if (vault.mint.equals(NATIVE_MINT)) {
+    if (mint.equals(NATIVE_MINT)) {
       const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
       const unwrapIx = createCloseAccountInstruction(wsolAta, signer, signer);
       return builder
@@ -243,21 +273,25 @@ export class VaultClient {
     return finalize(this.program, signer, vaultPda, winningIdx);
   }
 
-  async redeemWinnings(signer: PublicKey, vaultPda: PublicKey) {
+  async redeemWinnings(signer: PublicKey, vaultPda: PublicKey, vaultType: VaultType) {
     const vault = await this.fetchVault(vaultPda);
+    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    const condMints = vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints;
+
     const builder = redeemWinnings(
       this.program,
       signer,
       vaultPda,
-      vault.mint,
-      vault.condMints
+      mint,
+      condMints,
+      vaultType
     );
 
     const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
       units: MAX_COMPUTE_UNITS,
     });
 
-    if (vault.mint.equals(NATIVE_MINT)) {
+    if (mint.equals(NATIVE_MINT)) {
       const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
       const unwrapIx = createCloseAccountInstruction(wsolAta, signer, signer);
       return builder
