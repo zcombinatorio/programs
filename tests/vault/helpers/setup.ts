@@ -18,7 +18,8 @@ export interface TestContext {
 export interface FundedUser {
   keypair: Keypair;
   wallet: anchor.Wallet;
-  ata: PublicKey;
+  baseAta: PublicKey;
+  quoteAta: PublicKey;
 }
 
 /**
@@ -49,12 +50,13 @@ export async function createTestMint(
 }
 
 /**
- * Create a funded user with SOL and tokens
+ * Create a funded user with SOL and tokens for both base and quote mints
  */
 export async function createFundedUser(
   provider: anchor.AnchorProvider,
   wallet: anchor.Wallet,
-  mint: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
   amount: number = FUNDING_AMOUNT
 ): Promise<FundedUser> {
   const keypair = Keypair.generate();
@@ -67,28 +69,43 @@ export async function createFundedUser(
   );
   await provider.connection.confirmTransaction(sig);
 
-  // Create ATA and fund with tokens
-  const ata = await getOrCreateAssociatedTokenAccount(
+  // Create ATA and fund with base tokens
+  const baseAta = await getOrCreateAssociatedTokenAccount(
     provider.connection,
-    wallet.payer, // payer for ATA creation
-    mint,
+    wallet.payer,
+    baseMint,
     keypair.publicKey
   );
-
-  // Mint tokens to user
   await mintTo(
     provider.connection,
     wallet.payer,
-    mint,
-    ata.address,
-    wallet.publicKey, // mint authority
+    baseMint,
+    baseAta.address,
+    wallet.publicKey,
+    amount
+  );
+
+  // Create ATA and fund with quote tokens
+  const quoteAta = await getOrCreateAssociatedTokenAccount(
+    provider.connection,
+    wallet.payer,
+    quoteMint,
+    keypair.publicKey
+  );
+  await mintTo(
+    provider.connection,
+    wallet.payer,
+    quoteMint,
+    quoteAta.address,
+    wallet.publicKey,
     amount
   );
 
   return {
     keypair,
     wallet: userWallet,
-    ata: ata.address,
+    baseAta: baseAta.address,
+    quoteAta: quoteAta.address,
   };
 }
 

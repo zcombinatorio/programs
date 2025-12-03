@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { PublicKey } from "@solana/web3.js";
 
-import { VaultClient, VaultState } from "../../../sdk/src";
+import { VaultClient, VaultState, VaultType } from "../../../sdk/src";
 
 /**
  * Assert that a promise rejects with a specific Anchor error code
@@ -91,9 +91,10 @@ export async function expectCondBalances(
   client: VaultClient,
   vaultPda: PublicKey,
   user: PublicKey,
+  vaultType: VaultType,
   expectedBalances: number[]
 ): Promise<void> {
-  const { condBalances } = await client.fetchUserBalances(vaultPda, user);
+  const { condBalances } = await client.fetchUserBalances(vaultPda, user, vaultType);
   expect(condBalances).to.deep.equal(
     expectedBalances,
     `Conditional balances mismatch`
@@ -106,9 +107,10 @@ export async function expectCondBalances(
 export async function expectVaultBalance(
   client: VaultClient,
   vaultPda: PublicKey,
+  vaultType: VaultType,
   expectedBalance: number
 ): Promise<void> {
-  const balance = await client.fetchVaultBalance(vaultPda);
+  const balance = await client.fetchVaultBalance(vaultPda, vaultType);
   expect(balance).to.equal(
     expectedBalance,
     `Expected vault balance ${expectedBalance} but got ${balance}`
@@ -141,14 +143,15 @@ export interface BalanceExpectation {
 export async function expectAllBalances(
   client: VaultClient,
   vaultPda: PublicKey,
+  vaultType: VaultType,
   expectations: BalanceExpectation[],
   expectedVaultBalance: number
 ): Promise<void> {
   // Check vault balance
-  await expectVaultBalance(client, vaultPda, expectedVaultBalance);
+  await expectVaultBalance(client, vaultPda, vaultType, expectedVaultBalance);
 
   // Check each user's conditional balances
   for (const exp of expectations) {
-    await expectCondBalances(client, vaultPda, exp.user, exp.condBalances);
+    await expectCondBalances(client, vaultPda, exp.user, vaultType, exp.condBalances);
   }
 }

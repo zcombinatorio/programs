@@ -10,7 +10,7 @@ import {
   createTestMint,
   fundOwnerWallet,
   createVaultInSetupState,
-  sendWithComputeBudget,
+  sendAndLog,
   expectVaultState,
   expectNumOptions,
   expectCondBalances,
@@ -25,37 +25,48 @@ describe("Vault Lifecycle", () => {
   // Parameterized tests for each option count
   OPTION_COUNTS.forEach((numOptions) => {
     describe(`with ${numOptions} options`, () => {
-      let mint: PublicKey;
+      let baseMint: PublicKey;
+      let quoteMint: PublicKey;
       let vaultPda: PublicKey;
-      let condMints: PublicKey[];
+      let condBaseMints: PublicKey[];
+      let condQuoteMints: PublicKey[];
       const nonce = numOptions; // Use numOptions as unique nonce (2 or 10)
       const proposalId = numOptions; // Same as nonce for unique PDA per test
 
       before(async () => {
-        // Create fresh mint for this test suite
-        mint = await createTestMint(provider, wallet);
-        await fundOwnerWallet(provider, wallet, mint);
+        // Create fresh mints for this test suite
+        baseMint = await createTestMint(provider, wallet);
+        quoteMint = await createTestMint(provider, wallet);
+        await fundOwnerWallet(provider, wallet, baseMint);
+        await fundOwnerWallet(provider, wallet, quoteMint);
 
         // Initialize vault
-        const { builder, vaultPda: pda, condMint0, condMint1 } = client.initialize(
+        const {
+          builder,
+          vaultPda: pda,
+          condBaseMint0,
+          condBaseMint1,
+          condQuoteMint0,
+          condQuoteMint1,
+        } = client.initialize(
           wallet.publicKey,
-          mint,
-          VaultType.Base,
+          baseMint,
+          quoteMint,
           nonce,
           proposalId
         );
         await builder.rpc();
         vaultPda = pda;
-        condMints = [condMint0, condMint1];
+        condBaseMints = [condBaseMint0, condBaseMint1];
+        condQuoteMints = [condQuoteMint0, condQuoteMint1];
 
         // Add additional options to reach target
         for (let i = 2; i < numOptions; i++) {
-          const { builder: addBuilder, condMint } = await client.addOption(
-            wallet.publicKey,
-            vaultPda
-          );
+          const { builder: addBuilder, condBaseMint, condQuoteMint } =
+            await client.addOption(wallet.publicKey, vaultPda);
           await addBuilder.rpc();
-          condMints.push(condMint);
+          condBaseMints.push(condBaseMint);
+          condQuoteMints.push(condQuoteMint);
         }
       });
 
@@ -63,7 +74,8 @@ describe("Vault Lifecycle", () => {
         it("verifies vault initialized with correct options", async () => {
           const vault = await client.fetchVault(vaultPda);
           expect(vault.owner.toBase58()).to.equal(wallet.publicKey.toBase58());
-          expect(vault.mint.toBase58()).to.equal(mint.toBase58());
+          expect(vault.baseMint.toBase58()).to.equal(baseMint.toBase58());
+          expect(vault.quoteMint.toBase58()).to.equal(quoteMint.toBase58());
           expect(vault.numOptions).to.equal(numOptions);
           expect(vault.state).to.equal("setup");
           expect(vault.nonce).to.equal(nonce);
@@ -80,26 +92,29 @@ describe("Vault Lifecycle", () => {
         it("deposits and receives conditional tokens", async () => {
           const { userBalance: initialBalance } = await client.fetchUserBalances(
             vaultPda,
-            wallet.publicKey
+            wallet.publicKey,
+            VaultType.Base
           );
 
           const builder = await client.deposit(
             wallet.publicKey,
             vaultPda,
+            VaultType.Base,
             DEPOSIT_AMOUNT
           );
-          await sendWithComputeBudget(builder, client, wallet, numOptions, "deposit");
+          await sendAndLog(builder, client, wallet);
 
           // Verify user received conditional tokens for all options
           await expectCondBalances(
             client,
             vaultPda,
             wallet.publicKey,
+            VaultType.Base,
             Array(numOptions).fill(DEPOSIT_AMOUNT)
           );
 
           // Verify vault received the tokens
-          await expectVaultBalance(client, vaultPda, DEPOSIT_AMOUNT);
+          await expectVaultBalance(client, vaultPda, VaultType.Base, DEPOSIT_AMOUNT);
         });
 
         it("withdraws partial amount", async () => {
@@ -108,18 +123,20 @@ describe("Vault Lifecycle", () => {
           const builder = await client.withdraw(
             wallet.publicKey,
             vaultPda,
+            VaultType.Base,
             withdrawAmount
           );
-          await sendWithComputeBudget(builder, client, wallet, numOptions, "withdraw");
+          await sendAndLog(builder, client, wallet);
 
           const expectedBalance = DEPOSIT_AMOUNT - withdrawAmount;
           await expectCondBalances(
             client,
             vaultPda,
             wallet.publicKey,
+            VaultType.Base,
             Array(numOptions).fill(expectedBalance)
           );
-          await expectVaultBalance(client, vaultPda, expectedBalance);
+          await expectVaultBalance(client, vaultPda, VaultType.Base, expectedBalance);
         });
 
         it("deposits additional amount", async () => {
@@ -128,18 +145,20 @@ describe("Vault Lifecycle", () => {
           const builder = await client.deposit(
             wallet.publicKey,
             vaultPda,
+            VaultType.Base,
             additionalDeposit
           );
-          await sendWithComputeBudget(builder, client, wallet, numOptions);
+          await sendAndLog(builder, client, wallet);
 
           const expectedBalance = DEPOSIT_AMOUNT / 2 + additionalDeposit;
           await expectCondBalances(
             client,
             vaultPda,
             wallet.publicKey,
+            VaultType.Base,
             Array(numOptions).fill(expectedBalance)
           );
-          await expectVaultBalance(client, vaultPda, expectedBalance);
+          await expectVaultBalance(client, vaultPda, VaultType.Base, expectedBalance);
         });
       });
 
@@ -155,22 +174,27 @@ describe("Vault Lifecycle", () => {
 
         it("redeems winnings", async () => {
           const { userBalance: initialBalance, condBalances } =
-            await client.fetchUserBalances(vaultPda, wallet.publicKey);
+            await client.fetchUserBalances(vaultPda, wallet.publicKey, VaultType.Base);
           const winningAmount = condBalances[winningIdx];
 
-          const builder = await client.redeemWinnings(wallet.publicKey, vaultPda);
-          await sendWithComputeBudget(builder, client, wallet, numOptions, "redeem");
+          const builder = await client.redeemWinnings(
+            wallet.publicKey,
+            vaultPda,
+            VaultType.Base
+          );
+          await sendAndLog(builder, client, wallet);
 
           const { userBalance: finalBalance } = await client.fetchUserBalances(
             vaultPda,
-            wallet.publicKey
+            wallet.publicKey,
+            VaultType.Base
           );
 
           // User should receive their winning token balance
           expect(finalBalance - initialBalance).to.equal(winningAmount);
 
           // Vault should be empty
-          await expectVaultBalance(client, vaultPda, 0);
+          await expectVaultBalance(client, vaultPda, VaultType.Base, 0);
         });
       });
     });

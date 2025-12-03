@@ -11,7 +11,7 @@ import {
   createFundedUser,
   createUserClient,
   createVaultInActiveState,
-  sendWithComputeBudget,
+  sendAndLog,
   expectCondBalances,
   expectVaultBalance,
   FundedUser,
@@ -20,18 +20,21 @@ import {
 describe("Multi-User Redemption", () => {
   const { provider, wallet, client } = getTestContext();
 
-  let mint: PublicKey;
+  let baseMint: PublicKey;
+  let quoteMint: PublicKey;
   let alice: FundedUser;
   let bob: FundedUser;
   let charlie: FundedUser;
 
   before(async () => {
-    mint = await createTestMint(provider, wallet);
-    await fundOwnerWallet(provider, wallet, mint);
+    baseMint = await createTestMint(provider, wallet);
+    quoteMint = await createTestMint(provider, wallet);
+    await fundOwnerWallet(provider, wallet, baseMint);
+    await fundOwnerWallet(provider, wallet, quoteMint);
 
-    alice = await createFundedUser(provider, wallet, mint, 50 * ONE_TOKEN);
-    bob = await createFundedUser(provider, wallet, mint, 50 * ONE_TOKEN);
-    charlie = await createFundedUser(provider, wallet, mint, 50 * ONE_TOKEN);
+    alice = await createFundedUser(provider, wallet, baseMint, quoteMint, 50 * ONE_TOKEN);
+    bob = await createFundedUser(provider, wallet, baseMint, quoteMint, 50 * ONE_TOKEN);
+    charlie = await createFundedUser(provider, wallet, baseMint, quoteMint, 50 * ONE_TOKEN);
   });
 
   describe("Multiple Users Redeem After Finalization", () => {
@@ -44,7 +47,7 @@ describe("Multi-User Redemption", () => {
     const charlieDeposit = 2 * ONE_TOKEN;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 50,
         proposalId: 50,
@@ -59,9 +62,10 @@ describe("Multi-User Redemption", () => {
       const aliceBuilder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         aliceDeposit
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         aliceBuilder,
         aliceClient,
         alice.wallet,
@@ -71,16 +75,18 @@ describe("Multi-User Redemption", () => {
       const bobBuilder = await bobClient.deposit(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         bobDeposit
       );
-      await sendWithComputeBudget(bobBuilder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(bobBuilder, bobClient, bob.wallet);
 
       const charlieBuilder = await charlieClient.deposit(
         charlie.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         charlieDeposit
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         charlieBuilder,
         charlieClient,
         charlie.wallet,
@@ -96,18 +102,21 @@ describe("Multi-User Redemption", () => {
 
       const { userBalance: balanceBefore } = await aliceClient.fetchUserBalances(
         vaultPda,
-        alice.keypair.publicKey
+        alice.keypair.publicKey,
+        VaultType.Base
       );
 
       const builder = await aliceClient.redeemWinnings(
         alice.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       const { userBalance: balanceAfter } = await aliceClient.fetchUserBalances(
         vaultPda,
-        alice.keypair.publicKey
+        alice.keypair.publicKey,
+        VaultType.Base
       );
 
       expect(balanceAfter - balanceBefore).to.equal(aliceDeposit);
@@ -118,18 +127,21 @@ describe("Multi-User Redemption", () => {
 
       const { userBalance: balanceBefore } = await bobClient.fetchUserBalances(
         vaultPda,
-        bob.keypair.publicKey
+        bob.keypair.publicKey,
+        VaultType.Base
       );
 
       const builder = await bobClient.redeemWinnings(
         bob.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(builder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(builder, bobClient, bob.wallet);
 
       const { userBalance: balanceAfter } = await bobClient.fetchUserBalances(
         vaultPda,
-        bob.keypair.publicKey
+        bob.keypair.publicKey,
+        VaultType.Base
       );
 
       expect(balanceAfter - balanceBefore).to.equal(bobDeposit);
@@ -140,14 +152,16 @@ describe("Multi-User Redemption", () => {
 
       const { userBalance: balanceBefore } = await charlieClient.fetchUserBalances(
         vaultPda,
-        charlie.keypair.publicKey
+        charlie.keypair.publicKey,
+        VaultType.Base
       );
 
       const builder = await charlieClient.redeemWinnings(
         charlie.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         builder,
         charlieClient,
         charlie.wallet,
@@ -156,14 +170,15 @@ describe("Multi-User Redemption", () => {
 
       const { userBalance: balanceAfter } = await charlieClient.fetchUserBalances(
         vaultPda,
-        charlie.keypair.publicKey
+        charlie.keypair.publicKey,
+        VaultType.Base
       );
 
       expect(balanceAfter - balanceBefore).to.equal(charlieDeposit);
     });
 
     it("vault balance is 0 after all redemptions", async () => {
-      await expectVaultBalance(client, vaultPda, 0);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 0);
     });
   });
 
@@ -173,7 +188,7 @@ describe("Multi-User Redemption", () => {
     const winningIdx = 1;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 51,
         proposalId: 51,
@@ -187,9 +202,10 @@ describe("Multi-User Redemption", () => {
       const aliceBuilder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         5 * ONE_TOKEN
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         aliceBuilder,
         aliceClient,
         alice.wallet,
@@ -199,9 +215,10 @@ describe("Multi-User Redemption", () => {
       const bobBuilder = await bobClient.deposit(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         3 * ONE_TOKEN
       );
-      await sendWithComputeBudget(bobBuilder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(bobBuilder, bobClient, bob.wallet);
 
       await client.finalize(wallet.publicKey, vaultPda, winningIdx).rpc();
     });
@@ -211,18 +228,21 @@ describe("Multi-User Redemption", () => {
 
       const { userBalance: balanceBefore } = await bobClient.fetchUserBalances(
         vaultPda,
-        bob.keypair.publicKey
+        bob.keypair.publicKey,
+        VaultType.Base
       );
 
       const builder = await bobClient.redeemWinnings(
         bob.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(builder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(builder, bobClient, bob.wallet);
 
       const { userBalance: balanceAfter } = await bobClient.fetchUserBalances(
         vaultPda,
-        bob.keypair.publicKey
+        bob.keypair.publicKey,
+        VaultType.Base
       );
 
       expect(balanceAfter - balanceBefore).to.equal(3 * ONE_TOKEN);
@@ -233,18 +253,21 @@ describe("Multi-User Redemption", () => {
 
       const { userBalance: balanceBefore } = await aliceClient.fetchUserBalances(
         vaultPda,
-        alice.keypair.publicKey
+        alice.keypair.publicKey,
+        VaultType.Base
       );
 
       const builder = await aliceClient.redeemWinnings(
         alice.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       const { userBalance: balanceAfter } = await aliceClient.fetchUserBalances(
         vaultPda,
-        alice.keypair.publicKey
+        alice.keypair.publicKey,
+        VaultType.Base
       );
 
       // Order doesn't matter - Alice gets her amount
@@ -258,7 +281,7 @@ describe("Multi-User Redemption", () => {
     const winningIdx = 0;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 52,
         proposalId: 52,
@@ -270,9 +293,10 @@ describe("Multi-User Redemption", () => {
       const aliceBuilder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         5 * ONE_TOKEN
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         aliceBuilder,
         aliceClient,
         alice.wallet,
@@ -284,9 +308,10 @@ describe("Multi-User Redemption", () => {
       const bobDepositBuilder = await bobClient.deposit(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         3 * ONE_TOKEN
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         bobDepositBuilder,
         bobClient,
         bob.wallet,
@@ -296,9 +321,10 @@ describe("Multi-User Redemption", () => {
       const bobWithdrawBuilder = await bobClient.withdraw(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         3 * ONE_TOKEN
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         bobWithdrawBuilder,
         bobClient,
         bob.wallet,
@@ -313,19 +339,22 @@ describe("Multi-User Redemption", () => {
 
       const { userBalance: balanceBefore } = await bobClient.fetchUserBalances(
         vaultPda,
-        bob.keypair.publicKey
+        bob.keypair.publicKey,
+        VaultType.Base
       );
 
       // This should succeed but transfer 0
       const builder = await bobClient.redeemWinnings(
         bob.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(builder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(builder, bobClient, bob.wallet);
 
       const { userBalance: balanceAfter } = await bobClient.fetchUserBalances(
         vaultPda,
-        bob.keypair.publicKey
+        bob.keypair.publicKey,
+        VaultType.Base
       );
 
       // Bob receives nothing
@@ -337,11 +366,12 @@ describe("Multi-User Redemption", () => {
 
       const builder = await aliceClient.redeemWinnings(
         alice.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
-      await expectVaultBalance(client, vaultPda, 0);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 0);
     });
   });
 
@@ -350,7 +380,7 @@ describe("Multi-User Redemption", () => {
     const numOptions = 2;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 53,
         proposalId: 53,
@@ -362,9 +392,10 @@ describe("Multi-User Redemption", () => {
       const aliceBuilder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         5 * ONE_TOKEN
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         aliceBuilder,
         aliceClient,
         alice.wallet,
@@ -379,16 +410,18 @@ describe("Multi-User Redemption", () => {
 
       const { userBalance: balanceBefore } = await charlieClient.fetchUserBalances(
         vaultPda,
-        charlie.keypair.publicKey
+        charlie.keypair.publicKey,
+        VaultType.Base
       );
 
       // Charlie has no ATAs for conditional tokens
       // The redeem_winnings handler gracefully handles empty ATAs
       const builder = await charlieClient.redeemWinnings(
         charlie.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         builder,
         charlieClient,
         charlie.wallet,
@@ -397,7 +430,8 @@ describe("Multi-User Redemption", () => {
 
       const { userBalance: balanceAfter } = await charlieClient.fetchUserBalances(
         vaultPda,
-        charlie.keypair.publicKey
+        charlie.keypair.publicKey,
+        VaultType.Base
       );
 
       expect(balanceAfter - balanceBefore).to.equal(0);
@@ -409,7 +443,7 @@ describe("Multi-User Redemption", () => {
     const numOptions = 3;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 54,
         proposalId: 54,
@@ -425,15 +459,18 @@ describe("Multi-User Redemption", () => {
       // Record initial balances
       const { userBalance: aliceInitial } = await aliceClient.fetchUserBalances(
         vaultPda,
-        alice.keypair.publicKey
+        alice.keypair.publicKey,
+        VaultType.Base
       );
       const { userBalance: bobInitial } = await bobClient.fetchUserBalances(
         vaultPda,
-        bob.keypair.publicKey
+        bob.keypair.publicKey,
+        VaultType.Base
       );
       const { userBalance: charlieInitial } = await charlieClient.fetchUserBalances(
         vaultPda,
-        charlie.keypair.publicKey
+        charlie.keypair.publicKey,
+        VaultType.Base
       );
 
       // Deposits
@@ -445,26 +482,29 @@ describe("Multi-User Redemption", () => {
       const ab = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         aliceDeposit
       );
-      await sendWithComputeBudget(ab, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(ab, aliceClient, alice.wallet);
 
       const bb = await bobClient.deposit(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         bobDeposit
       );
-      await sendWithComputeBudget(bb, bobClient, bob.wallet, numOptions);
+      await sendAndLog(bb, bobClient, bob.wallet);
 
       const cb = await charlieClient.deposit(
         charlie.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         charlieDeposit
       );
-      await sendWithComputeBudget(cb, charlieClient, charlie.wallet, numOptions);
+      await sendAndLog(cb, charlieClient, charlie.wallet);
 
       // Verify vault has total deposits
-      await expectVaultBalance(client, vaultPda, totalDeposits);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, totalDeposits);
 
       // Finalize
       await client.finalize(wallet.publicKey, vaultPda, 0).rpc();
@@ -472,31 +512,40 @@ describe("Multi-User Redemption", () => {
       // All redeem
       const ar = await aliceClient.redeemWinnings(
         alice.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(ar, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(ar, aliceClient, alice.wallet);
 
-      const br = await bobClient.redeemWinnings(bob.keypair.publicKey, vaultPda);
-      await sendWithComputeBudget(br, bobClient, bob.wallet, numOptions);
+      const br = await bobClient.redeemWinnings(
+        bob.keypair.publicKey,
+        vaultPda,
+        VaultType.Base
+      );
+      await sendAndLog(br, bobClient, bob.wallet);
 
       const cr = await charlieClient.redeemWinnings(
         charlie.keypair.publicKey,
-        vaultPda
+        vaultPda,
+        VaultType.Base
       );
-      await sendWithComputeBudget(cr, charlieClient, charlie.wallet, numOptions);
+      await sendAndLog(cr, charlieClient, charlie.wallet);
 
       // Final balances
       const { userBalance: aliceFinal } = await aliceClient.fetchUserBalances(
         vaultPda,
-        alice.keypair.publicKey
+        alice.keypair.publicKey,
+        VaultType.Base
       );
       const { userBalance: bobFinal } = await bobClient.fetchUserBalances(
         vaultPda,
-        bob.keypair.publicKey
+        bob.keypair.publicKey,
+        VaultType.Base
       );
       const { userBalance: charlieFinal } = await charlieClient.fetchUserBalances(
         vaultPda,
-        charlie.keypair.publicKey
+        charlie.keypair.publicKey,
+        VaultType.Base
       );
 
       // Net change for each user (should be 0 since they get back what they put in)
@@ -514,7 +563,7 @@ describe("Multi-User Redemption", () => {
       expect(totalRedemptions).to.equal(totalDeposits);
 
       // Vault should be empty
-      await expectVaultBalance(client, vaultPda, 0);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 0);
     });
   });
 });

@@ -15,13 +15,16 @@ import {
 describe("Authorization Errors", () => {
   const { provider, wallet, client } = getTestContext();
 
-  let mint: PublicKey;
+  let baseMint: PublicKey;
+  let quoteMint: PublicKey;
   let attackerKeypair: Keypair;
   let attackerClient: VaultClient;
 
   before(async () => {
-    mint = await createTestMint(provider, wallet);
-    await fundOwnerWallet(provider, wallet, mint);
+    baseMint = await createTestMint(provider, wallet);
+    quoteMint = await createTestMint(provider, wallet);
+    await fundOwnerWallet(provider, wallet, baseMint);
+    await fundOwnerWallet(provider, wallet, quoteMint);
 
     // Create attacker wallet
     attackerKeypair = Keypair.generate();
@@ -37,7 +40,7 @@ describe("Authorization Errors", () => {
   describe("Unauthorized - add_option", () => {
     it("rejects add_option from non-owner", async () => {
       // Owner creates vault
-      const ctx = await createVaultInSetupState(client, wallet, mint);
+      const ctx = await createVaultInSetupState(client, wallet, baseMint, quoteMint);
 
       // Attacker tries to add option
       const { builder } = await attackerClient.addOption(
@@ -51,7 +54,7 @@ describe("Authorization Errors", () => {
   describe("Unauthorized - activate", () => {
     it("rejects activate from non-owner", async () => {
       // Owner creates vault
-      const ctx = await createVaultInSetupState(client, wallet, mint);
+      const ctx = await createVaultInSetupState(client, wallet, baseMint, quoteMint);
 
       // Attacker tries to activate
       await expectAnchorError(
@@ -64,7 +67,7 @@ describe("Authorization Errors", () => {
   describe("Unauthorized - finalize", () => {
     it("rejects finalize from non-owner", async () => {
       // Owner creates and activates vault
-      const ctx = await createVaultInActiveState(client, wallet, mint);
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint);
 
       // Attacker tries to finalize
       await expectAnchorError(

@@ -11,7 +11,7 @@ import {
   createFundedUser,
   createUserClient,
   createVaultInActiveState,
-  sendWithComputeBudget,
+  sendAndLog,
   expectCondBalances,
   expectVaultBalance,
   FundedUser,
@@ -20,18 +20,21 @@ import {
 describe("Interleaved Deposit/Withdraw", () => {
   const { provider, wallet, client } = getTestContext();
 
-  let mint: PublicKey;
+  let baseMint: PublicKey;
+  let quoteMint: PublicKey;
   let alice: FundedUser;
   let bob: FundedUser;
   let charlie: FundedUser;
 
   before(async () => {
-    mint = await createTestMint(provider, wallet);
-    await fundOwnerWallet(provider, wallet, mint);
+    baseMint = await createTestMint(provider, wallet);
+    quoteMint = await createTestMint(provider, wallet);
+    await fundOwnerWallet(provider, wallet, baseMint);
+    await fundOwnerWallet(provider, wallet, quoteMint);
 
-    alice = await createFundedUser(provider, wallet, mint, 50 * ONE_TOKEN);
-    bob = await createFundedUser(provider, wallet, mint, 50 * ONE_TOKEN);
-    charlie = await createFundedUser(provider, wallet, mint, 50 * ONE_TOKEN);
+    alice = await createFundedUser(provider, wallet, baseMint, quoteMint, 50 * ONE_TOKEN);
+    bob = await createFundedUser(provider, wallet, baseMint, quoteMint, 50 * ONE_TOKEN);
+    charlie = await createFundedUser(provider, wallet, baseMint, quoteMint, 50 * ONE_TOKEN);
   });
 
   describe("Interleaved Operations", () => {
@@ -39,7 +42,7 @@ describe("Interleaved Deposit/Withdraw", () => {
     const numOptions = 3;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 40,
         proposalId: 40,
@@ -54,15 +57,17 @@ describe("Interleaved Deposit/Withdraw", () => {
       const builder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         amount
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
-      await expectVaultBalance(client, vaultPda, 5 * ONE_TOKEN);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 5 * ONE_TOKEN);
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(5 * ONE_TOKEN)
       );
     });
@@ -74,15 +79,17 @@ describe("Interleaved Deposit/Withdraw", () => {
       const builder = await bobClient.deposit(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         amount
       );
-      await sendWithComputeBudget(builder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(builder, bobClient, bob.wallet);
 
-      await expectVaultBalance(client, vaultPda, 8 * ONE_TOKEN);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 8 * ONE_TOKEN);
       await expectCondBalances(
         client,
         vaultPda,
         bob.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(3 * ONE_TOKEN)
       );
     });
@@ -94,15 +101,17 @@ describe("Interleaved Deposit/Withdraw", () => {
       const builder = await aliceClient.withdraw(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         withdrawAmount
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
-      await expectVaultBalance(client, vaultPda, 6 * ONE_TOKEN);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 6 * ONE_TOKEN);
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(3 * ONE_TOKEN)
       );
     });
@@ -114,15 +123,17 @@ describe("Interleaved Deposit/Withdraw", () => {
       const builder = await bobClient.deposit(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         amount
       );
-      await sendWithComputeBudget(builder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(builder, bobClient, bob.wallet);
 
-      await expectVaultBalance(client, vaultPda, 7 * ONE_TOKEN);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 7 * ONE_TOKEN);
       await expectCondBalances(
         client,
         vaultPda,
         bob.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(4 * ONE_TOKEN)
       );
     });
@@ -133,6 +144,7 @@ describe("Interleaved Deposit/Withdraw", () => {
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(3 * ONE_TOKEN)
       );
 
@@ -141,11 +153,12 @@ describe("Interleaved Deposit/Withdraw", () => {
         client,
         vaultPda,
         bob.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(4 * ONE_TOKEN)
       );
 
       // Vault: 3M + 4M = 7M
-      await expectVaultBalance(client, vaultPda, 7 * ONE_TOKEN);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 7 * ONE_TOKEN);
     });
   });
 
@@ -154,7 +167,7 @@ describe("Interleaved Deposit/Withdraw", () => {
     const numOptions = 2;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 41,
         proposalId: 41,
@@ -170,9 +183,10 @@ describe("Interleaved Deposit/Withdraw", () => {
       const aliceBuilder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         5 * ONE_TOKEN
       );
-      await sendWithComputeBudget(
+      await sendAndLog(
         aliceBuilder,
         aliceClient,
         alice.wallet,
@@ -183,11 +197,12 @@ describe("Interleaved Deposit/Withdraw", () => {
       const bobBuilder = await bobClient.deposit(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         3 * ONE_TOKEN
       );
-      await sendWithComputeBudget(bobBuilder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(bobBuilder, bobClient, bob.wallet);
 
-      await expectVaultBalance(client, vaultPda, 8 * ONE_TOKEN);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 8 * ONE_TOKEN);
     });
 
     it("Alice withdraws everything", async () => {
@@ -196,20 +211,22 @@ describe("Interleaved Deposit/Withdraw", () => {
       const builder = await aliceClient.withdraw(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         5 * ONE_TOKEN
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       // Alice should have 0 conditional tokens
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(0)
       );
 
       // Vault should only have Bob's deposit
-      await expectVaultBalance(client, vaultPda, 3 * ONE_TOKEN);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 3 * ONE_TOKEN);
     });
 
     it("Bob's balance is unaffected", async () => {
@@ -217,6 +234,7 @@ describe("Interleaved Deposit/Withdraw", () => {
         client,
         vaultPda,
         bob.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(3 * ONE_TOKEN)
       );
     });
@@ -227,7 +245,7 @@ describe("Interleaved Deposit/Withdraw", () => {
     const numOptions = 2;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 42,
         proposalId: 42,
@@ -239,9 +257,10 @@ describe("Interleaved Deposit/Withdraw", () => {
       const builder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         ONE_TOKEN
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
     });
 
     it("withdraws 333,333 (first partial)", async () => {
@@ -250,18 +269,20 @@ describe("Interleaved Deposit/Withdraw", () => {
       const builder = await aliceClient.withdraw(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         333_333
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       const expected = ONE_TOKEN - 333_333; // 666,667
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(expected)
       );
-      await expectVaultBalance(client, vaultPda, expected);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, expected);
     });
 
     it("withdraws 333,333 (second partial)", async () => {
@@ -270,18 +291,20 @@ describe("Interleaved Deposit/Withdraw", () => {
       const builder = await aliceClient.withdraw(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         333_333
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       const expected = 333_334; // 666,667 - 333,333
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(expected)
       );
-      await expectVaultBalance(client, vaultPda, expected);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, expected);
     });
 
     it("withdraws remaining 333,334 (exact remainder)", async () => {
@@ -290,17 +313,19 @@ describe("Interleaved Deposit/Withdraw", () => {
       const builder = await aliceClient.withdraw(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         333_334
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(0)
       );
-      await expectVaultBalance(client, vaultPda, 0);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 0);
     });
   });
 });

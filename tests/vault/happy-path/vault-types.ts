@@ -9,7 +9,7 @@ import {
   createTestMint,
   fundOwnerWallet,
   createVaultInActiveState,
-  sendWithComputeBudget,
+  sendAndLog,
   expectVaultState,
   expectCondBalances,
   expectVaultBalance,
@@ -18,25 +18,31 @@ import {
 describe("Vault Types", () => {
   const { provider, wallet, client } = getTestContext();
 
-  let mint: PublicKey;
+  let baseMint: PublicKey;
+  let quoteMint: PublicKey;
 
   before(async () => {
-    mint = await createTestMint(provider, wallet);
-    await fundOwnerWallet(provider, wallet, mint);
+    baseMint = await createTestMint(provider, wallet);
+    quoteMint = await createTestMint(provider, wallet);
+    await fundOwnerWallet(provider, wallet, baseMint);
+    await fundOwnerWallet(provider, wallet, quoteMint);
   });
 
-  describe("VaultType.Quote", () => {
+  describe("Base and Quote Operations on Same Vault", () => {
     let vaultPda: PublicKey;
     const numOptions = 3;
     const nonce = 20;
     const proposalId = 20;
 
     before(async () => {
-      // Initialize Quote vault
-      const { builder, vaultPda: pda } = client.initialize(
+      // Initialize vault with both base and quote mints
+      const {
+        builder,
+        vaultPda: pda,
+      } = client.initialize(
         wallet.publicKey,
-        mint,
-        VaultType.Quote,
+        baseMint,
+        quoteMint,
         nonce,
         proposalId
       );
@@ -48,54 +54,105 @@ describe("Vault Types", () => {
       await addBuilder.rpc();
     });
 
-    it("verifies Quote vault initialized correctly", async () => {
+    it("verifies vault initialized with both mints", async () => {
       const vault = await client.fetchVault(vaultPda);
-      expect(vault.vaultType).to.equal(VaultType.Quote);
+      expect(vault.baseMint.toBase58()).to.equal(baseMint.toBase58());
+      expect(vault.quoteMint.toBase58()).to.equal(quoteMint.toBase58());
       expect(vault.state).to.equal("setup");
       expect(vault.numOptions).to.equal(3);
     });
 
-    it("activates Quote vault", async () => {
+    it("activates vault", async () => {
       await client.activate(wallet.publicKey, vaultPda).rpc();
       await expectVaultState(client, vaultPda, VaultState.Active);
     });
 
-    it("deposits to Quote vault", async () => {
+    it("deposits to base side of vault", async () => {
       const builder = await client.deposit(
         wallet.publicKey,
         vaultPda,
+        VaultType.Base,
         DEPOSIT_AMOUNT
       );
-      await sendWithComputeBudget(builder, client, wallet, numOptions);
+      await sendAndLog(builder, client, wallet);
 
       await expectCondBalances(
         client,
         vaultPda,
         wallet.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(DEPOSIT_AMOUNT)
       );
-      await expectVaultBalance(client, vaultPda, DEPOSIT_AMOUNT);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, DEPOSIT_AMOUNT);
     });
 
-    it("withdraws from Quote vault", async () => {
+    it("deposits to quote side of vault", async () => {
+      const quoteDeposit = DEPOSIT_AMOUNT * 2;
+      const builder = await client.deposit(
+        wallet.publicKey,
+        vaultPda,
+        VaultType.Quote,
+        quoteDeposit
+      );
+      await sendAndLog(builder, client, wallet);
+
+      await expectCondBalances(
+        client,
+        vaultPda,
+        wallet.publicKey,
+        VaultType.Quote,
+        Array(numOptions).fill(quoteDeposit)
+      );
+      await expectVaultBalance(client, vaultPda, VaultType.Quote, quoteDeposit);
+    });
+
+    it("verifies base and quote balances are independent", async () => {
+      // Base should still have original deposit
+      await expectVaultBalance(client, vaultPda, VaultType.Base, DEPOSIT_AMOUNT);
+      await expectCondBalances(
+        client,
+        vaultPda,
+        wallet.publicKey,
+        VaultType.Base,
+        Array(numOptions).fill(DEPOSIT_AMOUNT)
+      );
+
+      // Quote should have double deposit
+      await expectVaultBalance(client, vaultPda, VaultType.Quote, DEPOSIT_AMOUNT * 2);
+      await expectCondBalances(
+        client,
+        vaultPda,
+        wallet.publicKey,
+        VaultType.Quote,
+        Array(numOptions).fill(DEPOSIT_AMOUNT * 2)
+      );
+    });
+
+    it("withdraws from base side", async () => {
       const withdrawAmount = DEPOSIT_AMOUNT / 2;
       const builder = await client.withdraw(
         wallet.publicKey,
         vaultPda,
+        VaultType.Base,
         withdrawAmount
       );
-      await sendWithComputeBudget(builder, client, wallet, numOptions);
+      await sendAndLog(builder, client, wallet);
 
       const expectedBalance = DEPOSIT_AMOUNT - withdrawAmount;
       await expectCondBalances(
         client,
         vaultPda,
         wallet.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(expectedBalance)
       );
+      await expectVaultBalance(client, vaultPda, VaultType.Base, expectedBalance);
+
+      // Quote should be unaffected
+      await expectVaultBalance(client, vaultPda, VaultType.Quote, DEPOSIT_AMOUNT * 2);
     });
 
-    it("finalizes Quote vault", async () => {
+    it("finalizes vault", async () => {
       await client.finalize(wallet.publicKey, vaultPda, 1).rpc();
       await expectVaultState(client, vaultPda, VaultState.Finalized);
 
@@ -103,95 +160,26 @@ describe("Vault Types", () => {
       expect(vault.winningIdx).to.equal(1);
     });
 
-    it("redeems from Quote vault", async () => {
-      const builder = await client.redeemWinnings(wallet.publicKey, vaultPda);
-      await sendWithComputeBudget(builder, client, wallet, numOptions);
-
-      await expectVaultBalance(client, vaultPda, 0);
-    });
-  });
-
-  describe("Parallel Base and Quote Vaults", () => {
-    let baseVaultPda: PublicKey;
-    let quoteVaultPda: PublicKey;
-    const nonce = 21;
-    const proposalId = 21;
-    const numOptions = 2;
-
-    before(async () => {
-      // Create Base vault
-      const { builder: baseBuilder, vaultPda: basePda } = client.initialize(
+    it("redeems from base side", async () => {
+      const builder = await client.redeemWinnings(
         wallet.publicKey,
-        mint,
-        VaultType.Base,
-        nonce,
-        proposalId
+        vaultPda,
+        VaultType.Base
       );
-      await baseBuilder.rpc();
-      baseVaultPda = basePda;
+      await sendAndLog(builder, client, wallet);
 
-      // Create Quote vault with same nonce/proposalId
-      const { builder: quoteBuilder, vaultPda: quotePda } = client.initialize(
-        wallet.publicKey,
-        mint,
-        VaultType.Quote,
-        nonce,
-        proposalId
-      );
-      await quoteBuilder.rpc();
-      quoteVaultPda = quotePda;
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 0);
     });
 
-    it("creates both Base and Quote vaults with different PDAs", async () => {
-      // Verify they have different PDAs
-      expect(baseVaultPda.toBase58()).to.not.equal(quoteVaultPda.toBase58());
-
-      // Verify types
-      const baseVault = await client.fetchVault(baseVaultPda);
-      const quoteVault = await client.fetchVault(quoteVaultPda);
-      expect(baseVault.vaultType).to.equal(VaultType.Base);
-      expect(quoteVault.vaultType).to.equal(VaultType.Quote);
-    });
-
-    it("operates on both vaults independently", async () => {
-      // Activate both
-      await client.activate(wallet.publicKey, baseVaultPda).rpc();
-      await client.activate(wallet.publicKey, quoteVaultPda).rpc();
-
-      // Deposit different amounts to each
-      const baseDeposit = DEPOSIT_AMOUNT;
-      const quoteDeposit = DEPOSIT_AMOUNT * 2;
-
-      const baseBuilder = await client.deposit(
+    it("redeems from quote side", async () => {
+      const builder = await client.redeemWinnings(
         wallet.publicKey,
-        baseVaultPda,
-        baseDeposit
+        vaultPda,
+        VaultType.Quote
       );
-      await sendWithComputeBudget(baseBuilder, client, wallet, numOptions);
+      await sendAndLog(builder, client, wallet);
 
-      const quoteBuilder = await client.deposit(
-        wallet.publicKey,
-        quoteVaultPda,
-        quoteDeposit
-      );
-      await sendWithComputeBudget(quoteBuilder, client, wallet, numOptions);
-
-      // Verify balances are independent
-      await expectVaultBalance(client, baseVaultPda, baseDeposit);
-      await expectVaultBalance(client, quoteVaultPda, quoteDeposit);
-
-      await expectCondBalances(
-        client,
-        baseVaultPda,
-        wallet.publicKey,
-        Array(numOptions).fill(baseDeposit)
-      );
-      await expectCondBalances(
-        client,
-        quoteVaultPda,
-        wallet.publicKey,
-        Array(numOptions).fill(quoteDeposit)
-      );
+      await expectVaultBalance(client, vaultPda, VaultType.Quote, 0);
     });
   });
 });

@@ -12,7 +12,7 @@ import {
   createFundedUser,
   createUserClient,
   createVaultInActiveState,
-  sendWithComputeBudget,
+  sendAndLog,
   expectCondBalances,
   expectVaultBalance,
   FundedUser,
@@ -21,19 +21,22 @@ import {
 describe("Multi-User Deposits", () => {
   const { provider, wallet, client } = getTestContext();
 
-  let mint: PublicKey;
+  let baseMint: PublicKey;
+  let quoteMint: PublicKey;
   let alice: FundedUser;
   let bob: FundedUser;
   let charlie: FundedUser;
 
   before(async () => {
-    mint = await createTestMint(provider, wallet);
-    await fundOwnerWallet(provider, wallet, mint);
+    baseMint = await createTestMint(provider, wallet);
+    quoteMint = await createTestMint(provider, wallet);
+    await fundOwnerWallet(provider, wallet, baseMint);
+    await fundOwnerWallet(provider, wallet, quoteMint);
 
     // Create funded users
-    alice = await createFundedUser(provider, wallet, mint, 50 * ONE_TOKEN);
-    bob = await createFundedUser(provider, wallet, mint, 50 * ONE_TOKEN);
-    charlie = await createFundedUser(provider, wallet, mint, 50 * ONE_TOKEN);
+    alice = await createFundedUser(provider, wallet, baseMint, quoteMint, 50 * ONE_TOKEN);
+    bob = await createFundedUser(provider, wallet, baseMint, quoteMint, 50 * ONE_TOKEN);
+    charlie = await createFundedUser(provider, wallet, baseMint, quoteMint, 50 * ONE_TOKEN);
   });
 
   describe("Multiple Users Deposit Different Amounts", () => {
@@ -45,7 +48,7 @@ describe("Multi-User Deposits", () => {
     const charlieDeposit = 1 * ONE_TOKEN;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 30,
         proposalId: 30,
@@ -58,17 +61,19 @@ describe("Multi-User Deposits", () => {
       const builder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         aliceDeposit
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(aliceDeposit)
       );
-      await expectVaultBalance(client, vaultPda, aliceDeposit);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, aliceDeposit);
     });
 
     it("Bob deposits 3 tokens", async () => {
@@ -76,17 +81,19 @@ describe("Multi-User Deposits", () => {
       const builder = await bobClient.deposit(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         bobDeposit
       );
-      await sendWithComputeBudget(builder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(builder, bobClient, bob.wallet);
 
       await expectCondBalances(
         client,
         vaultPda,
         bob.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(bobDeposit)
       );
-      await expectVaultBalance(client, vaultPda, aliceDeposit + bobDeposit);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, aliceDeposit + bobDeposit);
     });
 
     it("Charlie deposits 1 token", async () => {
@@ -94,26 +101,29 @@ describe("Multi-User Deposits", () => {
       const builder = await charlieClient.deposit(
         charlie.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         charlieDeposit
       );
-      await sendWithComputeBudget(builder, charlieClient, charlie.wallet, numOptions);
+      await sendAndLog(builder, charlieClient, charlie.wallet);
 
       await expectCondBalances(
         client,
         vaultPda,
         charlie.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(charlieDeposit)
       );
       await expectVaultBalance(
         client,
         vaultPda,
+        VaultType.Base,
         aliceDeposit + bobDeposit + charlieDeposit
       );
     });
 
     it("verifies total vault balance equals sum of all deposits", async () => {
       const totalDeposits = aliceDeposit + bobDeposit + charlieDeposit;
-      await expectVaultBalance(client, vaultPda, totalDeposits);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, totalDeposits);
     });
   });
 
@@ -122,7 +132,7 @@ describe("Multi-User Deposits", () => {
     const numOptions = 2;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 31,
         proposalId: 31,
@@ -137,14 +147,16 @@ describe("Multi-User Deposits", () => {
       const builder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         amount1
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(amount1)
       );
     });
@@ -156,15 +168,17 @@ describe("Multi-User Deposits", () => {
       const builder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         amount2
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       const expectedTotal = 3 * ONE_TOKEN;
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(expectedTotal)
       );
     });
@@ -176,18 +190,20 @@ describe("Multi-User Deposits", () => {
       const builder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         amount3
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
       const expectedTotal = 3_500_000; // 3.5 tokens
       await expectCondBalances(
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(expectedTotal)
       );
-      await expectVaultBalance(client, vaultPda, expectedTotal);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, expectedTotal);
     });
   });
 
@@ -196,7 +212,7 @@ describe("Multi-User Deposits", () => {
     const numOptions = 2;
 
     before(async () => {
-      const ctx = await createVaultInActiveState(client, wallet, mint, {
+      const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 32,
         proposalId: 32,
@@ -211,11 +227,12 @@ describe("Multi-User Deposits", () => {
       const builder = await aliceClient.deposit(
         alice.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         aliceAmount
       );
-      await sendWithComputeBudget(builder, aliceClient, alice.wallet, numOptions);
+      await sendAndLog(builder, aliceClient, alice.wallet);
 
-      await expectVaultBalance(client, vaultPda, aliceAmount);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, aliceAmount);
     });
 
     it("second user deposits after first (vault not empty)", async () => {
@@ -225,20 +242,22 @@ describe("Multi-User Deposits", () => {
       const builder = await bobClient.deposit(
         bob.keypair.publicKey,
         vaultPda,
+        VaultType.Base,
         bobAmount
       );
-      await sendWithComputeBudget(builder, bobClient, bob.wallet, numOptions);
+      await sendAndLog(builder, bobClient, bob.wallet);
 
       // Verify Bob's balance is independent
       await expectCondBalances(
         client,
         vaultPda,
         bob.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(bobAmount)
       );
 
       // Verify vault total
-      await expectVaultBalance(client, vaultPda, 5 * ONE_TOKEN);
+      await expectVaultBalance(client, vaultPda, VaultType.Base, 5 * ONE_TOKEN);
     });
 
     it("verifies each user's balance is independent", async () => {
@@ -247,6 +266,7 @@ describe("Multi-User Deposits", () => {
         client,
         vaultPda,
         alice.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(2 * ONE_TOKEN)
       );
 
@@ -255,6 +275,7 @@ describe("Multi-User Deposits", () => {
         client,
         vaultPda,
         bob.keypair.publicKey,
+        VaultType.Base,
         Array(numOptions).fill(3 * ONE_TOKEN)
       );
     });

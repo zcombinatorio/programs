@@ -6,17 +6,17 @@ import { getComputeUnitsForOptions, DEPOSIT_AMOUNT } from "./constants";
 
 export interface VaultTestContext {
   vaultPda: PublicKey;
-  mint: PublicKey;
+  baseMint: PublicKey;
+  quoteMint: PublicKey;
   numOptions: number;
-  vaultType: VaultType;
   nonce: number;
   proposalId: number;
-  condMints: PublicKey[];
+  condBaseMints: PublicKey[];
+  condQuoteMints: PublicKey[];
 }
 
 export interface CreateVaultOptions {
   numOptions?: number; // default: 2 (MIN_OPTIONS)
-  vaultType?: VaultType; // default: Base
   nonce?: number; // default: auto-generated
   proposalId?: number; // default: auto-generated
 }
@@ -40,44 +40,46 @@ export function resetCounters(): void {
 export async function createVaultInSetupState(
   client: VaultClient,
   wallet: anchor.Wallet,
-  mint: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
   options: CreateVaultOptions = {}
 ): Promise<VaultTestContext> {
   const numOptions = options.numOptions ?? 2;
-  const vaultType = options.vaultType ?? VaultType.Base;
   const nonce = options.nonce ?? nonceCounter++;
   const proposalId = options.proposalId ?? proposalIdCounter++;
 
-  // Initialize vault (creates 2 options)
-  const { builder, vaultPda, condMint0, condMint1 } = client.initialize(
-    wallet.publicKey,
-    mint,
-    vaultType,
-    nonce,
-    proposalId
-  );
+  // Initialize vault (creates 2 base + 2 quote options)
+  const {
+    builder,
+    vaultPda,
+    condBaseMint0,
+    condBaseMint1,
+    condQuoteMint0,
+    condQuoteMint1,
+  } = client.initialize(wallet.publicKey, baseMint, quoteMint, nonce, proposalId);
   await builder.rpc();
 
-  const condMints: PublicKey[] = [condMint0, condMint1];
+  const condBaseMints: PublicKey[] = [condBaseMint0, condBaseMint1];
+  const condQuoteMints: PublicKey[] = [condQuoteMint0, condQuoteMint1];
 
   // Add additional options to reach target
   for (let i = 2; i < numOptions; i++) {
-    const { builder: addBuilder, condMint } = await client.addOption(
-      wallet.publicKey,
-      vaultPda
-    );
+    const { builder: addBuilder, condBaseMint, condQuoteMint } =
+      await client.addOption(wallet.publicKey, vaultPda);
     await addBuilder.rpc();
-    condMints.push(condMint);
+    condBaseMints.push(condBaseMint);
+    condQuoteMints.push(condQuoteMint);
   }
 
   return {
     vaultPda,
-    mint,
+    baseMint,
+    quoteMint,
     numOptions,
-    vaultType,
     nonce,
     proposalId,
-    condMints,
+    condBaseMints,
+    condQuoteMints,
   };
 }
 
@@ -87,10 +89,11 @@ export async function createVaultInSetupState(
 export async function createVaultInActiveState(
   client: VaultClient,
   wallet: anchor.Wallet,
-  mint: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
   options: CreateVaultOptions = {}
 ): Promise<VaultTestContext> {
-  const ctx = await createVaultInSetupState(client, wallet, mint, options);
+  const ctx = await createVaultInSetupState(client, wallet, baseMint, quoteMint, options);
 
   await client.activate(wallet.publicKey, ctx.vaultPda).rpc();
 
@@ -103,11 +106,12 @@ export async function createVaultInActiveState(
 export async function createVaultInFinalizedState(
   client: VaultClient,
   wallet: anchor.Wallet,
-  mint: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
   winningIdx: number,
   options: CreateVaultOptions = {}
 ): Promise<VaultTestContext> {
-  const ctx = await createVaultInActiveState(client, wallet, mint, options);
+  const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, options);
 
   await client.finalize(wallet.publicKey, ctx.vaultPda, winningIdx).rpc();
 
@@ -115,57 +119,50 @@ export async function createVaultInFinalizedState(
 }
 
 /**
- * Create a vault with a deposit already made
+ * Create a vault with a deposit already made (defaults to base vault type)
  */
 export async function createVaultWithDeposit(
   client: VaultClient,
   wallet: anchor.Wallet,
-  mint: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
   depositAmount: number = DEPOSIT_AMOUNT,
+  vaultType: VaultType = VaultType.Base,
   options: CreateVaultOptions = {}
 ): Promise<VaultTestContext> {
-  const ctx = await createVaultInActiveState(client, wallet, mint, options);
+  const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, options);
 
   const builder = await client.deposit(
     wallet.publicKey,
     ctx.vaultPda,
+    vaultType,
     depositAmount
   );
-  await sendWithComputeBudget(
-    builder,
-    client,
-    wallet,
-    ctx.numOptions
-  );
+  await sendAndLog(builder, client, wallet);
 
   return ctx;
 }
 
 /**
- * Helper to send transaction with appropriate compute budget
+ * Helper to send transaction and log byte/CU usage
+ * Note: SDK already includes compute budget, so we just send and log
  */
-export async function sendWithComputeBudget(
+export async function sendAndLog(
   builder: any,
   client: VaultClient,
   wallet: anchor.Wallet,
-  numOptions: number,
   logName?: string
 ): Promise<string> {
-  const computeUnits = getComputeUnitsForOptions(numOptions);
   const provider = client.program.provider as anchor.AnchorProvider;
 
-  const withBudget = builder.preInstructions([
-    ComputeBudgetProgram.setComputeUnitLimit({ units: computeUnits }),
-  ]);
-
-  const tx = await withBudget.transaction();
+  const tx = await builder.transaction();
   tx.recentBlockhash = (
     await provider.connection.getLatestBlockhash()
   ).blockhash;
   tx.feePayer = wallet.publicKey;
 
   const size = tx.serialize({ requireAllSignatures: false }).length;
-  const sig = await withBudget.rpc();
+  const sig = await builder.rpc();
 
   if (logName) {
     const confirmedTx = await provider.connection.getTransaction(sig, {

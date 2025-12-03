@@ -1,7 +1,7 @@
 // Test constants for vault test suite
 
 // Option counts to test (min and max boundaries)
-export const OPTION_COUNTS = [2, 10];
+export const OPTION_COUNTS = [2, 8];
 
 // Token amounts (6 decimals)
 export const ONE_TOKEN = 1_000_000;
