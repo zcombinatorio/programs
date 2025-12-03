@@ -41,14 +41,14 @@ pub struct AddOption<'info> {
         constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
         constraint = vault.state == VaultState::Setup @ VaultError::InvalidState,
     )]
-    pub vault: Account<'info, VaultAccount>,
+    pub vault: Box<Account<'info, VaultAccount>>,
 
     // Base mint
     #[account(address = vault.base_mint)]
     pub base_mint: Account<'info, Mint>,
 
     // Quote mint
-    #[account(address = vault.base_mint)]
+    #[account(address = vault.quote_mint)]
     pub quote_mint: Account<'info, Mint>,
 
     // Conditional base mint

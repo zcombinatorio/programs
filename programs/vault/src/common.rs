@@ -40,7 +40,7 @@ pub struct UserVaultAction<'info> {
         ],
         bump = vault.bump,
     )]
-    pub vault: Account<'info, VaultAccount>,
+    pub vault: Box<Account<'info, VaultAccount>>,
 
     // Regular Mint (base or quote depending on vault_type)
     #[account(

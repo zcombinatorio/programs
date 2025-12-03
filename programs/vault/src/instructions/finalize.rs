@@ -39,7 +39,7 @@ pub struct FinalizeVault<'info> {
         constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
         constraint = vault.state == VaultState::Active @ VaultError::InvalidState,
     )]
-    pub vault: Account<'info, VaultAccount>,
+    pub vault: Box<Account<'info, VaultAccount>>,
 }
 
 pub fn finalize_vault_handler(ctx: Context<FinalizeVault>, winning_idx: u8) -> Result<()> {

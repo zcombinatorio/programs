@@ -38,7 +38,7 @@ pub struct ActivateVault<'info> {
         constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
         constraint = vault.state == VaultState::Setup @ VaultError::InvalidState,
     )]
-    pub vault: Account<'info, VaultAccount>,
+    pub vault: Box<Account<'info, VaultAccount>>,
 }
 
 pub fn activate_vault_handler(ctx: Context<ActivateVault>) -> Result<()> {

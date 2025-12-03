@@ -41,7 +41,7 @@ pub struct InitializeVault<'info> {
         ],
         bump,
     )]
-    pub vault: Account<'info, VaultAccount>,
+    pub vault: Box<Account<'info, VaultAccount>>,
 
     pub base_mint: Account<'info, Mint>,
     pub quote_mint: Account<'info, Mint>,
@@ -74,9 +74,9 @@ pub struct InitializeVault<'info> {
         mint::decimals = base_mint.decimals,
         mint::authority = vault,
         seeds = [
-            CONDITIONAL_MINT_SEED, 
-            vault.key().as_ref(), 
-            &[VaultType::Base as u8], 
+            CONDITIONAL_MINT_SEED,
+            vault.key().as_ref(),
+            &[VaultType::Base as u8],
             &[0]
         ],
         bump,
@@ -90,9 +90,9 @@ pub struct InitializeVault<'info> {
         mint::decimals = base_mint.decimals,
         mint::authority = vault,
         seeds = [
-            CONDITIONAL_MINT_SEED, 
-            vault.key().as_ref(), 
-            &[VaultType::Base as u8], 
+            CONDITIONAL_MINT_SEED,
+            vault.key().as_ref(),
+            &[VaultType::Base as u8],
             &[1]
         ],
         bump,
@@ -104,12 +104,12 @@ pub struct InitializeVault<'info> {
     #[account(
         init,
         payer = signer,
-        mint::decimals = base_mint.decimals,
+        mint::decimals = quote_mint.decimals,
         mint::authority = vault,
         seeds = [
-            CONDITIONAL_MINT_SEED, 
-            vault.key().as_ref(), 
-            &[VaultType::Quote as u8], 
+            CONDITIONAL_MINT_SEED,
+            vault.key().as_ref(),
+            &[VaultType::Quote as u8],
             &[0]
         ],
         bump,
@@ -120,12 +120,12 @@ pub struct InitializeVault<'info> {
     #[account(
         init,
         payer = signer,
-        mint::decimals = base_mint.decimals,
+        mint::decimals = quote_mint.decimals,
         mint::authority = vault,
         seeds = [
-            CONDITIONAL_MINT_SEED, 
-            vault.key().as_ref(), 
-            &[VaultType::Quote as u8], 
+            CONDITIONAL_MINT_SEED,
+            vault.key().as_ref(),
+            &[VaultType::Quote as u8],
             &[1]
         ],
         bump,
