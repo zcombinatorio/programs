@@ -8,3 +8,4 @@ test-ledger
 sdk/dist/
 .env
 .sentinel
+authority.json
