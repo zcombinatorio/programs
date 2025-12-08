@@ -78,7 +78,7 @@ pub struct CreatePoolWithLiquidity<'info> {
     )]
     pub reserve_b: Account<'info, TokenAccount>,
 
-    /// Hardcoded fee authority wallet
+    /// CHECK: Validated by address constraint against hardcoded FEE_AUTHORITY constant
     #[account(address = FEE_AUTHORITY)]
     pub fee_authority: UncheckedAccount<'info>,
 
