@@ -30,6 +30,7 @@ pub struct LiquidityRemoved {
 
 #[derive(Accounts)]
 pub struct RemoveLiquidity<'info> {
+    // Only allow pool admin to remove liquidity
     #[account(
         mut,
         constraint = depositor.key() == pool.admin @ AmmError::InvalidAdmin,
@@ -52,6 +53,7 @@ pub struct RemoveLiquidity<'info> {
     )]
     pub pool: Account<'info, PoolAccount>,
 
+    // Pool reserves
     #[account(
         mut,
         seeds = [
@@ -78,6 +80,7 @@ pub struct RemoveLiquidity<'info> {
     )]
     pub reserve_b: Account<'info, TokenAccount>,
 
+    // Depositor token accounts for both mints
     #[account(
         mut,
         token::mint = mint_a,

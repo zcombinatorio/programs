@@ -36,6 +36,7 @@ pub struct PoolCreatedWithLiquidity {
 
 #[derive(Accounts)]
 pub struct CreatePoolWithLiquidity<'info> {
+    // Signer & Depositor
     #[account(mut)]
     pub signer: Signer<'info>,
 
@@ -56,6 +57,7 @@ pub struct CreatePoolWithLiquidity<'info> {
     )]
     pub pool: Box<Account<'info, PoolAccount>>,
 
+    // Pool reserves
     #[account(
         init,
         payer = signer,
@@ -84,6 +86,11 @@ pub struct CreatePoolWithLiquidity<'info> {
     )]
     pub reserve_b: Account<'info, TokenAccount>,
 
+    /// Hardcoded fee authority wallet
+    #[account(address = FEE_AUTHORITY)]
+    pub fee_authority: UncheckedAccount<'info>,
+
+    // Fee authority token account (mint a)
     #[account(
         init,
         payer = signer,
@@ -93,10 +100,11 @@ pub struct CreatePoolWithLiquidity<'info> {
         ],
         bump,
         token::mint = mint_a,
-        token::authority = signer
+        token::authority = fee_authority
     )]
     pub fee_vault: Account<'info, TokenAccount>,
 
+    // Signer (depositor) token accounts for both mints
     #[account(
         mut,
         token::mint = mint_a,

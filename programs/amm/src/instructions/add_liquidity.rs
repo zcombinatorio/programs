@@ -30,6 +30,7 @@ pub struct LiquidityAdded {
 
 #[derive(Accounts)]
 pub struct AddLiquidity<'info> {
+    // Only allow the pool admin to add liquidity
     #[account(
         mut,
         constraint = depositor.key() == pool.admin @ AmmError::InvalidAdmin,
@@ -52,6 +53,7 @@ pub struct AddLiquidity<'info> {
     )]
     pub pool: Account<'info, PoolAccount>,
 
+    // Pool reserves
     #[account(
         mut,
         seeds = [
@@ -78,6 +80,7 @@ pub struct AddLiquidity<'info> {
     )]
     pub reserve_b: Account<'info, TokenAccount>,
 
+    // Depositor token accounts for both mints
     #[account(
         mut,
         token::mint = mint_a,
