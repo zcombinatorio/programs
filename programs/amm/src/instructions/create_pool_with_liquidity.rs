@@ -45,7 +45,7 @@ pub struct CreatePoolWithLiquidity<'info> {
     #[account(
         init,
         payer = signer,
-        space = PoolAccount::INIT_SPACE,
+        space = 8 + PoolAccount::INIT_SPACE,
         seeds = [
             POOL_SEED,
             signer.key().as_ref(),

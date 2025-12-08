@@ -67,8 +67,6 @@ pub struct Swap<'info> {
             pool.key().as_ref(),
         ],
         bump,
-        token::mint = mint_a,
-        token::authority = pool.admin,
     )]
     pub fee_vault: Account<'info, TokenAccount>,
 
