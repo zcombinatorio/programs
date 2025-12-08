@@ -25,11 +25,11 @@ use crate::state::*;
 
 #[event]
 pub struct PoolCreated {
-    pool: Pubkey,
-    admin: Pubkey,
-    mint_a: Pubkey,
-    mint_b: Pubkey,
-    fee: u16,
+    pub pool: Pubkey,
+    pub admin: Pubkey,
+    pub mint_a: Pubkey,
+    pub mint_b: Pubkey,
+    pub fee: u16,
 }
 
 #[derive(Accounts)]

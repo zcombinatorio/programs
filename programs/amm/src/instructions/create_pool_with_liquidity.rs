@@ -23,17 +23,8 @@ use crate::constants::*;
 use crate::errors::*;
 use crate::state::*;
 use crate::utils::transfer_tokens;
-
-#[event]
-pub struct PoolCreatedWithLiquidity {
-    pub pool: Pubkey,
-    pub admin: Pubkey,
-    pub mint_a: Pubkey,
-    pub mint_b: Pubkey,
-    pub fee: u16,
-    pub amount_a: u64,
-    pub amount_b: u64,
-}
+use crate::instructions::create_pool::PoolCreated;
+use crate::instructions::add_liquidity::LiquidityAdded;
 
 #[derive(Accounts)]
 pub struct CreatePoolWithLiquidity<'info> {
@@ -157,12 +148,16 @@ pub fn create_pool_with_liquidity_handler(
         amount_b,
     )?;
 
-    emit!(PoolCreatedWithLiquidity {
+    emit!(PoolCreated {
         pool: pool.key(),
         admin: pool.admin,
         mint_a: pool.mint_a,
         mint_b: pool.mint_b,
         fee: pool.fee,
+    });
+
+    emit!(LiquidityAdded {
+        pool: pool.key(),
         amount_a,
         amount_b,
     });

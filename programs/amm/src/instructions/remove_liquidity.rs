@@ -23,9 +23,9 @@ use crate::{constants::*, errors::*, state::*, utils::transfer_signed};
 
 #[event]
 pub struct LiquidityRemoved {
-    pool: Pubkey,
-    amount_a: u64,
-    amount_b: u64
+    pub pool: Pubkey,
+    pub amount_a: u64,
+    pub amount_b: u64
 }
 
 #[derive(Accounts)]
