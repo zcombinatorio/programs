@@ -31,7 +31,7 @@ pub struct Swap<'info> {
         has_one = mint_a,
         has_one = mint_b,
     )]
-    pub pool: Account<'info, PoolAccount>,
+    pub pool: Box<Account<'info, PoolAccount>>,
 
     // Pool reserves
     #[account(
