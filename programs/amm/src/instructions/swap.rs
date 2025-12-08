@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
-use fixed::types::I64F64;
 
 use crate::{constants::*, errors::*, state::PoolAccount};
 
@@ -34,6 +33,7 @@ pub struct Swap<'info> {
     )]
     pub pool: Account<'info, PoolAccount>,
 
+    // Pool reserves
     #[account(
         mut,
         seeds = [
@@ -60,6 +60,7 @@ pub struct Swap<'info> {
     )]
     pub reserve_b: Account<'info, TokenAccount>,
 
+    /// Fee vault with hardcoded fee authority wallet
     #[account(
         mut,
         seeds = [
@@ -70,6 +71,7 @@ pub struct Swap<'info> {
     )]
     pub fee_vault: Account<'info, TokenAccount>,
 
+    // Trader accounts
     #[account(
         mut,
         token::mint = mint_a,
@@ -105,50 +107,64 @@ pub fn swap_handler(
     require!(reserve_a > 0 && reserve_b > 0, AmmError::EmptyPool);
 
     // Store invariant before swap
-    let invariant_before = reserve_a as u128 * reserve_b as u128;
+    let invariant_before = (reserve_a as u128)
+        .checked_mul(reserve_b as u128)
+        .ok_or(AmmError::MathOverflow)?;
 
     // Calculate fee and output based on swap direction
     // Fee is always collected in token A
-    let (output, fee_amount) = if swap_a_to_b {
+    // Returns: (output, fee_amount, input_to_reserve, output_from_reserve)
+    // The last two are for invariant checking (tracks what enters/exits the AMM math)
+    let (output, fee_amount, input_to_reserve, output_from_reserve) = if swap_a_to_b {
         // A -> B: fee on input (A), then swap
         let mut fee = input_amount
             .checked_mul(fee_bps)
             .ok_or(AmmError::MathOverflow)?
-            / 10000;
+            .checked_div(10000)
+            .ok_or(AmmError::MathOverflow)?;
         // Prevent dust swaps from avoiding fees via integer truncation
         if fee_bps > 0 && fee == 0 { fee = 1; }
-        let taxed_input = input_amount - fee;
-        let out = I64F64::from_num(taxed_input)
-            .checked_mul(I64F64::from_num(reserve_b))
-            .ok_or(AmmError::MathOverflow)?
-            .checked_div(
-                I64F64::from_num(reserve_a)
-                    .checked_add(I64F64::from_num(taxed_input))
-                    .ok_or(AmmError::MathOverflow)?,
-            )
-            .ok_or(AmmError::MathOverflow)?
-            .to_num::<u64>();
-        (out, fee)
+        let taxed_input = input_amount
+            .checked_sub(fee)
+            .ok_or(AmmError::MathOverflow)?;
+
+        // AMM formula: output = (input * reserve_out) / (reserve_in + input)
+        let numerator = (taxed_input as u128)
+            .checked_mul(reserve_b as u128)
+            .ok_or(AmmError::MathOverflow)?;
+        let denominator = (reserve_a as u128)
+            .checked_add(taxed_input as u128)
+            .ok_or(AmmError::MathOverflow)?;
+        let out = numerator
+            .checked_div(denominator)
+            .ok_or(AmmError::MathOverflow)? as u64;
+
+        (out, fee, taxed_input, out)
     } else {
         // B -> A: swap first, then fee on output (A)
-        let gross_output = I64F64::from_num(input_amount)
-            .checked_mul(I64F64::from_num(reserve_a))
-            .ok_or(AmmError::MathOverflow)?
-            .checked_div(
-                I64F64::from_num(reserve_b)
-                    .checked_add(I64F64::from_num(input_amount))
-                    .ok_or(AmmError::MathOverflow)?,
-            )
-            .ok_or(AmmError::MathOverflow)?
-            .to_num::<u64>();
+        // AMM formula: output = (input * reserve_out) / (reserve_in + input)
+        let numerator = (input_amount as u128)
+            .checked_mul(reserve_a as u128)
+            .ok_or(AmmError::MathOverflow)?;
+        let denominator = (reserve_b as u128)
+            .checked_add(input_amount as u128)
+            .ok_or(AmmError::MathOverflow)?;
+        let gross_output = numerator
+            .checked_div(denominator)
+            .ok_or(AmmError::MathOverflow)? as u64;
+
         let mut fee = gross_output
             .checked_mul(fee_bps)
             .ok_or(AmmError::MathOverflow)?
-            / 10000;
+            .checked_div(10000)
+            .ok_or(AmmError::MathOverflow)?;
         // Prevent dust swaps from avoiding fees via integer truncation
         if fee_bps > 0 && fee == 0 { fee = 1; }
-        let net_output = gross_output - fee;
-        (net_output, fee)
+        let net_output = gross_output
+            .checked_sub(fee)
+            .ok_or(AmmError::MathOverflow)?;
+
+        (net_output, fee, input_amount, gross_output)
     };
 
     // Ensure output is non-zero
@@ -164,6 +180,38 @@ pub fn swap_handler(
 
     // Slippage check
     require!(output >= min_output_amount, AmmError::SlippageExceeded);
+
+    // Verify invariant will hold after swap (checked before transfers)
+    // Calculate expected reserves based on AMM math (independent of fee extraction)
+    let (expected_reserve_a, expected_reserve_b) = if swap_a_to_b {
+        // A→B: input_to_reserve (taxed_input) enters reserve_a, output leaves reserve_b
+        (
+            (reserve_a as u128)
+                .checked_add(input_to_reserve as u128)
+                .ok_or(AmmError::MathOverflow)?,
+            (reserve_b as u128)
+                .checked_sub(output_from_reserve as u128)
+                .ok_or(AmmError::MathOverflow)?,
+        )
+    } else {
+        // B→A: input enters reserve_b, output_from_reserve (gross_output) leaves reserve_a
+        (
+            (reserve_a as u128)
+                .checked_sub(output_from_reserve as u128)
+                .ok_or(AmmError::MathOverflow)?,
+            (reserve_b as u128)
+                .checked_add(input_to_reserve as u128)
+                .ok_or(AmmError::MathOverflow)?,
+        )
+    };
+
+    let invariant_after = expected_reserve_a
+        .checked_mul(expected_reserve_b)
+        .ok_or(AmmError::MathOverflow)?;
+    require!(
+        invariant_after >= invariant_before,
+        AmmError::InvariantViolated
+    );
 
     // Build pool signer seeds
     let seeds = &[
@@ -255,16 +303,6 @@ pub fn swap_handler(
             fee_amount,
         )?;
     }
-
-    // Verify invariant after swap
-    ctx.accounts.reserve_a.reload()?;
-    ctx.accounts.reserve_b.reload()?;
-    let invariant_after =
-        ctx.accounts.reserve_a.amount as u128 * ctx.accounts.reserve_b.amount as u128;
-    require!(
-        invariant_after >= invariant_before,
-        AmmError::InvariantViolated
-    );
 
     emit!(CondSwap {
         pool: ctx.accounts.pool.key(),
