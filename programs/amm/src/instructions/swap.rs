@@ -89,6 +89,29 @@ pub struct Swap<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+impl<'info> Swap<'info> {
+    /// Constant product invariant: k = reserve_a * reserve_b
+    pub fn invariant(reserve_a: u128, reserve_b: u128) -> Result<u128> {
+        reserve_a
+            .checked_mul(reserve_b)
+            .ok_or(AmmError::MathOverflow.into())
+    }
+
+    /// AMM output formula: output = (input * reserve_out) / (reserve_in + input)
+    pub fn compute_output(input: u64, reserve_in: u64, reserve_out: u64) -> Result<u64> {
+        let numerator = (input as u128)
+            .checked_mul(reserve_out as u128)
+            .ok_or(AmmError::MathOverflow)?;
+        let denominator = (reserve_in as u128)
+            .checked_add(input as u128)
+            .ok_or(AmmError::MathOverflow)?;
+        let output = numerator
+            .checked_div(denominator)
+            .ok_or(AmmError::MathOverflow)? as u64;
+        Ok(output)
+    }
+}
+
 pub fn swap_handler(
     ctx: Context<Swap>,
     swap_a_to_b: bool,
@@ -107,9 +130,7 @@ pub fn swap_handler(
     require!(reserve_a > 0 && reserve_b > 0, AmmError::EmptyPool);
 
     // Store invariant before swap
-    let invariant_before = (reserve_a as u128)
-        .checked_mul(reserve_b as u128)
-        .ok_or(AmmError::MathOverflow)?;
+    let invariant_before = Swap::invariant(reserve_a as u128, reserve_b as u128)?;
 
     // Calculate fee and output based on swap direction
     // Fee is always collected in token A
@@ -128,30 +149,14 @@ pub fn swap_handler(
             .checked_sub(fee)
             .ok_or(AmmError::MathOverflow)?;
 
-        // AMM formula: output = (input * reserve_out) / (reserve_in + input)
-        let numerator = (taxed_input as u128)
-            .checked_mul(reserve_b as u128)
-            .ok_or(AmmError::MathOverflow)?;
-        let denominator = (reserve_a as u128)
-            .checked_add(taxed_input as u128)
-            .ok_or(AmmError::MathOverflow)?;
-        let out = numerator
-            .checked_div(denominator)
-            .ok_or(AmmError::MathOverflow)? as u64;
+        let out = Swap::compute_output(taxed_input, reserve_a, reserve_b)?;
+        require!(reserve_b >= out, AmmError::InsufficientReserve);
 
         (out, fee, taxed_input, out)
     } else {
         // B -> A: swap first, then fee on output (A)
-        // AMM formula: output = (input * reserve_out) / (reserve_in + input)
-        let numerator = (input_amount as u128)
-            .checked_mul(reserve_a as u128)
-            .ok_or(AmmError::MathOverflow)?;
-        let denominator = (reserve_b as u128)
-            .checked_add(input_amount as u128)
-            .ok_or(AmmError::MathOverflow)?;
-        let gross_output = numerator
-            .checked_div(denominator)
-            .ok_or(AmmError::MathOverflow)? as u64;
+        let gross_output = Swap::compute_output(input_amount, reserve_b, reserve_a)?;
+        require!(reserve_a >= gross_output, AmmError::InsufficientReserve);
 
         let mut fee = gross_output
             .checked_mul(fee_bps)
@@ -169,14 +174,6 @@ pub fn swap_handler(
 
     // Ensure output is non-zero
     require!(output > 0, AmmError::OutputTooSmall);
-
-    // For B->A swaps, verify reserve_a has enough for output + fee
-    if !swap_a_to_b {
-        require!(
-            reserve_a >= output + fee_amount,
-            AmmError::InsufficientReserve
-        );
-    }
 
     // Slippage check
     require!(output >= min_output_amount, AmmError::SlippageExceeded);
@@ -205,13 +202,9 @@ pub fn swap_handler(
         )
     };
 
-    let invariant_after = expected_reserve_a
-        .checked_mul(expected_reserve_b)
-        .ok_or(AmmError::MathOverflow)?;
-    require!(
-        invariant_after >= invariant_before,
-        AmmError::InvariantViolated
-    );
+    // Pre-transfer invariant check (validates our math)
+    let invariant_after = Swap::invariant(expected_reserve_a, expected_reserve_b)?;
+    require!(invariant_after >= invariant_before, AmmError::InvariantViolated);
 
     // Build pool signer seeds
     let seeds = &[
@@ -231,16 +224,18 @@ pub fn swap_handler(
             ctx.accounts.reserve_a.to_account_info(),
             ctx.accounts.trader.to_account_info(),
             ctx.accounts.token_program.to_account_info(),
-            input_amount - fee_amount,
+            input_to_reserve,
         )?;
-        // 2. Transfer fee to fee vault
-        transfer_tokens(
-            ctx.accounts.trader_account_a.to_account_info(),
-            ctx.accounts.fee_vault.to_account_info(),
-            ctx.accounts.trader.to_account_info(),
-            ctx.accounts.token_program.to_account_info(),
-            fee_amount,
-        )?;
+        // 2. Transfer fee to fee vault (skip if zero)
+        if fee_amount > 0 {
+            transfer_tokens(
+                ctx.accounts.trader_account_a.to_account_info(),
+                ctx.accounts.fee_vault.to_account_info(),
+                ctx.accounts.trader.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+                fee_amount,
+            )?;
+        }
         // 3. Transfer output B to trader
         transfer_signed(
             ctx.accounts.reserve_b.to_account_info(),
@@ -269,16 +264,27 @@ pub fn swap_handler(
             output,
             signer_seeds,
         )?;
-        // 3. Transfer fee from reserve A to fee vault
-        transfer_signed(
-            ctx.accounts.reserve_a.to_account_info(),
-            ctx.accounts.fee_vault.to_account_info(),
-            ctx.accounts.pool.to_account_info(),
-            ctx.accounts.token_program.to_account_info(),
-            fee_amount,
-            signer_seeds,
-        )?;
+        // 3. Transfer fee from reserve A to fee vault (skip if zero)
+        if fee_amount > 0 {
+            transfer_signed(
+                ctx.accounts.reserve_a.to_account_info(),
+                ctx.accounts.fee_vault.to_account_info(),
+                ctx.accounts.pool.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+                fee_amount,
+                signer_seeds,
+            )?;
+        }
     }
+
+    // Post-transfer invariant check (expensive sanity check)
+    ctx.accounts.reserve_a.reload()?;
+    ctx.accounts.reserve_b.reload()?;
+    let invariant_final = Swap::invariant(
+        ctx.accounts.reserve_a.amount as u128,
+        ctx.accounts.reserve_b.amount as u128,
+    )?;
+    require!(invariant_final >= invariant_before, AmmError::InvariantViolated);
 
     emit!(CondSwap {
         pool: ctx.accounts.pool.key(),
