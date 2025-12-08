@@ -26,6 +26,14 @@ use crate::state::VaultState;
 use crate::utils::*;
 use crate::VaultType;
 
+#[event]
+pub struct VaultWithdrawal {
+    pub vault: Pubkey,
+    pub user: Pubkey,
+    pub vault_type: VaultType,
+    pub amount: u64,
+}
+
 pub fn withdrawal_handler<'info>(
     ctx: Context<'_, '_, '_, 'info, UserVaultAction<'info>>,
     vault_type: VaultType,
@@ -106,6 +114,13 @@ pub fn withdrawal_handler<'info>(
         amount,
         &[vault_seeds],
     )?;
+
+    emit!(VaultWithdrawal {
+        vault: vault.key(),
+        user: ctx.accounts.signer.key(),
+        vault_type,
+        amount,
+    });
 
     Ok(())
 }

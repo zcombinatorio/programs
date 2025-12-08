@@ -53,7 +53,7 @@ pub struct CreatePool<'info> {
         ],
         bump,
     )]
-    pub pool: Account<'info, PoolAccount>,
+    pub pool: Box<Account<'info, PoolAccount>>,
 
     // Pool reserves
     #[account(
@@ -84,7 +84,7 @@ pub struct CreatePool<'info> {
     )]
     pub reserve_b: Account<'info, TokenAccount>,
 
-    /// Hardcoded fee authority wallet
+    /// CHECK: Hardcoded fee authority wallet
     #[account(address = FEE_AUTHORITY)]
     pub fee_authority: UncheckedAccount<'info>,
 

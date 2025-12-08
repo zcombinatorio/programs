@@ -24,6 +24,14 @@ use crate::constants::*;
 use crate::errors::*;
 use crate::state::*;
 
+#[event]
+pub struct OptionAdded {
+    pub vault: Pubkey,
+    pub option_index: u8,
+    pub cond_base_mint: Pubkey,
+    pub cond_quote_mint: Pubkey,
+}
+
 #[derive(Accounts)]
 pub struct AddOption<'info> {
     #[account(mut)]
@@ -102,7 +110,12 @@ pub fn add_option_handler(ctx: Context<AddOption>) -> Result<()> {
     vault.cond_quote_mints[curr_num_options as usize] = ctx.accounts.cond_quote_mint.key();
     vault.num_options += 1;
 
-    msg!("Added option {:?}", vault.num_options);
+    emit!(OptionAdded {
+        vault: vault.key(),
+        option_index: curr_num_options,
+        cond_base_mint: ctx.accounts.cond_base_mint.key(),
+        cond_quote_mint: ctx.accounts.cond_quote_mint.key(),
+    });
 
     Ok(())
 }

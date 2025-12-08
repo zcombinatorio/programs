@@ -2,7 +2,19 @@
 export { VaultClient } from "./client";
 
 // Types
-export { VaultType, VaultState, VaultAccount } from "./types";
+export {
+  VaultType,
+  VaultState,
+  VaultAccount,
+  VaultInitializedEvent,
+  OptionAddedEvent,
+  VaultDepositEvent,
+  VaultWithdrawalEvent,
+  WinningsRedeemedEvent,
+  VaultActivatedEvent,
+  VaultFinalizedEvent,
+  VaultEvent,
+} from "./types";
 
 // Constants
 export {

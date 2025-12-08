@@ -27,6 +27,14 @@ use crate::state::VaultState;
 use crate::utils::*;
 use crate::VaultType;
 
+#[event]
+pub struct WinningsRedeemed {
+    pub vault: Pubkey,
+    pub user: Pubkey,
+    pub vault_type: VaultType,
+    pub amount: u64,
+}
+
 pub fn redeem_winnings_handler<'info>(
     ctx: Context<'_, '_, 'info, 'info, UserVaultAction<'info>>,
     vault_type: VaultType,
@@ -135,6 +143,13 @@ pub fn redeem_winnings_handler<'info>(
         winning_amount,
         &[vault_seeds],
     )?;
+
+    emit!(WinningsRedeemed {
+        vault: vault.key(),
+        user: ctx.accounts.signer.key(),
+        vault_type,
+        amount: winning_amount,
+    });
 
     Ok(())
 }

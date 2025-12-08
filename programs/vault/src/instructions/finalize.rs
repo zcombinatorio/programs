@@ -22,6 +22,14 @@ use crate::constants::*;
 use crate::errors::*;
 use crate::state::*;
 
+#[event]
+pub struct VaultFinalized {
+    pub vault: Pubkey,
+    pub winning_idx: u8,
+    pub winning_base_mint: Pubkey,
+    pub winning_quote_mint: Pubkey,
+}
+
 #[derive(Accounts)]
 #[instruction(winning_idx: u8)]
 pub struct FinalizeVault<'info> {
@@ -53,10 +61,12 @@ pub fn finalize_vault_handler(ctx: Context<FinalizeVault>, winning_idx: u8) -> R
     vault.state = VaultState::Finalized;
     vault.winning_idx = Some(winning_idx);
 
-    msg!("Vault finalized");
-    msg!("Winning idx {:?}", winning_idx);
-    msg!("Winning base mint {:?}", vault.cond_base_mints[winning_idx as usize]);
-    msg!("Winning quote mint {:?}", vault.cond_quote_mints[winning_idx as usize]);
+    emit!(VaultFinalized {
+        vault: vault.key(),
+        winning_idx,
+        winning_base_mint: vault.cond_base_mints[winning_idx as usize],
+        winning_quote_mint: vault.cond_quote_mints[winning_idx as usize],
+    });
 
     Ok(())
 }

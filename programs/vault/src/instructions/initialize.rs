@@ -23,6 +23,16 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 use crate::constants::*;
 use crate::state::*;
 
+#[event]
+pub struct VaultInitialized {
+    pub vault: Pubkey,
+    pub owner: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub proposal_id: u8,
+    pub nonce: u8,
+}
+
 #[derive(Accounts)]
 #[instruction(proposal_id: u8, nonce: u8)]
 pub struct InitializeVault<'info> {
@@ -163,9 +173,14 @@ pub fn initialize_handler(
     vault.winning_idx = None;
     vault.bump = ctx.bumps.vault;
 
-    msg!("Vault initialized!");
-    msg!("Owner: {:?}", vault.owner);
-    msg!("State: Setup");
+    emit!(VaultInitialized {
+        vault: vault.key(),
+        owner: vault.owner,
+        base_mint: vault.base_mint,
+        quote_mint: vault.quote_mint,
+        proposal_id,
+        nonce,
+    });
 
     Ok(())
 }

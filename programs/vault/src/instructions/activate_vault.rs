@@ -22,6 +22,12 @@ use crate::constants::*;
 use crate::errors::*;
 use crate::state::*;
 
+#[event]
+pub struct VaultActivated {
+    pub vault: Pubkey,
+    pub num_options: u8,
+}
+
 #[derive(Accounts)]
 pub struct ActivateVault<'info> {
     pub signer: Signer<'info>,
@@ -53,7 +59,10 @@ pub fn activate_vault_handler(ctx: Context<ActivateVault>) -> Result<()> {
 
     vault.state = VaultState::Active;
 
-    msg!("Vault activated with {:?} options", vault.num_options);
+    emit!(VaultActivated {
+        vault: vault.key(),
+        num_options: vault.num_options,
+    });
 
     Ok(())
 }
