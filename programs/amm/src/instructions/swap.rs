@@ -1,0 +1,281 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use fixed::types::I64F64;
+
+use crate::{constants::*, errors::*, state::PoolAccount};
+
+#[event]
+pub struct CondSwap {
+    pub pool: Pubkey,
+    pub trader: Pubkey,
+    pub swap_a_to_b: bool,
+    pub input_amount: u64,
+    pub output_amount: u64,
+    pub fee_amount: u64
+}
+
+#[derive(Accounts)]
+pub struct Swap<'info> {
+    pub trader: Signer<'info>,
+
+    pub mint_a: Account<'info, Mint>,
+    pub mint_b: Account<'info, Mint>,
+
+    #[account(
+        seeds = [
+            POOL_SEED,
+            pool.admin.as_ref(),
+            mint_a.key().as_ref(),
+            mint_b.key().as_ref(),
+        ],
+        bump = pool.bump,
+        has_one = mint_a,
+        has_one = mint_b,
+    )]
+    pub pool: Account<'info, PoolAccount>,
+
+    #[account(
+        mut,
+        seeds = [
+            RESERVE_SEED,
+            pool.key().as_ref(),
+            mint_a.key().as_ref(),
+        ],
+        bump,
+        token::mint = mint_a,
+        token::authority = pool,
+    )]
+    pub reserve_a: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        seeds = [
+            RESERVE_SEED,
+            pool.key().as_ref(),
+            mint_b.key().as_ref(),
+        ],
+        bump,
+        token::mint = mint_b,
+        token::authority = pool,
+    )]
+    pub reserve_b: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        seeds = [
+            FEE_VAULT_SEED,
+            pool.key().as_ref(),
+        ],
+        bump,
+        token::mint = mint_a,
+        token::authority = pool.admin,
+    )]
+    pub fee_vault: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        token::mint = mint_a,
+        token::authority = trader,
+    )]
+    pub trader_account_a: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        token::mint = mint_b,
+        token::authority = trader,
+    )]
+    pub trader_account_b: Account<'info, TokenAccount>,
+
+    pub token_program: Program<'info, Token>,
+}
+
+pub fn swap_handler(
+    ctx: Context<Swap>,
+    swap_a_to_b: bool,
+    input_amount: u64,
+    min_output_amount: u64,
+) -> Result<()> {
+    require!(input_amount > 0, AmmError::InvalidAmount);
+    require!(min_output_amount > 0, AmmError::InvalidAmount);
+
+    let pool = &ctx.accounts.pool;
+    let reserve_a = ctx.accounts.reserve_a.amount;
+    let reserve_b = ctx.accounts.reserve_b.amount;
+    let fee_bps = pool.fee as u64;
+
+    // Prevent swaps on empty pool
+    require!(reserve_a > 0 && reserve_b > 0, AmmError::EmptyPool);
+
+    // Store invariant before swap
+    let invariant_before = reserve_a as u128 * reserve_b as u128;
+
+    // Calculate fee and output based on swap direction
+    // Fee is always collected in token A
+    let (output, fee_amount) = if swap_a_to_b {
+        // A -> B: fee on input (A), then swap
+        let mut fee = input_amount
+            .checked_mul(fee_bps)
+            .ok_or(AmmError::MathOverflow)?
+            / 10000;
+        // Prevent dust swaps from avoiding fees via integer truncation
+        if fee_bps > 0 && fee == 0 { fee = 1; }
+        let taxed_input = input_amount - fee;
+        let out = I64F64::from_num(taxed_input)
+            .checked_mul(I64F64::from_num(reserve_b))
+            .ok_or(AmmError::MathOverflow)?
+            .checked_div(
+                I64F64::from_num(reserve_a)
+                    .checked_add(I64F64::from_num(taxed_input))
+                    .ok_or(AmmError::MathOverflow)?,
+            )
+            .ok_or(AmmError::MathOverflow)?
+            .to_num::<u64>();
+        (out, fee)
+    } else {
+        // B -> A: swap first, then fee on output (A)
+        let gross_output = I64F64::from_num(input_amount)
+            .checked_mul(I64F64::from_num(reserve_a))
+            .ok_or(AmmError::MathOverflow)?
+            .checked_div(
+                I64F64::from_num(reserve_b)
+                    .checked_add(I64F64::from_num(input_amount))
+                    .ok_or(AmmError::MathOverflow)?,
+            )
+            .ok_or(AmmError::MathOverflow)?
+            .to_num::<u64>();
+        let mut fee = gross_output
+            .checked_mul(fee_bps)
+            .ok_or(AmmError::MathOverflow)?
+            / 10000;
+        // Prevent dust swaps from avoiding fees via integer truncation
+        if fee_bps > 0 && fee == 0 { fee = 1; }
+        let net_output = gross_output - fee;
+        (net_output, fee)
+    };
+
+    // Ensure output is non-zero
+    require!(output > 0, AmmError::OutputTooSmall);
+
+    // For B->A swaps, verify reserve_a has enough for output + fee
+    if !swap_a_to_b {
+        require!(
+            reserve_a >= output + fee_amount,
+            AmmError::InsufficientReserve
+        );
+    }
+
+    // Slippage check
+    require!(output >= min_output_amount, AmmError::SlippageExceeded);
+
+    // Build pool signer seeds
+    let seeds = &[
+        POOL_SEED,
+        pool.admin.as_ref(),
+        pool.mint_a.as_ref(),
+        pool.mint_b.as_ref(),
+        &[pool.bump],
+    ];
+    let signer_seeds = &[&seeds[..]];
+
+    if swap_a_to_b {
+        // A -> B
+        // 1. Transfer input A (minus fee) to reserve
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.trader_account_a.to_account_info(),
+                    to: ctx.accounts.reserve_a.to_account_info(),
+                    authority: ctx.accounts.trader.to_account_info(),
+                },
+            ),
+            input_amount - fee_amount,
+        )?;
+        // 2. Transfer fee to fee vault
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.trader_account_a.to_account_info(),
+                    to: ctx.accounts.fee_vault.to_account_info(),
+                    authority: ctx.accounts.trader.to_account_info(),
+                },
+            ),
+            fee_amount,
+        )?;
+        // 3. Transfer output B to trader
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.reserve_b.to_account_info(),
+                    to: ctx.accounts.trader_account_b.to_account_info(),
+                    authority: ctx.accounts.pool.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            output,
+        )?;
+    } else {
+        // B -> A
+        // 1. Transfer input B to reserve
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.trader_account_b.to_account_info(),
+                    to: ctx.accounts.reserve_b.to_account_info(),
+                    authority: ctx.accounts.trader.to_account_info(),
+                },
+            ),
+            input_amount,
+        )?;
+        // 2. Transfer output A to trader
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.reserve_a.to_account_info(),
+                    to: ctx.accounts.trader_account_a.to_account_info(),
+                    authority: ctx.accounts.pool.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            output,
+        )?;
+        // 3. Transfer fee from reserve A to fee vault
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.reserve_a.to_account_info(),
+                    to: ctx.accounts.fee_vault.to_account_info(),
+                    authority: ctx.accounts.pool.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            fee_amount,
+        )?;
+    }
+
+    // Verify invariant after swap
+    ctx.accounts.reserve_a.reload()?;
+    ctx.accounts.reserve_b.reload()?;
+    let invariant_after =
+        ctx.accounts.reserve_a.amount as u128 * ctx.accounts.reserve_b.amount as u128;
+    require!(
+        invariant_after >= invariant_before,
+        AmmError::InvariantViolated
+    );
+
+    emit!(CondSwap {
+        pool: ctx.accounts.pool.key(),
+        trader: ctx.accounts.trader.key(),
+        swap_a_to_b,
+        input_amount,
+        output_amount: output,
+        fee_amount,
+    });
+
+    Ok(())
+}

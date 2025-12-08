@@ -9,3 +9,5 @@ sdk/dist/
 .env
 .sentinel
 authority.json
+.blinker/
+.claude
