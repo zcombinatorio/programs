@@ -17,11 +17,12 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::constants::*;
 use crate::errors::*;
 use crate::state::*;
+use crate::utils::transfer_tokens;
 
 #[event]
 pub struct PoolCreatedWithLiquidity {
@@ -140,27 +141,19 @@ pub fn create_pool_with_liquidity_handler(
     pool.fee = fee;
     pool.bump = ctx.bumps.pool;
 
-    token::transfer(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.signer_token_acc_a.to_account_info(),
-                to: ctx.accounts.reserve_a.to_account_info(),
-                authority: ctx.accounts.signer.to_account_info(),
-            },
-        ),
+    transfer_tokens(
+        ctx.accounts.signer_token_acc_a.to_account_info(),
+        ctx.accounts.reserve_a.to_account_info(),
+        ctx.accounts.signer.to_account_info(),
+        ctx.accounts.token_program.to_account_info(),
         amount_a,
     )?;
 
-    token::transfer(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.signer_token_acc_b.to_account_info(),
-                to: ctx.accounts.reserve_b.to_account_info(),
-                authority: ctx.accounts.signer.to_account_info(),
-            },
-        ),
+    transfer_tokens(
+        ctx.accounts.signer_token_acc_b.to_account_info(),
+        ctx.accounts.reserve_b.to_account_info(),
+        ctx.accounts.signer.to_account_info(),
+        ctx.accounts.token_program.to_account_info(),
         amount_b,
     )?;
 

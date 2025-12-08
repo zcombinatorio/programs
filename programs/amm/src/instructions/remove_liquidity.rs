@@ -17,9 +17,9 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{constants::*, errors::*, state::*};
+use crate::{constants::*, errors::*, state::*, utils::transfer_signed};
 
 #[event]
 pub struct LiquidityRemoved {
@@ -117,30 +117,22 @@ pub fn remove_liquidity_handler(ctx: Context<RemoveLiquidity>, amount_a: u64, am
     let signer_seeds = &[&seeds[..]];
 
     // Transfer tokens from reserves -> depositor
-    token::transfer(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.reserve_a.to_account_info(),
-                to: ctx.accounts.depositor_token_acc_a.to_account_info(),
-                authority: ctx.accounts.pool.to_account_info(),
-            },
-            signer_seeds,
-        ),
+    transfer_signed(
+        ctx.accounts.reserve_a.to_account_info(),
+        ctx.accounts.depositor_token_acc_a.to_account_info(),
+        ctx.accounts.pool.to_account_info(),
+        ctx.accounts.token_program.to_account_info(),
         amount_a,
+        signer_seeds,
     )?;
 
-    token::transfer(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.reserve_b.to_account_info(),
-                to: ctx.accounts.depositor_token_acc_b.to_account_info(),
-                authority: ctx.accounts.pool.to_account_info(),
-            },
-            signer_seeds,
-        ),
+    transfer_signed(
+        ctx.accounts.reserve_b.to_account_info(),
+        ctx.accounts.depositor_token_acc_b.to_account_info(),
+        ctx.accounts.pool.to_account_info(),
+        ctx.accounts.token_program.to_account_info(),
         amount_b,
+        signer_seeds,
     )?;
 
     emit!( LiquidityRemoved {

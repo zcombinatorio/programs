@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{constants::*, errors::*, state::PoolAccount};
+use crate::{constants::*, errors::*, state::PoolAccount, utils::{transfer_tokens, transfer_signed}};
 
 #[event]
 pub struct CondSwap {
@@ -226,81 +226,57 @@ pub fn swap_handler(
     if swap_a_to_b {
         // A -> B
         // 1. Transfer input A (minus fee) to reserve
-        token::transfer(
-            CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.trader_account_a.to_account_info(),
-                    to: ctx.accounts.reserve_a.to_account_info(),
-                    authority: ctx.accounts.trader.to_account_info(),
-                },
-            ),
+        transfer_tokens(
+            ctx.accounts.trader_account_a.to_account_info(),
+            ctx.accounts.reserve_a.to_account_info(),
+            ctx.accounts.trader.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
             input_amount - fee_amount,
         )?;
         // 2. Transfer fee to fee vault
-        token::transfer(
-            CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.trader_account_a.to_account_info(),
-                    to: ctx.accounts.fee_vault.to_account_info(),
-                    authority: ctx.accounts.trader.to_account_info(),
-                },
-            ),
+        transfer_tokens(
+            ctx.accounts.trader_account_a.to_account_info(),
+            ctx.accounts.fee_vault.to_account_info(),
+            ctx.accounts.trader.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
             fee_amount,
         )?;
         // 3. Transfer output B to trader
-        token::transfer(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.reserve_b.to_account_info(),
-                    to: ctx.accounts.trader_account_b.to_account_info(),
-                    authority: ctx.accounts.pool.to_account_info(),
-                },
-                signer_seeds,
-            ),
+        transfer_signed(
+            ctx.accounts.reserve_b.to_account_info(),
+            ctx.accounts.trader_account_b.to_account_info(),
+            ctx.accounts.pool.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
             output,
+            signer_seeds,
         )?;
     } else {
         // B -> A
         // 1. Transfer input B to reserve
-        token::transfer(
-            CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.trader_account_b.to_account_info(),
-                    to: ctx.accounts.reserve_b.to_account_info(),
-                    authority: ctx.accounts.trader.to_account_info(),
-                },
-            ),
+        transfer_tokens(
+            ctx.accounts.trader_account_b.to_account_info(),
+            ctx.accounts.reserve_b.to_account_info(),
+            ctx.accounts.trader.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
             input_amount,
         )?;
         // 2. Transfer output A to trader
-        token::transfer(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.reserve_a.to_account_info(),
-                    to: ctx.accounts.trader_account_a.to_account_info(),
-                    authority: ctx.accounts.pool.to_account_info(),
-                },
-                signer_seeds,
-            ),
+        transfer_signed(
+            ctx.accounts.reserve_a.to_account_info(),
+            ctx.accounts.trader_account_a.to_account_info(),
+            ctx.accounts.pool.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
             output,
+            signer_seeds,
         )?;
         // 3. Transfer fee from reserve A to fee vault
-        token::transfer(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.reserve_a.to_account_info(),
-                    to: ctx.accounts.fee_vault.to_account_info(),
-                    authority: ctx.accounts.pool.to_account_info(),
-                },
-                signer_seeds,
-            ),
+        transfer_signed(
+            ctx.accounts.reserve_a.to_account_info(),
+            ctx.accounts.fee_vault.to_account_info(),
+            ctx.accounts.pool.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
             fee_amount,
+            signer_seeds,
         )?;
     }
 

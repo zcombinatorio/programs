@@ -17,9 +17,9 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{constants::*, errors::*, state::*};
+use crate::{constants::*, errors::*, state::*, utils::transfer_tokens};
 
 #[event]
 pub struct LiquidityAdded {
@@ -108,26 +108,18 @@ pub fn add_liquidity_handler(
     require!(amount_b > 0, AmmError::InvalidAmount);
 
     // Transfer tokens from depositor -> reserves
-    token::transfer(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.depositor_token_acc_a.to_account_info(),
-                to: ctx.accounts.reserve_a.to_account_info(),
-                authority: ctx.accounts.depositor.to_account_info(),
-            },
-        ),
+    transfer_tokens(
+        ctx.accounts.depositor_token_acc_a.to_account_info(),
+        ctx.accounts.reserve_a.to_account_info(),
+        ctx.accounts.depositor.to_account_info(),
+        ctx.accounts.token_program.to_account_info(),
         amount_a,
     )?;
-    token::transfer(
-        CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.depositor_token_acc_b.to_account_info(),
-                to: ctx.accounts.reserve_b.to_account_info(),
-                authority: ctx.accounts.depositor.to_account_info(),
-            },
-        ),
+    transfer_tokens(
+        ctx.accounts.depositor_token_acc_b.to_account_info(),
+        ctx.accounts.reserve_b.to_account_info(),
+        ctx.accounts.depositor.to_account_info(),
+        ctx.accounts.token_program.to_account_info(),
         amount_b,
     )?;
 

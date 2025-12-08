@@ -4,6 +4,7 @@ pub mod state;
 pub mod errors;
 pub mod constants;
 pub mod instructions;
+pub mod utils;
 
 pub use state::*;
 pub use constants::*;
