@@ -1,7 +1,7 @@
 {
   "name": "@zcomb/vault-sdk",
-  "version": "0.1.4",
-  "description": "TS SDK for Combinator's QM Conditional Token Vault",
+  "version": "0.1.5",
+  "description": "TS SDK for Combinator's QM Programs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": ["dist", "src/generated/vault.json"],
@@ -10,7 +10,7 @@
     "type": "git",
     "url": "https://github.com/zcombinatorio/programs"
   },
-  "keywords": ["solana", "anchor", "vault"],
+  "keywords": ["solana", "anchor", "futarchy"],
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",

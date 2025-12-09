@@ -1,8 +1,10 @@
-// Client
-export { VaultClient } from "./client";
-
-// Types
+// =============================================================================
+// Vault SDK
+// =============================================================================
 export {
+  // Client
+  VaultClient,
+  // Types
   VaultType,
   VaultState,
   VaultAccount,
@@ -14,26 +16,17 @@ export {
   VaultActivatedEvent,
   VaultFinalizedEvent,
   VaultEvent,
-} from "./types";
-
-// Constants
-export {
+  // Constants
   PROGRAM_ID,
   VAULT_SEED,
   CONDITIONAL_MINT_SEED,
   MAX_OPTIONS,
   MIN_OPTIONS,
-} from "./constants";
-
-// Utils
-export {
+  // Utils
   deriveVaultPDA,
   deriveConditionalMint,
   fetchVaultAccount,
-} from "./utils";
-
-// Instruction Builders
-export {
+  // Instructions
   initialize,
   addOption,
   activate,
@@ -41,4 +34,48 @@ export {
   withdraw,
   finalize,
   redeemWinnings,
-} from "./instructions";
+} from "./vault";
+
+// =============================================================================
+// AMM SDK
+// =============================================================================
+export {
+  // Client
+  AMMClient,
+  // Types
+  TwapOracle,
+  PoolAccount,
+  PoolCreatedEvent,
+  CondSwapEvent,
+  TWAPUpdateEvent,
+  LiquidityAddedEvent,
+  LiquidityRemovedEvent,
+  AMMEvent,
+  SwapQuote,
+  // Constants
+  AMM_PROGRAM_ID,
+  POOL_SEED,
+  RESERVE_SEED,
+  FEE_VAULT_SEED,
+  FEE_AUTHORITY,
+  MAX_FEE,
+  PRICE_SCALE,
+  // Utils
+  derivePoolPDA,
+  deriveReservePDA,
+  deriveFeeVaultPDA,
+  fetchPoolAccount,
+  computeSwapOutput,
+  computeSwapInput,
+  calculatePriceImpact,
+  createSwapQuote,
+  calculateTwap,
+  calculateSpotPrice,
+  // Instructions
+  createPool,
+  createPoolWithLiquidity,
+  addLiquidity,
+  removeLiquidity,
+  swap,
+  crankTwap,
+} from "./amm";
