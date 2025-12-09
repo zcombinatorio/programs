@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token::{Token, TokenAccount};
 
 use crate::{constants::*, errors::*, state::PoolAccount, utils::{transfer_tokens, transfer_signed}};
 
@@ -17,19 +17,14 @@ pub struct CondSwap {
 pub struct Swap<'info> {
     pub trader: Signer<'info>,
 
-    pub mint_a: Account<'info, Mint>,
-    pub mint_b: Account<'info, Mint>,
-
     #[account(
         seeds = [
             POOL_SEED,
             pool.admin.as_ref(),
-            mint_a.key().as_ref(),
-            mint_b.key().as_ref(),
+            pool.mint_a.as_ref(),
+            pool.mint_b.as_ref(),
         ],
         bump = pool.bump,
-        has_one = mint_a,
-        has_one = mint_b,
     )]
     pub pool: Box<Account<'info, PoolAccount>>,
 
@@ -39,10 +34,10 @@ pub struct Swap<'info> {
         seeds = [
             RESERVE_SEED,
             pool.key().as_ref(),
-            mint_a.key().as_ref(),
+            pool.mint_a.as_ref(),
         ],
         bump,
-        token::mint = mint_a,
+        token::mint = pool.mint_a,
         token::authority = pool,
     )]
     pub reserve_a: Account<'info, TokenAccount>,
@@ -52,10 +47,10 @@ pub struct Swap<'info> {
         seeds = [
             RESERVE_SEED,
             pool.key().as_ref(),
-            mint_b.key().as_ref(),
+            pool.mint_b.as_ref(),
         ],
         bump,
-        token::mint = mint_b,
+        token::mint = pool.mint_b,
         token::authority = pool,
     )]
     pub reserve_b: Account<'info, TokenAccount>,
@@ -74,14 +69,14 @@ pub struct Swap<'info> {
     // Trader accounts
     #[account(
         mut,
-        token::mint = mint_a,
+        token::mint = pool.mint_a,
         token::authority = trader,
     )]
     pub trader_account_a: Account<'info, TokenAccount>,
 
     #[account(
         mut,
-        token::mint = mint_b,
+        token::mint = pool.mint_b,
         token::authority = trader,
     )]
     pub trader_account_b: Account<'info, TokenAccount>,

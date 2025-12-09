@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token::{Token, TokenAccount};
 
 use crate::{constants::*, errors::*, state::*, utils::transfer_signed};
 
@@ -37,19 +37,14 @@ pub struct RemoveLiquidity<'info> {
     )]
     pub depositor: Signer<'info>,
 
-    pub mint_a: Account<'info, Mint>,
-    pub mint_b: Account<'info, Mint>,
-
     #[account(
         seeds = [
             POOL_SEED,
             depositor.key().as_ref(),
-            mint_a.key().as_ref(),
-            mint_b.key().as_ref(),
+            pool.mint_a.as_ref(),
+            pool.mint_b.as_ref(),
         ],
         bump = pool.bump,
-        has_one = mint_a,
-        has_one = mint_b,
     )]
     pub pool: Box<Account<'info, PoolAccount>>,
 
@@ -59,10 +54,10 @@ pub struct RemoveLiquidity<'info> {
         seeds = [
             RESERVE_SEED,
             pool.key().as_ref(),
-            mint_a.key().as_ref(),
+            pool.mint_a.as_ref(),
         ],
         bump,
-        token::mint = mint_a,
+        token::mint = pool.mint_a,
         token::authority = pool,
     )]
     pub reserve_a: Account<'info, TokenAccount>,
@@ -72,10 +67,10 @@ pub struct RemoveLiquidity<'info> {
         seeds = [
             RESERVE_SEED,
             pool.key().as_ref(),
-            mint_b.key().as_ref(),
+            pool.mint_b.as_ref(),
         ],
         bump,
-        token::mint = mint_b,
+        token::mint = pool.mint_b,
         token::authority = pool,
     )]
     pub reserve_b: Account<'info, TokenAccount>,
@@ -83,14 +78,14 @@ pub struct RemoveLiquidity<'info> {
     // Depositor token accounts for both mints
     #[account(
         mut,
-        token::mint = mint_a,
+        token::mint = pool.mint_a,
         token::authority = depositor,
     )]
     pub depositor_token_acc_a: Account<'info, TokenAccount>,
 
     #[account(
         mut,
-        token::mint = mint_b,
+        token::mint = pool.mint_b,
         token::authority = depositor,
     )]
     pub depositor_token_acc_b: Account<'info, TokenAccount>,
