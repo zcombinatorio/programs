@@ -121,10 +121,12 @@ pub fn swap_handler(
     require!(input_amount > 0, AmmError::InvalidAmount);
     require!(min_output_amount > 0, AmmError::InvalidAmount);
 
-    let pool = &ctx.accounts.pool;
     let reserve_a = ctx.accounts.reserve_a.amount;
     let reserve_b = ctx.accounts.reserve_b.amount;
-    let fee_bps = pool.fee as u64;
+    let fee_bps = ctx.accounts.pool.fee as u64;
+
+    // Crank TWAP oracle
+    ctx.accounts.pool.oracle.crank_twap(reserve_a, reserve_b)?;
 
     // Prevent swaps on empty pool
     require!(reserve_a > 0 && reserve_b > 0, AmmError::EmptyPool);
@@ -207,6 +209,7 @@ pub fn swap_handler(
     require!(invariant_after >= invariant_before, AmmError::InvariantViolated);
 
     // Build pool signer seeds
+    let pool = &ctx.accounts.pool;
     let seeds = &[
         POOL_SEED,
         pool.admin.as_ref(),

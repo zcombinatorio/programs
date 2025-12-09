@@ -22,6 +22,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 use crate::constants::*;
 use crate::errors::*;
 use crate::state::*;
+use crate::twap::TwapOracle;
 use crate::utils::transfer_tokens;
 use crate::instructions::create_pool::PoolCreated;
 use crate::instructions::add_liquidity::LiquidityAdded;
@@ -120,17 +121,28 @@ pub fn create_pool_with_liquidity_handler(
     fee: u16,
     amount_a: u64,
     amount_b: u64,
+    starting_observation: u128,
+    max_observation_delta: u128,
+    warmup_duration: u32,
 ) -> Result<()> {
     require!(fee <= MAX_FEE, AmmError::InvalidFee);
     require!(amount_a > 0, AmmError::InvalidAmount);
     require!(amount_b > 0, AmmError::InvalidAmount);
 
     let pool = &mut ctx.accounts.pool;
+    let clock = Clock::get()?;
+
     pool.admin = ctx.accounts.signer.key();
     pool.mint_a = ctx.accounts.mint_a.key();
     pool.mint_b = ctx.accounts.mint_b.key();
     pool.fee = fee;
     pool.bump = ctx.bumps.pool;
+    pool.oracle = TwapOracle::new(
+        clock.unix_timestamp,
+        starting_observation,
+        max_observation_delta,
+        warmup_duration,
+    );
 
     transfer_tokens(
         ctx.accounts.signer_token_acc_a.to_account_info(),

@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use crate::twap::TwapOracle;
 
 #[account]
 #[derive(InitSpace)]
@@ -11,6 +12,7 @@ pub struct PoolAccount {
 
     // Fee (basis points)
     pub fee: u16,
+    pub oracle: TwapOracle,
 
     pub bump: u8,
 }

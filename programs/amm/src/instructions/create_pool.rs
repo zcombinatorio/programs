@@ -22,6 +22,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 use crate::constants::*;
 use crate::errors::*;
 use crate::state::*;
+use crate::twap::TwapOracle;
 
 #[event]
 pub struct PoolCreated {
@@ -105,16 +106,29 @@ pub struct CreatePool<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn create_pool_handler(ctx: Context<CreatePool>, fee: u16) -> Result<()> {
+pub fn create_pool_handler(
+    ctx: Context<CreatePool>,
+    fee: u16,
+    starting_observation: u128,
+    max_observation_delta: u128,
+    warmup_duration: u32,
+) -> Result<()> {
     // Fee cannot exceed maximum
     require!(fee <= MAX_FEE, AmmError::InvalidFee);
 
     let pool = &mut ctx.accounts.pool;
+    let clock = Clock::get()?;
 
     pool.admin = ctx.accounts.signer.key();
     pool.mint_a = ctx.accounts.mint_a.key();
     pool.mint_b = ctx.accounts.mint_b.key();
     pool.fee = fee;
+    pool.oracle = TwapOracle::new(
+        clock.unix_timestamp,
+        starting_observation,
+        max_observation_delta,
+        warmup_duration,
+    );
     pool.bump = ctx.bumps.pool;
 
     emit!(PoolCreated {
