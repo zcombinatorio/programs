@@ -18,6 +18,7 @@ pub struct Swap<'info> {
     pub trader: Signer<'info>,
 
     #[account(
+        mut,
         seeds = [
             POOL_SEED,
             pool.admin.as_ref(),
