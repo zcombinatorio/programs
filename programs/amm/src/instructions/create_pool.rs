@@ -36,7 +36,10 @@ pub struct PoolCreated {
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
     #[account(mut)]
-    pub signer: Signer<'info>,
+    pub payer: Signer<'info>,
+
+    /// CHECK: Admin pubkey stored in pool state
+    pub admin: UncheckedAccount<'info>,
 
     // Mints; Fees are collected in mint A
     pub mint_a: Account<'info, Mint>,
@@ -44,11 +47,11 @@ pub struct CreatePool<'info> {
 
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         space = 8 + PoolAccount::INIT_SPACE,
         seeds = [
             POOL_SEED,
-            signer.key().as_ref(),
+            admin.key().as_ref(),
             mint_a.key().as_ref(),
             mint_b.key().as_ref(),
         ],
@@ -59,7 +62,7 @@ pub struct CreatePool<'info> {
     // Pool reserves
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         seeds = [
             RESERVE_SEED,
             pool.key().as_ref(),
@@ -73,7 +76,7 @@ pub struct CreatePool<'info> {
 
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         seeds = [
             RESERVE_SEED,
             pool.key().as_ref(),
@@ -91,7 +94,7 @@ pub struct CreatePool<'info> {
 
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         seeds = [
             FEE_VAULT_SEED,
             pool.key().as_ref(),
@@ -118,30 +121,35 @@ pub fn create_pool_handler(
     // Fee cannot exceed maximum
     require!(fee <= MAX_FEE, AmmError::InvalidFee);
 
-    let pool = &mut ctx.accounts.pool;
     let clock = Clock::get()?;
 
-    pool.admin = ctx.accounts.signer.key();
-    pool.liquidity_provider = 
-        liquidity_provider.unwrap_or(ctx.accounts.signer.key());
-    pool.mint_a = ctx.accounts.mint_a.key();
-    pool.mint_b = ctx.accounts.mint_b.key();
-    pool.fee = fee;
-    pool.oracle = TwapOracle::new(
-        clock.unix_timestamp,
-        starting_observation,
-        max_observation_delta,
-        warmup_duration,
-    );
-    pool.bump = ctx.bumps.pool;
-    pool.state = PoolState::Trading;
+    ctx.accounts.pool.set_inner(PoolAccount {
+        admin: ctx.accounts.admin.key(),
+        liquidity_provider: liquidity_provider.unwrap_or(ctx.accounts.admin.key()),
+        mint_a: ctx.accounts.mint_a.key(),
+        mint_b: ctx.accounts.mint_b.key(),
+        fee,
+        oracle: TwapOracle::new(
+            clock.unix_timestamp,
+            starting_observation,
+            max_observation_delta,
+            warmup_duration,
+        ),
+        state: PoolState::Trading,
+        bumps: PoolBumps {
+            pool: ctx.bumps.pool,
+            reserve_a: ctx.bumps.reserve_a,
+            reserve_b: ctx.bumps.reserve_b,
+            fee_vault: ctx.bumps.fee_vault,
+        },
+    });
 
     emit!(PoolCreated {
-        pool: pool.key(),
-        admin: pool.admin,
-        mint_a: pool.mint_a,
-        mint_b: pool.mint_b,
-        fee: pool.fee,
+        pool: ctx.accounts.pool.key(),
+        admin: ctx.accounts.admin.key(),
+        mint_a: ctx.accounts.mint_a.key(),
+        mint_b: ctx.accounts.mint_b.key(),
+        fee,
     });
 
     Ok(())

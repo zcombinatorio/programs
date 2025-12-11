@@ -33,10 +33,10 @@ pub struct CrankTwap<'info> {
             pool.mint_a.as_ref(),
             pool.mint_b.as_ref(),
         ],
-        bump = pool.bump,
+        bump = pool.bumps.pool,
         constraint = pool.state == PoolState::Trading @ AmmError::InvalidState
     )]
-    pub pool: Box<Account<'info, PoolAccount>>,
+    pub pool: Account<'info, PoolAccount>,
 
     #[account(
         seeds = [
@@ -44,7 +44,7 @@ pub struct CrankTwap<'info> {
             pool.key().as_ref(),
             pool.mint_a.as_ref(),
         ],
-        bump,
+        bump = pool.bumps.reserve_a,
         token::mint = pool.mint_a,
         token::authority = pool,
     )]
@@ -56,18 +56,16 @@ pub struct CrankTwap<'info> {
             pool.key().as_ref(),
             pool.mint_b.as_ref(),
         ],
-        bump,
+        bump = pool.bumps.reserve_b,
         token::mint = pool.mint_b,
         token::authority = pool,
     )]
     pub reserve_b: Account<'info, TokenAccount>,
 }
 
-pub fn crank_twap_handler(ctx: Context<CrankTwap>) -> Result<()> {
+pub fn crank_twap_handler(ctx: Context<CrankTwap>) -> Result<Option<u128>> {
     let reserve_a = ctx.accounts.reserve_a.amount;
     let reserve_b = ctx.accounts.reserve_b.amount;
 
-    ctx.accounts.pool.oracle.crank_twap(reserve_a, reserve_b)?;
-
-    Ok(())
+    ctx.accounts.pool.oracle.crank_twap(reserve_a, reserve_b)
 }

@@ -7,6 +7,14 @@ pub enum PoolState {
     Finalized,
 }
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
+pub struct PoolBumps {
+    pub pool: u8,
+    pub reserve_a: u8,
+    pub reserve_b: u8,
+    pub fee_vault: u8,
+}
+
 #[account]
 #[derive(InitSpace)]
 pub struct PoolAccount {
@@ -27,5 +35,5 @@ pub struct PoolAccount {
     pub oracle: TwapOracle,
     pub state: PoolState,
 
-    pub bump: u8,
+    pub bumps: PoolBumps,
 }

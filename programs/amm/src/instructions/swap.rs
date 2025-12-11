@@ -25,7 +25,7 @@ pub struct Swap<'info> {
             pool.mint_a.as_ref(),
             pool.mint_b.as_ref(),
         ],
-        bump = pool.bump,
+        bump = pool.bumps.pool,
         constraint = pool.state == PoolState::Trading @ AmmError::InvalidState
     )]
     pub pool: Box<Account<'info, PoolAccount>>,
@@ -38,7 +38,7 @@ pub struct Swap<'info> {
             pool.key().as_ref(),
             pool.mint_a.as_ref(),
         ],
-        bump,
+        bump = pool.bumps.reserve_a,
         token::mint = pool.mint_a,
         token::authority = pool,
     )]
@@ -51,7 +51,7 @@ pub struct Swap<'info> {
             pool.key().as_ref(),
             pool.mint_b.as_ref(),
         ],
-        bump,
+        bump = pool.bumps.reserve_b,
         token::mint = pool.mint_b,
         token::authority = pool,
     )]
@@ -64,7 +64,7 @@ pub struct Swap<'info> {
             FEE_VAULT_SEED,
             pool.key().as_ref(),
         ],
-        bump,
+        bump = pool.bumps.fee_vault,
     )]
     pub fee_vault: Account<'info, TokenAccount>,
 
@@ -212,7 +212,7 @@ pub fn swap_handler(
         pool.admin.as_ref(),
         pool.mint_a.as_ref(),
         pool.mint_b.as_ref(),
-        &[pool.bump],
+        &[pool.bumps.pool],
     ];
     let signer_seeds = &[&seeds[..]];
 

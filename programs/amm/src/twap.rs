@@ -28,6 +28,7 @@ pub struct TWAPUpdate {
     pub price: u128,
     pub observation: u128,
     pub cumulative_observations: u128,
+    pub twap: u128,
 }
 
 /// TWAP oracle that tracks time-weighted average prices with manipulation resistance.
@@ -76,7 +77,8 @@ impl TwapOracle {
     }
 
     /// Records a new price sample and updates the TWAP accumulator.
-    pub fn crank_twap(&mut self, reserves_a: u64, reserves_b: u64) -> Result<()> {
+    /// Returns the current TWAP if available (None during warmup).
+    pub fn crank_twap(&mut self, reserves_a: u64, reserves_b: u64) -> Result<Option<u128>> {
         let clock = Clock::get()?;
         let now = clock.unix_timestamp;
 
@@ -85,7 +87,7 @@ impl TwapOracle {
             || reserves_a == 0
             || reserves_b == 0
         {
-            return Ok(());
+            return Ok(self.fetch_twap().ok());
         }
 
         let curr_price = (reserves_a as u128).saturating_mul(PRICE_SCALE) / reserves_b as u128;
@@ -128,14 +130,18 @@ impl TwapOracle {
             Ordering::Equal => require_eq!(new_obs, curr_price),
         }
 
+        // Get final twap
+        let twap = self.fetch_twap().ok();
+
         emit!(TWAPUpdate {
             unix_time: now,
             price: curr_price,
             observation: new_obs,
             cumulative_observations: self.cumulative_observations,
+            twap: twap.unwrap_or(0)
         });
 
-        Ok(())
+        Ok(twap)
     }
 
     /// Computes the time-weighted average price since warmup completed.

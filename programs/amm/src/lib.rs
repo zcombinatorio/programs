@@ -40,7 +40,7 @@ pub mod amm {
         instructions::swap::swap_handler(ctx, swap_a_to_b, input_amount, min_output_amount)
     }
 
-    pub fn crank_twap(ctx: Context<CrankTwap>) -> Result<()> {
+    pub fn crank_twap(ctx: Context<CrankTwap>) -> Result<Option<u128>> {
         instructions::crank_twap::crank_twap_handler(ctx)
     }
 

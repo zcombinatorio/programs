@@ -30,7 +30,7 @@ pub struct LiquidityAdded {
 
 #[derive(Accounts)]
 pub struct AddLiquidity<'info> {
-    // Only allow the pool admin to add liquidity
+    // Only allow the liquidity provider (pool field) 
     #[account(
         constraint = depositor.key() == pool.liquidity_provider @ AmmError::InvalidAdmin,
     )]
@@ -39,11 +39,11 @@ pub struct AddLiquidity<'info> {
     #[account(
         seeds = [
             POOL_SEED,
-            depositor.key().as_ref(),
+            pool.admin.as_ref(),
             pool.mint_a.as_ref(),
             pool.mint_b.as_ref(),
         ],
-        bump = pool.bump,
+        bump = pool.bumps.pool,
     )]
     pub pool: Box<Account<'info, PoolAccount>>,
 
@@ -55,7 +55,7 @@ pub struct AddLiquidity<'info> {
             pool.key().as_ref(),
             pool.mint_a.as_ref(),
         ],
-        bump,
+        bump = pool.bumps.reserve_a,
         token::mint = pool.mint_a,
         token::authority = pool,
     )]
@@ -68,7 +68,7 @@ pub struct AddLiquidity<'info> {
             pool.key().as_ref(),
             pool.mint_b.as_ref(),
         ],
-        bump,
+        bump = pool.bumps.reserve_b,
         token::mint = pool.mint_b,
         token::authority = pool,
     )]
