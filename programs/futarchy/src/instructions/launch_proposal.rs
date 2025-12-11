@@ -11,6 +11,16 @@ use anchor_spl::token::Token;
 use vault::program::Vault;
 use vault::VaultType;
 
+#[event]
+pub struct ProposalLaunched {
+    pub proposal_id: u8,
+    pub proposal: Pubkey,
+    pub num_options: u8,
+    pub base_amount: u64,
+    pub quote_amount: u64,
+    pub created_at: i64,
+}
+
 #[derive(Accounts)]
 pub struct LaunchProposal<'info> {
     #[account(mut)]
@@ -185,6 +195,15 @@ pub fn launch_proposal_handler<'info>(
     let proposal = &mut ctx.accounts.proposal;
     proposal.state = ProposalState::Pending;
     proposal.created_at = Clock::get()?.unix_timestamp;
+
+    emit!(ProposalLaunched {
+        proposal_id: proposal.id,
+        proposal: proposal.key(),
+        num_options: proposal.num_options,
+        base_amount,
+        quote_amount,
+        created_at: proposal.created_at,
+    });
 
     Ok(())
 }

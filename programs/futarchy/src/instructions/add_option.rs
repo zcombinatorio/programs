@@ -10,6 +10,14 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
 use vault::program::Vault;
 
+#[event]
+pub struct OptionAdded {
+    pub proposal_id: u8,
+    pub proposal: Pubkey,
+    pub option_index: u8,
+    pub pool: Pubkey,
+}
+
 #[derive(Accounts)]
 pub struct AddOption<'info> {
     #[account(
@@ -135,6 +143,13 @@ pub fn add_option_handler<'info>(
         proposal.twap_config.warmup_duration,
         Some(ctx.accounts.signer.key())
     )?;
+
+    emit!(OptionAdded {
+        proposal_id: proposal.id,
+        proposal: proposal.key(),
+        option_index: curr_options,
+        pool: ctx.remaining_accounts[5].key(),
+    });
 
     Ok(())
 }

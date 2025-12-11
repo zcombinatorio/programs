@@ -9,6 +9,13 @@ use crate::constants::*;
 use crate::errors::FutarchyError;
 use crate::state::{ProposalAccount, ProposalState};
 
+#[event]
+pub struct ProposalFinalized {
+    pub proposal_id: u8,
+    pub proposal: Pubkey,
+    pub winning_idx: u8,
+}
+
 #[derive(Accounts)]
 pub struct FinalizeProposal<'info> {
     pub signer: Signer<'info>,
@@ -143,6 +150,12 @@ pub fn finalize_proposal_handler<'info>(
     // Update proposal state
     let proposal = &mut ctx.accounts.proposal;
     proposal.state = ProposalState::Resolved(winning_idx);
+
+    emit!(ProposalFinalized {
+        proposal_id: proposal.id,
+        proposal: proposal.key(),
+        winning_idx,
+    });
 
     Ok(())
 }

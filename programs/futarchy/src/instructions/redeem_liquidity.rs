@@ -11,6 +11,14 @@ use crate::constants::*;
 use crate::errors::FutarchyError;
 use crate::state::{ProposalAccount, ProposalState};
 
+#[event]
+pub struct LiquidityRedeemed {
+    pub proposal_id: u8,
+    pub proposal: Pubkey,
+    pub redeemer: Pubkey,
+    pub winning_idx: u8,
+}
+
 #[derive(Accounts)]
 pub struct RedeemLiquidity<'info> {
     #[account(mut)]
@@ -172,6 +180,13 @@ pub fn redeem_liquidity_handler<'info>(
     .with_remaining_accounts(quote_remaining);
 
     vault::cpi::redeem_winnings(redeem_quote_ctx, VaultType::Quote)?;
+
+    emit!(LiquidityRedeemed {
+        proposal_id: proposal.id,
+        proposal: proposal.key(),
+        redeemer: ctx.accounts.signer.key(),
+        winning_idx,
+    });
 
     Ok(())
 }

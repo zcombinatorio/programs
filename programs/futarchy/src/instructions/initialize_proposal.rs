@@ -10,6 +10,18 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
 use vault::program::Vault;
 
+#[event]
+pub struct ProposalInitialized {
+    pub proposal_id: u8,
+    pub proposal: Pubkey,
+    pub moderator: Pubkey,
+    pub creator: Pubkey,
+    pub vault: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub length: u16
+}
+
 #[derive(Accounts)]
 pub struct InitializeProposal<'info> {
     #[account(mut)]
@@ -112,7 +124,7 @@ pub fn initialize_proposal_handler<'info>(
     proposal.vault = ctx.remaining_accounts[2].key();
 
     // Build proposal PDA signer seeds
-    let moderator_key = ctx.accounts.moderator.key();
+    let moderator_key = moderator.key();
     let proposal_seeds = &[
         PROPOSAL_SEED,
         moderator_key.as_ref(),
@@ -197,6 +209,17 @@ pub fn initialize_proposal_handler<'info>(
         twap_config.warmup_duration,
         Some(ctx.accounts.signer.key())
     )?;
+
+    emit!(ProposalInitialized {
+        proposal_id,
+        proposal: proposal.key(),
+        moderator: moderator.key(),
+        creator: proposal.creator,
+        vault: proposal.vault,
+        base_mint: proposal.base_mint,
+        quote_mint: proposal.quote_mint,
+        length
+    });
 
     Ok(())
 }
