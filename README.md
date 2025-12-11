@@ -1,8 +1,125 @@
 # Combinator Programs
 
-| Program | Address |
-|---------|---------|
-| vault | vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc |
+| Program | Address | Version | Deprecated |
+|---------|---------|---------|------------|
+| futarchy | D2E45PQk715zosJaJcwauGP5PiyBipYQpNqsCrQMGMWV | 0.1.0 | |
+| amm | 3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz | 0.1.0 | |
+| vault | vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc | 0.0.0 | ❌ |
+
+---
+
+## Futarchy
+
+A decision market protocol. Proposals create conditional token markets for each option, and the option with the highest TWAP wins.
+
+```
+                         INITIALIZE PROPOSAL
+    Moderator ──────────────────────────────────────────────►┌──────────┐
+                                                             │ Proposal │
+                                                             └────┬─────┘
+                                                                  │
+                    ┌─────────────────────────────────────────────┼─────────────────────────────────────────────┐
+                    │                                             │                                             │
+                    ▼                                             ▼                                             ▼
+             ┌─────────────┐                               ┌─────────────┐                               ┌─────────────┐
+             │   Vault     │                               │   Pool 0    │                               │   Pool N    │
+             │ (cond tkns) │                               │ quote/base  │           ...                 │ quote/base  │
+             └─────────────┘                               └──────┬──────┘                               └──────┬──────┘
+                                                                  │                                             │
+                                                                  │ TWAP                                        │ TWAP
+                                                                  ▼                                             ▼
+                                                           ┌────────────────────────────────────────────────────────┐
+                                                           │              FINALIZE PROPOSAL                         │
+                                                           │         highest TWAP wins → vault finalized            │
+                                                           └────────────────────────────────────────────────────────┘
+```
+
+### Initialize Moderator
+
+Creates a moderator account tied to a base/quote mint pair. Moderators can host multiple proposals.
+
+### Initialize Proposal
+
+Creates a proposal with 2 options. Initializes a vault (via CPI) and creates AMM pools for each option. Proposal starts in `Setup` state.
+
+### Add Option
+
+Adds additional options to a proposal (up to 6 total). Creates the corresponding conditional mints in the vault and a new AMM pool.
+
+### Launch Proposal
+
+Activates the proposal for trading:
+1. Activates the vault
+2. Deposits base and quote tokens (mints conditional tokens)
+3. Seeds liquidity to all AMM pools
+
+Proposal transitions to `Pending` state and the countdown begins.
+
+### Finalize Proposal
+
+After the proposal duration elapses:
+1. Cranks TWAP on each pool
+2. Determines winner by highest TWAP
+3. Ceases trading on all pools
+4. Finalizes vault with winning index
+
+Proposal transitions to `Resolved(winning_idx)`.
+
+### Redeem Liquidity
+
+Allows the proposal creator to withdraw their liquidity from all pools after finalization.
+
+---
+
+## AMM with TWAP Oracle
+
+A simple light-weight constant-product AMM with a manipulation-resistant Time-Weighted Average Price (TWAP) oracle. Designed for conditional token markets where the TWAP determines outcomes.
+
+```
+                           SWAP
+    Token A ──────────────────────────────────► Token B
+       │                                           │
+       │              ┌─────────┐                  │
+       └─────────────►│  Pool   │◄─────────────────┘
+                      │ x * y=k │
+                      └────┬────┘
+                           │
+                           │ crank_twap (rate-limited)
+                           ▼
+                    ┌─────────────┐
+                    │ TWAP Oracle │
+                    │  ┌───────┐  │
+                    │  │ price │──┼──► bounded observation
+                    │  └───────┘  │        │
+                    │             │        ▼
+                    │  cumulative_observations += obs * elapsed
+                    └─────────────┘
+```
+
+### Create Pool
+
+Creates a new liquidity pool with configurable fee and TWAP parameters. Takes an optional `liquidity_provider` parameter:
+- If provided: only that address can add/remove liquidity
+- If omitted: defaults to `admin`
+
+### Add / Remove Liquidity
+
+Only the designated `liquidity_provider` can deposit or withdraw tokens. This single-provider model ensures controlled liquidity for conditional token markets.
+
+### Swap
+
+Constant-product swap with configurable fee (basis points). Fee collected in token A (mint_a).
+
+### Crank TWAP
+
+Updates the TWAP oracle with current pool price. Manipulation-resistant design:
+- **Rate limited**: 60-second minimum between recordings
+- **Bounded movement**: Observation moves toward price capped by `max_observation_delta`
+- **Warmup period**: TWAP accumulation begins after `warmup_duration` seconds
+
+### Cease Trading
+
+Admin freezes the pool, preventing further swaps. Used when finalizing proposals.
 
 ---
 
