@@ -31,4 +31,7 @@ pub enum FutarchyError {
 
     #[msg("Proposal has not expired yet")]
     ProposalNotExpired,
+
+    #[msg("TWAP not ready")]
+    TwapNotReady,
 }

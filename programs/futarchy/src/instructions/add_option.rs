@@ -4,7 +4,7 @@ use vault::cpi::accounts::AddOption as AddVaultOption;
 
 use crate::constants::*;
 use crate::errors::FutarchyError;
-use crate::state::{ModeratorAccount, ProposalAccount, ProposalState};
+use crate::state::{ProposalAccount, ProposalState};
 use amm::program::Amm;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
@@ -19,21 +19,10 @@ pub struct AddOption<'info> {
     pub signer: Signer<'info>,
 
     #[account(
-        seeds = [
-            MODERATOR_SEED,
-            moderator.base_mint.as_ref(),
-            moderator.quote_mint.as_ref(),
-            &[moderator.id]
-        ],
-        bump = moderator.bump
-    )]
-    pub moderator: Box<Account<'info, ModeratorAccount>>,
-
-    #[account(
         mut,
         seeds = [
             PROPOSAL_SEED,
-            moderator.key().as_ref(),
+            proposal.moderator.as_ref(),
             &[proposal.id]
         ],
         bump = proposal.bump,
@@ -69,18 +58,18 @@ pub fn add_option_handler<'info>(
         FutarchyError::InvalidRemainingAccounts
     );
 
-    // Validate mints match moderator
-    let moderator = &ctx.accounts.moderator;
+    let proposal = &mut ctx.accounts.proposal;
+
+    // Validate mints
     require!(
-        ctx.remaining_accounts[1].key() == moderator.base_mint,
+        ctx.remaining_accounts[1].key() == proposal.base_mint,
         FutarchyError::InvalidMint
     );
     require!(
-        ctx.remaining_accounts[2].key() == moderator.quote_mint,
+        ctx.remaining_accounts[2].key() == proposal.quote_mint,
         FutarchyError::InvalidMint
     );
 
-    let proposal = &mut ctx.accounts.proposal;
     let curr_options = proposal.num_options;
 
     require!(
@@ -93,10 +82,9 @@ pub fn add_option_handler<'info>(
     proposal.num_options += 1;
 
     // Build proposal PDA signer seeds
-    let moderator_key = ctx.accounts.moderator.key();
     let proposal_seeds = &[
         PROPOSAL_SEED,
-        moderator_key.as_ref(),
+        proposal.moderator.as_ref(),
         &[proposal.id],
         &[proposal.bump],
     ];
@@ -125,7 +113,8 @@ pub fn add_option_handler<'info>(
     let create_pool_ctx = CpiContext::new(
         ctx.accounts.amm_program.to_account_info(),
         CreatePool {
-            signer: ctx.accounts.signer.to_account_info(),
+            payer: ctx.accounts.signer.to_account_info(),
+            admin: proposal.to_account_info(),
             mint_a: ctx.remaining_accounts[4].to_account_info(), // cond_quote_mint
             mint_b: ctx.remaining_accounts[3].to_account_info(), // cond_base_mint
             pool: ctx.remaining_accounts[5].to_account_info(),   // pool

@@ -4,7 +4,7 @@ use vault::cpi::accounts::{ActivateVault, UserVaultAction};
 
 use crate::constants::*;
 use crate::errors::FutarchyError;
-use crate::state::{ModeratorAccount, ProposalAccount, ProposalState};
+use crate::state::{ProposalAccount, ProposalState};
 use amm::program::Amm;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
@@ -17,21 +17,10 @@ pub struct LaunchProposal<'info> {
     pub signer: Signer<'info>,
 
     #[account(
-        seeds = [
-            MODERATOR_SEED,
-            moderator.base_mint.as_ref(),
-            moderator.quote_mint.as_ref(),
-            &[moderator.id]
-        ],
-        bump = moderator.bump
-    )]
-    pub moderator: Box<Account<'info, ModeratorAccount>>,
-
-    #[account(
         mut,
         seeds = [
             PROPOSAL_SEED,
-            moderator.key().as_ref(),
+            proposal.moderator.as_ref(),
             &[proposal.id]
         ],
         bump = proposal.bump,
@@ -86,21 +75,20 @@ pub fn launch_proposal_handler<'info>(
 
     // Validate vault matches proposal
     require!(
-        ctx.remaining_accounts[0].key() == ctx.accounts.moderator.base_mint, // base_mint
+        ctx.remaining_accounts[0].key() == ctx.accounts.proposal.base_mint, // base_mint
         FutarchyError::InvalidMint
     );
     require!(
-        ctx.remaining_accounts[1].key() == ctx.accounts.moderator.quote_mint, // quote_mint
+        ctx.remaining_accounts[1].key() == ctx.accounts.proposal.quote_mint, // quote_mint
         FutarchyError::InvalidMint
     );
 
     // Build proposal PDA signer seeds
-    let moderator_key = ctx.accounts.moderator.key();
     let proposal_id = ctx.accounts.proposal.id;
     let proposal_bump = ctx.accounts.proposal.bump;
     let proposal_seeds = &[
         PROPOSAL_SEED,
-        moderator_key.as_ref(),
+        ctx.accounts.proposal.moderator.as_ref(),
         &[proposal_id],
         &[proposal_bump],
     ];

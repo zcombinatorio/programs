@@ -95,19 +95,23 @@ pub fn initialize_proposal_handler<'info>(
 
     // Store state
     let proposal_id = moderator.proposal_id_counter;
+    moderator.proposal_id_counter += 1;
+  
     proposal.id = proposal_id;
     proposal.creator = ctx.accounts.signer.key();
     proposal.moderator = moderator.key();
-    moderator.proposal_id_counter += 1;
+    proposal.base_mint = moderator.base_mint;
+    proposal.quote_mint = moderator.quote_mint;
     proposal.length = length;
     proposal.bump = ctx.bumps.proposal;
     proposal.fee = fee;
     proposal.twap_config = twap_config;
     proposal.num_options = 2;
     proposal.state = ProposalState::Setup;
-    proposal.pools[0] = ctx.remaining_accounts[9].key(); // pool_0
-    proposal.pools[1] = ctx.remaining_accounts[14].key(); // pool_1
-    proposal.vault = ctx.remaining_accounts[2].key(); // vault
+    proposal.pools[0] = ctx.remaining_accounts[9].key();
+    proposal.pools[1] = ctx.remaining_accounts[14].key();
+    // pools[2..] already default/zeroed
+    proposal.vault = ctx.remaining_accounts[2].key();
 
     // Build proposal PDA signer seeds
     let moderator_key = ctx.accounts.moderator.key();
@@ -123,7 +127,7 @@ pub fn initialize_proposal_handler<'info>(
     let init_vault_ctx = CpiContext::new_with_signer(
         ctx.accounts.vault_program.to_account_info(),
         InitializeVault {
-            signer: ctx.accounts.proposal.to_account_info(),
+            signer: proposal.to_account_info(),
             base_mint: ctx.remaining_accounts[0].to_account_info(),
             quote_mint: ctx.remaining_accounts[1].to_account_info(),
             vault: ctx.remaining_accounts[2].to_account_info(),
@@ -146,7 +150,8 @@ pub fn initialize_proposal_handler<'info>(
     let create_pool_0_ctx = CpiContext::new(
         ctx.accounts.amm_program.to_account_info(),
         CreatePool {
-            signer: ctx.accounts.signer.to_account_info(),
+            payer: ctx.accounts.signer.to_account_info(),
+            admin: proposal.to_account_info(),
             mint_a: ctx.remaining_accounts[7].to_account_info(), // cond_quote_mint_0
             mint_b: ctx.remaining_accounts[5].to_account_info(), // cond_base_mint_0
             pool: ctx.remaining_accounts[9].to_account_info(),   // pool_0
@@ -172,7 +177,8 @@ pub fn initialize_proposal_handler<'info>(
     let create_pool_1_ctx = CpiContext::new(
         ctx.accounts.amm_program.to_account_info(),
         CreatePool {
-            signer: ctx.accounts.signer.to_account_info(),
+            payer: ctx.accounts.signer.to_account_info(),
+            admin: proposal.to_account_info(),
             mint_a: ctx.remaining_accounts[8].to_account_info(), // cond_quote_mint_1
             mint_b: ctx.remaining_accounts[6].to_account_info(), // cond_base_mint_1
             pool: ctx.remaining_accounts[14].to_account_info(),  // pool_1

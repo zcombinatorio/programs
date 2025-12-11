@@ -1,34 +1,23 @@
-use amm::cpi::accounts::CeaseTrading;
+use amm::cpi::accounts::{CeaseTrading, CrankTwap};
 use amm::program::Amm;
-use amm::PoolAccount;
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program::get_return_data;
 use vault::cpi::accounts::FinalizeVault;
 use vault::program::Vault;
 
 use crate::constants::*;
 use crate::errors::FutarchyError;
-use crate::state::{ModeratorAccount, ProposalAccount, ProposalState};
+use crate::state::{ProposalAccount, ProposalState};
 
 #[derive(Accounts)]
 pub struct FinalizeProposal<'info> {
     pub signer: Signer<'info>,
 
     #[account(
-        seeds = [
-            MODERATOR_SEED,
-            moderator.base_mint.as_ref(),
-            moderator.quote_mint.as_ref(),
-            &[moderator.id]
-        ],
-        bump = moderator.bump
-    )]
-    pub moderator: Box<Account<'info, ModeratorAccount>>,
-
-    #[account(
         mut,
         seeds = [
             PROPOSAL_SEED,
-            moderator.key().as_ref(),
+            proposal.moderator.as_ref(),
             &[proposal.id]
         ],
         bump = proposal.bump,
@@ -46,8 +35,11 @@ pub struct FinalizeProposal<'info> {
     pub vault_program: Program<'info, Vault>,
     pub amm_program: Program<'info, Amm>,
 
-    // Remaining accounts (for N pools):
-    // pools[0..N] - Pool accounts (mutable)
+    // Remaining accounts (for N pools, 3 accounts per pool):
+    // For each pool i:
+    //   - pool[i * 3]      - Pool account (mutable)
+    //   - reserve_a[i * 3 + 1] - Reserve A token account
+    //   - reserve_b[i * 3 + 2] - Reserve B token account
 }
 
 pub fn finalize_proposal_handler<'info>(
@@ -56,9 +48,9 @@ pub fn finalize_proposal_handler<'info>(
     let proposal = &ctx.accounts.proposal;
     let num_options = proposal.num_options as usize;
 
-    // Validate remaining accounts length
+    // Validate remaining accounts length (3 accounts per pool: pool, reserve_a, reserve_b)
     require!(
-        ctx.remaining_accounts.len() >= num_options,
+        ctx.remaining_accounts.len() >= num_options * 3,
         FutarchyError::InvalidRemainingAccounts
     );
 
@@ -70,22 +62,36 @@ pub fn finalize_proposal_handler<'info>(
         FutarchyError::ProposalNotExpired
     );
 
-    // Get TWAP from each pool and find the winning index
+    // Crank TWAP and collect values from each pool
     let mut twaps: Vec<u128> = Vec::with_capacity(num_options);
 
     for i in 0..num_options {
+        let pool_idx = i * 3;
+
         // Validate pool matches proposal
-        let pool_key = ctx.remaining_accounts[i].key();
+        let pool_key = ctx.remaining_accounts[pool_idx].key();
         require!(
             pool_key == proposal.pools[i],
             FutarchyError::InvalidPools
         );
 
-        // Deserialize pool account to read TWAP
-        let pool_data = ctx.remaining_accounts[i].try_borrow_data()?;
-        let pool = PoolAccount::try_deserialize(&mut &pool_data[..])?;
+        // Crank TWAP to ensure fresh data
+        let crank_twap_ctx = CpiContext::new(
+            ctx.accounts.amm_program.to_account_info(),
+            CrankTwap {
+                pool: ctx.remaining_accounts[pool_idx].to_account_info(),
+                reserve_a: ctx.remaining_accounts[pool_idx + 1].to_account_info(),
+                reserve_b: ctx.remaining_accounts[pool_idx + 2].to_account_info(),
+            },
+        );
+        amm::cpi::crank_twap(crank_twap_ctx)?;
 
-        let twap = pool.oracle.fetch_twap()?;
+        // Get TWAP from CPI return data
+        let (_, data) = get_return_data().ok_or(FutarchyError::TwapNotReady)?;
+        let twap: Option<u128> = AnchorDeserialize::deserialize(&mut &data[..])
+            .map_err(|_| FutarchyError::TwapNotReady)?;
+        // Should never be None - proposal length > warmup duration
+        let twap = twap.ok_or(FutarchyError::TwapNotReady)?;
         twaps.push(twap);
     }
 
@@ -98,7 +104,7 @@ pub fn finalize_proposal_handler<'info>(
         .unwrap_or(0);
 
     // Build proposal PDA signer seeds
-    let moderator_key = ctx.accounts.moderator.key();
+    let moderator_key = proposal.moderator;
     let proposal_id = proposal.id;
     let proposal_bump = proposal.bump;
     let proposal_seeds = &[
@@ -111,11 +117,12 @@ pub fn finalize_proposal_handler<'info>(
 
     // Cease trading on each pool (proposal PDA as admin)
     for i in 0..num_options {
+        let pool_idx = i * 3;
         let cease_trading_ctx = CpiContext::new_with_signer(
             ctx.accounts.amm_program.to_account_info(),
             CeaseTrading {
                 admin: ctx.accounts.proposal.to_account_info(),
-                pool: ctx.remaining_accounts[i].to_account_info(),
+                pool: ctx.remaining_accounts[pool_idx].to_account_info(),
             },
             signer_seeds,
         );

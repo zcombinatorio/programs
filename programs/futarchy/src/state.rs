@@ -31,7 +31,9 @@ pub struct ProposalAccount {
     pub created_at: i64,
     pub length: u16, // in seconds
 
-    // References to vault and pool accounts
+    // References for validation
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
     pub vault: Pubkey,
     pub pools: [Pubkey; MAX_OPTIONS as usize],
 
