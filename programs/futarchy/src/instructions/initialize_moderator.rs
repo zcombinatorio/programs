@@ -37,7 +37,7 @@ pub struct InitializeModerator<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn initialize_moderator(ctx: Context<InitializeModerator>, id: u8) -> Result<()> {
+pub fn initialize_moderator_handler(ctx: Context<InitializeModerator>, id: u8) -> Result<()> {
     let moderator = &mut ctx.accounts.moderator;
 
     moderator.id = id;

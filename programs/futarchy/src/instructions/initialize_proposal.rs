@@ -68,7 +68,7 @@ pub struct InitializeProposal<'info> {
     // 17: fee_vault_1
 }
 
-pub fn initialize_proposal<'info>(
+pub fn initialize_proposal_handler<'info>(
     ctx: Context<'_, '_, 'info, 'info, InitializeProposal<'info>>,
     length: u16,
     fee: u16, // AMM Fee

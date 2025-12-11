@@ -5,17 +5,53 @@ pub mod errors;
 pub mod instructions;
 pub mod state;
 
+pub use constants::*;
+pub use errors::*;
+pub use instructions::*;
+pub use state::*;
+
 declare_id!("D2E45PQk715zosJaJcwauGP5PiyBipYQpNqsCrQMGMWV");
 
 #[program]
 pub mod futarchy {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
-        Ok(())
+    pub fn initialize_moderator(ctx: Context<InitializeModerator>, id: u8) -> Result<()> {
+        instructions::initialize_moderator::initialize_moderator_handler(ctx, id)
+    }
+
+    pub fn initialize_proposal<'info>(
+        ctx: Context<'_, '_, 'info, 'info, InitializeProposal<'info>>,
+        length: u16,
+        fee: u16,
+        twap_config: TWAPConfig,
+    ) -> Result<()> {
+        instructions::initialize_proposal::initialize_proposal_handler(ctx, length, fee, twap_config)
+    }
+
+    pub fn add_option<'info>(
+        ctx: Context<'_, '_, 'info, 'info, AddOption<'info>>,
+    ) -> Result<()> {
+        instructions::add_option::add_option_handler(ctx)
+    }
+
+    pub fn launch_proposal<'info>(
+        ctx: Context<'_, '_, 'info, 'info, LaunchProposal<'info>>,
+        base_amount: u64,
+        quote_amount: u64,
+    ) -> Result<()> {
+        instructions::launch_proposal::launch_proposal_handler(ctx, base_amount, quote_amount)
+    }
+
+    pub fn finalize_proposal<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FinalizeProposal<'info>>,
+    ) -> Result<()> {
+        instructions::finalize_proposal::finalize_proposal_handler(ctx)
+    }
+
+    pub fn redeem_liquidity<'info>(
+        ctx: Context<'_, '_, 'info, 'info, RedeemLiquidity<'info>>,
+    ) -> Result<()> {
+        instructions::redeem_liquidity::redeem_liquidity_handler(ctx)
     }
 }
-
-#[derive(Accounts)]
-pub struct Initialize {}

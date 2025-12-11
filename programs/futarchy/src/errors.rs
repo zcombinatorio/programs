@@ -28,4 +28,7 @@ pub enum FutarchyError {
 
     #[msg("Unauthorized")]
     Unauthorized,
+
+    #[msg("Proposal has not expired yet")]
+    ProposalNotExpired,
 }

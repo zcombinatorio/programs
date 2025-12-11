@@ -10,6 +10,7 @@ vault = "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
 
 [programs.mainnet]
 amm = "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+futarchy = "D2E45PQk715zosJaJcwauGP5PiyBipYQpNqsCrQMGMWV"
 vault = "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
 
 [registry]

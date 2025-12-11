@@ -6,9 +6,10 @@ pub const MODERATOR_SEED: &[u8] = b"moderator";
 #[constant]
 pub const PROPOSAL_SEED: &[u8] = b"proposal";
 
-// Maximum number of conditional options per vault
+// Maximum number of conditional options
+// Bottle-necked by launch_proposal (64 account max)
 #[constant]
-pub const MAX_OPTIONS: u8 = 8;
+pub const MAX_OPTIONS: u8 = 6;
 
 // Minimum number of conditional options required
 #[constant]

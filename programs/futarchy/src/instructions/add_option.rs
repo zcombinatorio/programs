@@ -61,7 +61,7 @@ pub struct AddOption<'info> {
     // 9: fee_vault
 }
 
-pub fn add_option<'info>(
+pub fn add_option_handler<'info>(
     ctx: Context<'_, '_, 'info, 'info, AddOption<'info>>
 ) -> Result<()> {
     require!(
