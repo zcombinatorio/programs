@@ -39,18 +39,6 @@ pub mod amm {
         instructions::swap::swap_handler(ctx, swap_a_to_b, input_amount, min_output_amount)
     }
 
-    pub fn create_pool_with_liquidity(
-        ctx: Context<CreatePoolWithLiquidity>,
-        fee: u16,
-        amount_a: u64,
-        amount_b: u64,
-        starting_observation: u128,
-        max_observation_delta: u128,
-        warmup_duration: u32,
-    ) -> Result<()> {
-        instructions::create_pool_with_liquidity::create_pool_with_liquidity_handler(ctx, fee, amount_a, amount_b, starting_observation, max_observation_delta, warmup_duration)
-    }
-
     pub fn crank_twap(ctx: Context<CrankTwap>) -> Result<()> {
         instructions::crank_twap::crank_twap_handler(ctx)
     }
