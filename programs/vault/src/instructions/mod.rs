@@ -1,15 +1,15 @@
-pub mod initialize;
-pub mod add_option;
 pub mod activate_vault;
-pub mod finalize;
+pub mod add_option;
 pub mod deposit;
-pub mod withdrawal;
+pub mod finalize;
+pub mod initialize;
 pub mod redeem_winnings;
+pub mod withdrawal;
 
-pub use initialize::*;
-pub use add_option::*;
 pub use activate_vault::*;
-pub use finalize::*;
+pub use add_option::*;
 pub use deposit::*;
-pub use withdrawal::*;
+pub use finalize::*;
+pub use initialize::*;
 pub use redeem_winnings::*;
+pub use withdrawal::*;

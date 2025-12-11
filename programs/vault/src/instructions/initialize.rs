@@ -29,12 +29,11 @@ pub struct VaultInitialized {
     pub owner: Pubkey,
     pub base_mint: Pubkey,
     pub quote_mint: Pubkey,
-    pub proposal_id: u8,
     pub nonce: u8,
 }
 
 #[derive(Accounts)]
-#[instruction(proposal_id: u8, nonce: u8)]
+#[instruction(nonce: u8)]
 pub struct InitializeVault<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -46,8 +45,7 @@ pub struct InitializeVault<'info> {
         seeds = [
             VAULT_SEED,
             signer.key().as_ref(),
-            &[nonce],
-            &[proposal_id]
+            &[nonce]
         ],
         bump,
     )]
@@ -148,18 +146,13 @@ pub struct InitializeVault<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-pub fn initialize_handler(
-    ctx: Context<InitializeVault>,
-    proposal_id: u8,
-    nonce: u8,
-) -> Result<()> {
+pub fn initialize_handler(ctx: Context<InitializeVault>, nonce: u8) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
     vault.owner = ctx.accounts.signer.key();
     vault.base_mint = ctx.accounts.base_mint.key();
     vault.quote_mint = ctx.accounts.quote_mint.key();
     vault.nonce = nonce;
-    vault.proposal_id = proposal_id;
     vault.num_options = 2; // First 2 options generated atomically
 
     // Store conditional mints
@@ -170,7 +163,6 @@ pub fn initialize_handler(
     vault.cond_quote_mints[1] = ctx.accounts.cond_quote_mint_1.key();
 
     vault.state = VaultState::Setup;
-    vault.winning_idx = None;
     vault.bump = ctx.bumps.vault;
 
     emit!(VaultInitialized {
@@ -178,7 +170,6 @@ pub fn initialize_handler(
         owner: vault.owner,
         base_mint: vault.base_mint,
         quote_mint: vault.quote_mint,
-        proposal_id,
         nonce,
     });
 

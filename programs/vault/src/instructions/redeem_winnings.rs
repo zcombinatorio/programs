@@ -41,10 +41,11 @@ pub fn redeem_winnings_handler<'info>(
 ) -> Result<()> {
     let vault = &ctx.accounts.vault;
 
-    require!(
-        vault.state == VaultState::Finalized,
-        VaultError::InvalidState
-    );
+    let winning_idx = if let VaultState::Finalized(idx) = vault.state {
+        idx
+    } else {
+        return err!(VaultError::InvalidState);
+    };
 
     let num_options = vault.num_options as usize;
 
@@ -58,12 +59,7 @@ pub fn redeem_winnings_handler<'info>(
         vault.cond_base_mints
     } else {
         vault.cond_quote_mints
-    };    
-
-    // Extract winning option
-    let winning_idx = vault
-        .winning_idx
-        .ok_or(error!(VaultError::NoWinningOption))?;
+    };
 
     let mut winning_amount = 0u64;
 

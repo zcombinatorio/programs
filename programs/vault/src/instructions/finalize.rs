@@ -1,4 +1,3 @@
-
 /*
  * Copyright (C) 2025 Spice Finance Inc.
  *
@@ -16,7 +15,8 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */use anchor_lang::prelude::*;
+ */
+use anchor_lang::prelude::*;
 
 use crate::constants::*;
 use crate::errors::*;
@@ -41,7 +41,6 @@ pub struct FinalizeVault<'info> {
             VAULT_SEED,
             vault.owner.as_ref(),
             &[vault.nonce],
-            &[vault.proposal_id]
         ],
         bump = vault.bump,
         constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
@@ -58,8 +57,7 @@ pub fn finalize_vault_handler(ctx: Context<FinalizeVault>, winning_idx: u8) -> R
     );
 
     // Finalize state
-    vault.state = VaultState::Finalized;
-    vault.winning_idx = Some(winning_idx);
+    vault.state = VaultState::Finalized(winning_idx);
 
     emit!(VaultFinalized {
         vault: vault.key(),

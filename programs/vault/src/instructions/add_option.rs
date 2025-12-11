@@ -43,7 +43,6 @@ pub struct AddOption<'info> {
             VAULT_SEED,
             vault.owner.as_ref(),
             &[vault.nonce],
-            &[vault.proposal_id]
         ],
         bump = vault.bump,
         constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
@@ -66,9 +65,9 @@ pub struct AddOption<'info> {
         mint::decimals = base_mint.decimals,
         mint::authority = vault,
         seeds = [
-            CONDITIONAL_MINT_SEED, 
-            vault.key().as_ref(), 
-            &[VaultType::Base as u8], 
+            CONDITIONAL_MINT_SEED,
+            vault.key().as_ref(),
+            &[VaultType::Base as u8],
             &[vault.num_options]
         ],
         bump,
@@ -82,9 +81,9 @@ pub struct AddOption<'info> {
         mint::decimals = quote_mint.decimals,
         mint::authority = vault,
         seeds = [
-            CONDITIONAL_MINT_SEED, 
-            vault.key().as_ref(), 
-            &[VaultType::Quote as u8], 
+            CONDITIONAL_MINT_SEED,
+            vault.key().as_ref(),
+            &[VaultType::Quote as u8],
             &[vault.num_options]
         ],
         bump,

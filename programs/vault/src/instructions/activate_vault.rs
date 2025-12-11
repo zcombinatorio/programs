@@ -38,7 +38,6 @@ pub struct ActivateVault<'info> {
             VAULT_SEED,
             vault.owner.as_ref(),
             &[vault.nonce],
-            &[vault.proposal_id]
         ],
         bump = vault.bump,
         constraint = vault.owner == signer.key() @ VaultError::Unauthorized,

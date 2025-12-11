@@ -36,7 +36,6 @@ pub struct UserVaultAction<'info> {
             VAULT_SEED,
             vault.owner.as_ref(),
             &[vault.nonce],
-            &[vault.proposal_id],
         ],
         bump = vault.bump,
     )]

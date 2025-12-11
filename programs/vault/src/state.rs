@@ -34,16 +34,16 @@ pub enum VaultState {
     Active,
     // Deposits / Withdrawals revoked
     // Redeem Winnings allowed
-    Finalized,
+    Finalized(u8), // winning index
 }
 
 #[derive(InitSpace)]
 #[account]
 pub struct VaultAccount {
-    pub owner: Pubkey, // Vault creator
+    pub owner: Pubkey,      // Vault creator
     pub base_mint: Pubkey,  // Base mint
     pub quote_mint: Pubkey, // Quote mint
-    pub nonce: u8,     // Unique identifier (e.g. protocol_id)
+    pub nonce: u8,          // Unique identifier (e.g. protocol_id)
     pub proposal_id: u8,
     pub state: VaultState,
 
@@ -51,10 +51,6 @@ pub struct VaultAccount {
     pub num_options: u8,
     pub cond_base_mints: [Pubkey; MAX_OPTIONS as usize], // allocate for max options
     pub cond_quote_mints: [Pubkey; MAX_OPTIONS as usize], // allocate for max options
-
-    // Set after finalization
-    // index in cond_mints
-    pub winning_idx: Option<u8>,
 
     pub bump: u8,
 }

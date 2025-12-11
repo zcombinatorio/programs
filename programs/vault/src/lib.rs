@@ -41,12 +41,8 @@ pub mod vault {
     /*
      * Admin Actions
      */
-    pub fn initialize(
-        ctx: Context<InitializeVault>,
-        proposal_id: u8,
-        nonce: u8,
-    ) -> Result<()> {
-        instructions::initialize::initialize_handler(ctx, proposal_id, nonce)
+    pub fn initialize(ctx: Context<InitializeVault>, proposal_id: u8) -> Result<()> {
+        instructions::initialize::initialize_handler(ctx, proposal_id)
     }
 
     pub fn add_option(ctx: Context<AddOption>) -> Result<()> {

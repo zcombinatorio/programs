@@ -38,9 +38,6 @@ pub enum VaultError {
     #[msg("Invalid account owner")]
     InvalidAccountOwner,
 
-    #[msg("No winning option set")]
-    NoWinningOption,
-
     #[msg("No conditional tokens")]
     NoConditionalTokens,
 
