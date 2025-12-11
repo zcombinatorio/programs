@@ -34,4 +34,7 @@ pub enum FutarchyError {
 
     #[msg("TWAP not ready")]
     TwapNotReady,
+
+    #[msg("Counter overflow")]
+    CounterOverflow,
 }

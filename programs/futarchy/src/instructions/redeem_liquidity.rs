@@ -9,7 +9,7 @@ use vault::VaultType;
 
 use crate::constants::*;
 use crate::errors::FutarchyError;
-use crate::state::{ModeratorAccount, ProposalAccount, ProposalState};
+use crate::state::{ProposalAccount, ProposalState};
 
 #[derive(Accounts)]
 pub struct RedeemLiquidity<'info> {
@@ -18,19 +18,8 @@ pub struct RedeemLiquidity<'info> {
 
     #[account(
         seeds = [
-            MODERATOR_SEED,
-            moderator.base_mint.as_ref(),
-            moderator.quote_mint.as_ref(),
-            &[moderator.id]
-        ],
-        bump = moderator.bump
-    )]
-    pub moderator: Box<Account<'info, ModeratorAccount>>,
-
-    #[account(
-        seeds = [
             PROPOSAL_SEED,
-            moderator.key().as_ref(),
+            proposal.moderator.as_ref(),
             &[proposal.id]
         ],
         bump = proposal.bump,

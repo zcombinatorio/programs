@@ -4,8 +4,14 @@ use crate::constants::MAX_OPTIONS;
 
 #[account]
 #[derive(InitSpace)]
+pub struct GlobalConfig {
+    pub moderator_id_counter: u32, // global counter (starts at 0)
+}
+
+#[account]
+#[derive(InitSpace)]
 pub struct ModeratorAccount {
-    pub id: u8, // moderator id
+    pub id: u32, // moderator id (globally unique)
     pub quote_mint: Pubkey,
     pub base_mint: Pubkey,
     pub proposal_id_counter: u8, // next proposal id

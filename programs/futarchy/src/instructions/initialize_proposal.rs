@@ -19,9 +19,7 @@ pub struct InitializeProposal<'info> {
         mut,
         seeds = [
             MODERATOR_SEED,
-            moderator.base_mint.as_ref(),
-            moderator.quote_mint.as_ref(),
-            &[moderator.id]
+            &moderator.id.to_le_bytes()
         ],
         bump = moderator.bump
     )]

@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 
 #[constant]
+pub const GLOBAL_CONFIG_SEED: &[u8] = b"global_config";
+
+#[constant]
 pub const MODERATOR_SEED: &[u8] = b"moderator";
 
 #[constant]

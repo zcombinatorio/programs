@@ -16,8 +16,8 @@ declare_id!("D2E45PQk715zosJaJcwauGP5PiyBipYQpNqsCrQMGMWV");
 pub mod futarchy {
     use super::*;
 
-    pub fn initialize_moderator(ctx: Context<InitializeModerator>, id: u8) -> Result<()> {
-        instructions::initialize_moderator::initialize_moderator_handler(ctx, id)
+    pub fn initialize_moderator(ctx: Context<InitializeModerator>) -> Result<u32> {
+        instructions::initialize_moderator::initialize_moderator_handler(ctx)
     }
 
     pub fn initialize_proposal<'info>(
