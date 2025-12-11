@@ -1,5 +1,9 @@
 import { PublicKey } from "@solana/web3.js";
 
+// =============================================================================
+// Enums
+// =============================================================================
+
 export enum VaultType {
   Base = 0,
   Quote = 1,
@@ -10,6 +14,10 @@ export enum VaultState {
   Active = "active",
   Finalized = "finalized",
 }
+
+// =============================================================================
+// Account Types
+// =============================================================================
 
 export interface VaultAccount {
   owner: PublicKey;
@@ -25,21 +33,21 @@ export interface VaultAccount {
   bump: number;
 }
 
+// =============================================================================
 // Event Types
+// =============================================================================
+
 export interface VaultInitializedEvent {
   vault: PublicKey;
   owner: PublicKey;
   baseMint: PublicKey;
   quoteMint: PublicKey;
-  proposalId: number;
   nonce: number;
 }
 
-export interface OptionAddedEvent {
+export interface VaultActivatedEvent {
   vault: PublicKey;
-  optionIndex: number;
-  condBaseMint: PublicKey;
-  condQuoteMint: PublicKey;
+  numOptions: number;
 }
 
 export interface VaultDepositEvent {
@@ -56,18 +64,6 @@ export interface VaultWithdrawalEvent {
   amount: bigint;
 }
 
-export interface WinningsRedeemedEvent {
-  vault: PublicKey;
-  user: PublicKey;
-  vaultType: VaultType;
-  amount: bigint;
-}
-
-export interface VaultActivatedEvent {
-  vault: PublicKey;
-  numOptions: number;
-}
-
 export interface VaultFinalizedEvent {
   vault: PublicKey;
   winningIdx: number;
@@ -75,11 +71,25 @@ export interface VaultFinalizedEvent {
   winningQuoteMint: PublicKey;
 }
 
+export interface OptionAddedEvent {
+  vault: PublicKey;
+  optionIndex: number;
+  condBaseMint: PublicKey;
+  condQuoteMint: PublicKey;
+}
+
+export interface WinningsRedeemedEvent {
+  vault: PublicKey;
+  user: PublicKey;
+  vaultType: VaultType;
+  amount: bigint;
+}
+
 export type VaultEvent =
   | { name: "VaultInitialized"; data: VaultInitializedEvent }
-  | { name: "OptionAdded"; data: OptionAddedEvent }
+  | { name: "VaultActivated"; data: VaultActivatedEvent }
   | { name: "VaultDeposit"; data: VaultDepositEvent }
   | { name: "VaultWithdrawal"; data: VaultWithdrawalEvent }
-  | { name: "WinningsRedeemed"; data: WinningsRedeemedEvent }
-  | { name: "VaultActivated"; data: VaultActivatedEvent }
-  | { name: "VaultFinalized"; data: VaultFinalizedEvent };
+  | { name: "VaultFinalized"; data: VaultFinalizedEvent }
+  | { name: "OptionAdded"; data: OptionAddedEvent }
+  | { name: "WinningsRedeemed"; data: WinningsRedeemedEvent };

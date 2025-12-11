@@ -4,13 +4,12 @@ import { VAULT_SEED, CONDITIONAL_MINT_SEED, PROGRAM_ID } from "./constants";
 import { VaultType, VaultState, VaultAccount } from "./types";
 
 // =============================================================================
-// PDA Helpers
+// PDA Derivation
 // =============================================================================
 
 export function deriveVaultPDA(
   owner: PublicKey,
   nonce: number,
-  proposalId: number,
   programId: PublicKey = PROGRAM_ID
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
@@ -18,7 +17,6 @@ export function deriveVaultPDA(
       VAULT_SEED,
       owner.toBuffer(),
       Buffer.from([nonce]),
-      Buffer.from([proposalId]),
     ],
     programId
   );
@@ -45,10 +43,17 @@ export function deriveConditionalMint(
 // Parsers
 // =============================================================================
 
-export function parseVaultState(state: any): VaultState {
-  if ("setup" in state) return VaultState.Setup;
-  if ("active" in state) return VaultState.Active;
-  if ("finalized" in state) return VaultState.Finalized;
+export function parseVaultState(state: any): { state: VaultState; winningIdx: number | null } {
+  if ("setup" in state) {
+    return { state: VaultState.Setup, winningIdx: null };
+  }
+  if ("active" in state) {
+    return { state: VaultState.Active, winningIdx: null };
+  }
+  if ("finalized" in state) {
+    const winningIdx = state.finalized[0] ?? state.finalized;
+    return { state: VaultState.Finalized, winningIdx };
+  }
   throw new Error("Unknown vault state");
 }
 
@@ -61,6 +66,7 @@ export async function fetchVaultAccount(
   vaultPda: PublicKey
 ): Promise<VaultAccount> {
   const raw = await (program.account as any).vaultAccount.fetch(vaultPda);
+  const { state, winningIdx } = parseVaultState(raw.state);
 
   return {
     owner: raw.owner,
@@ -68,11 +74,11 @@ export async function fetchVaultAccount(
     quoteMint: raw.quoteMint,
     nonce: raw.nonce,
     proposalId: raw.proposalId,
-    state: parseVaultState(raw.state),
+    state,
     numOptions: raw.numOptions,
     condBaseMints: raw.condBaseMints.slice(0, raw.numOptions),
     condQuoteMints: raw.condQuoteMints.slice(0, raw.numOptions),
-    winningIdx: raw.winningIdx ?? null,
+    winningIdx,
     bump: raw.bump,
   };
 }

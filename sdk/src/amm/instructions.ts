@@ -1,7 +1,5 @@
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { FEE_AUTHORITY } from "./constants";
 
 // =============================================================================
 // Instruction Builders
@@ -9,80 +7,38 @@ import { FEE_AUTHORITY } from "./constants";
 
 export function createPool(
   program: Program,
-  signer: PublicKey,
+  payer: PublicKey,
+  admin: PublicKey,
   mintA: PublicKey,
   mintB: PublicKey,
-  poolPda: PublicKey,
+  pool: PublicKey,
   reserveA: PublicKey,
   reserveB: PublicKey,
   feeVault: PublicKey,
   fee: number,
   startingObservation: BN,
   maxObservationDelta: BN,
-  warmupDuration: number
+  warmupDuration: number,
+  liquidityProvider: PublicKey | null = null
 ) {
   return program.methods
-    .createPool(fee, startingObservation, maxObservationDelta, warmupDuration)
+    .createPool(fee, startingObservation, maxObservationDelta, warmupDuration, liquidityProvider)
     .accounts({
-      signer,
+      payer,
+      admin,
       mintA,
       mintB,
-      pool: poolPda,
+      pool,
       reserveA,
       reserveB,
-      feeAuthority: FEE_AUTHORITY,
       feeVault,
-    });
-}
-
-export function createPoolWithLiquidity(
-  program: Program,
-  signer: PublicKey,
-  mintA: PublicKey,
-  mintB: PublicKey,
-  poolPda: PublicKey,
-  reserveA: PublicKey,
-  reserveB: PublicKey,
-  feeVault: PublicKey,
-  signerTokenAccA: PublicKey,
-  signerTokenAccB: PublicKey,
-  fee: number,
-  amountA: BN | number,
-  amountB: BN | number,
-  startingObservation: BN,
-  maxObservationDelta: BN,
-  warmupDuration: number
-) {
-  const amtA = typeof amountA === "number" ? new BN(amountA) : amountA;
-  const amtB = typeof amountB === "number" ? new BN(amountB) : amountB;
-
-  return program.methods
-    .createPoolWithLiquidity(
-      fee,
-      amtA,
-      amtB,
-      startingObservation,
-      maxObservationDelta,
-      warmupDuration
-    )
-    .accounts({
-      signer,
-      mintA,
-      mintB,
-      pool: poolPda,
-      reserveA,
-      reserveB,
-      feeAuthority: FEE_AUTHORITY,
-      feeVault,
-      signerTokenAccA,
-      signerTokenAccB,
     });
 }
 
 export function addLiquidity(
   program: Program,
   depositor: PublicKey,
-  poolPda: PublicKey,
+  pool: PublicKey,
   reserveA: PublicKey,
   reserveB: PublicKey,
   depositorTokenAccA: PublicKey,
@@ -90,12 +46,12 @@ export function addLiquidity(
   amountA: BN | number,
   amountB: BN | number
 ) {
-  const amtA = typeof amountA === "number" ? new BN(amountA) : amountA;
-  const amtB = typeof amountB === "number" ? new BN(amountB) : amountB;
+  const amountABN = typeof amountA === "number" ? new BN(amountA) : amountA;
+  const amountBBN = typeof amountB === "number" ? new BN(amountB) : amountB;
 
-  return program.methods.addLiquidity(amtA, amtB).accounts({
+  return program.methods.addLiquidity(amountABN, amountBBN).accounts({
     depositor,
-    pool: poolPda,
+    pool,
     reserveA,
     reserveB,
     depositorTokenAccA,
@@ -106,7 +62,7 @@ export function addLiquidity(
 export function removeLiquidity(
   program: Program,
   depositor: PublicKey,
-  poolPda: PublicKey,
+  pool: PublicKey,
   reserveA: PublicKey,
   reserveB: PublicKey,
   depositorTokenAccA: PublicKey,
@@ -114,12 +70,12 @@ export function removeLiquidity(
   amountA: BN | number,
   amountB: BN | number
 ) {
-  const amtA = typeof amountA === "number" ? new BN(amountA) : amountA;
-  const amtB = typeof amountB === "number" ? new BN(amountB) : amountB;
+  const amountABN = typeof amountA === "number" ? new BN(amountA) : amountA;
+  const amountBBN = typeof amountB === "number" ? new BN(amountB) : amountB;
 
-  return program.methods.removeLiquidity(amtA, amtB).accounts({
+  return program.methods.removeLiquidity(amountABN, amountBBN).accounts({
     depositor,
-    pool: poolPda,
+    pool,
     reserveA,
     reserveB,
     depositorTokenAccA,
@@ -130,7 +86,7 @@ export function removeLiquidity(
 export function swap(
   program: Program,
   trader: PublicKey,
-  poolPda: PublicKey,
+  pool: PublicKey,
   reserveA: PublicKey,
   reserveB: PublicKey,
   feeVault: PublicKey,
@@ -140,13 +96,12 @@ export function swap(
   inputAmount: BN | number,
   minOutputAmount: BN | number
 ) {
-  const input = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
-  const minOutput =
-    typeof minOutputAmount === "number" ? new BN(minOutputAmount) : minOutputAmount;
+  const inputAmountBN = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
+  const minOutputAmountBN = typeof minOutputAmount === "number" ? new BN(minOutputAmount) : minOutputAmount;
 
-  return program.methods.swap(swapAToB, input, minOutput).accounts({
+  return program.methods.swap(swapAToB, inputAmountBN, minOutputAmountBN).accounts({
     trader,
-    pool: poolPda,
+    pool,
     reserveA,
     reserveB,
     feeVault,
@@ -157,13 +112,24 @@ export function swap(
 
 export function crankTwap(
   program: Program,
-  poolPda: PublicKey,
+  pool: PublicKey,
   reserveA: PublicKey,
   reserveB: PublicKey
 ) {
   return program.methods.crankTwap().accounts({
-    pool: poolPda,
+    pool,
     reserveA,
     reserveB,
+  });
+}
+
+export function ceaseTrading(
+  program: Program,
+  admin: PublicKey,
+  pool: PublicKey
+) {
+  return program.methods.ceaseTrading().accounts({
+    admin,
+    pool,
   });
 }

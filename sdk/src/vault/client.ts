@@ -1,5 +1,5 @@
 import { Program, AnchorProvider, Idl, BN } from "@coral-xyz/anchor";
-import { PublicKey, SystemProgram, ComputeBudgetProgram } from "@solana/web3.js";
+import { PublicKey, ComputeBudgetProgram, SystemProgram } from "@solana/web3.js";
 import {
   getAccount,
   getAssociatedTokenAddressSync,
@@ -26,9 +26,8 @@ import {
   redeemWinnings,
 } from "./instructions";
 
-import IDL from "./generated/vault.json";
+import IDL from "./idl/vault.json";
 
-// Max compute units for deposit/withdraw/redeem operations
 const MAX_COMPUTE_UNITS = 450_000;
 
 export class VaultClient {
@@ -46,10 +45,9 @@ export class VaultClient {
 
   deriveVaultPDA(
     owner: PublicKey,
-    nonce: number,
-    proposalId: number
+    nonce: number
   ): [PublicKey, number] {
-    return deriveVaultPDA(owner, nonce, proposalId, this.programId);
+    return deriveVaultPDA(owner, nonce, this.programId);
   }
 
   deriveConditionalMint(
@@ -74,9 +72,7 @@ export class VaultClient {
     const condMints = vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints;
     return {
       userAta: getAssociatedTokenAddressSync(mint, user),
-      userCondATAs: condMints.map((m) =>
-        getAssociatedTokenAddressSync(m, user)
-      ),
+      userCondATAs: condMints.map((m) => getAssociatedTokenAddressSync(m, user)),
     };
   }
 
@@ -93,10 +89,10 @@ export class VaultClient {
     const getBalanceSafe = async (ata: PublicKey) => {
       try {
         const acc = await getAccount(connection, ata);
-        return Number(acc.amount);
+        return new BN(acc.amount.toString());
       } catch (e) {
         if (e instanceof TokenAccountNotFoundError) {
-          return 0;
+          return new BN(0);
         }
         throw e;
       }
@@ -110,14 +106,14 @@ export class VaultClient {
     return { userBalance, condBalances };
   }
 
-  async fetchVaultBalance(vaultPda: PublicKey, vaultType: VaultType) {
+  async fetchVaultBalance(vaultPda: PublicKey, vaultType: VaultType): Promise<BN> {
     const vaultAta = await this.fetchVaultATA(vaultPda, vaultType);
     try {
       const acc = await getAccount(this.program.provider.connection, vaultAta);
-      return Number(acc.amount);
+      return new BN(acc.amount.toString());
     } catch (e) {
       if (e instanceof TokenAccountNotFoundError) {
-        return 0;
+        return new BN(0);
       }
       throw e;
     }
@@ -131,10 +127,9 @@ export class VaultClient {
     signer: PublicKey,
     baseMint: PublicKey,
     quoteMint: PublicKey,
-    nonce: number,
-    proposalId: number
+    nonce: number
   ) {
-    const [vaultPda] = this.deriveVaultPDA(signer, nonce, proposalId);
+    const [vaultPda] = this.deriveVaultPDA(signer, nonce);
     const [condBaseMint0] = this.deriveConditionalMint(vaultPda, VaultType.Base, 0);
     const [condBaseMint1] = this.deriveConditionalMint(vaultPda, VaultType.Base, 1);
     const [condQuoteMint0] = this.deriveConditionalMint(vaultPda, VaultType.Quote, 0);
@@ -150,8 +145,7 @@ export class VaultClient {
       condBaseMint1,
       condQuoteMint0,
       condQuoteMint1,
-      nonce,
-      proposalId
+      nonce
     );
 
     return {

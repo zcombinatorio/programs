@@ -1,17 +1,17 @@
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { AMM_PROGRAM_ID, POOL_SEED, RESERVE_SEED, FEE_VAULT_SEED, PRICE_SCALE } from "./constants";
-import { PoolAccount, TwapOracle, SwapQuote } from "./types";
+import { POOL_SEED, RESERVE_SEED, FEE_VAULT_SEED, PROGRAM_ID, PRICE_SCALE } from "./constants";
+import { PoolState, PoolAccount, TwapOracle, SwapQuote } from "./types";
 
 // =============================================================================
-// PDA Helpers
+// PDA Derivation
 // =============================================================================
 
 export function derivePoolPDA(
   admin: PublicKey,
   mintA: PublicKey,
   mintB: PublicKey,
-  programId: PublicKey = AMM_PROGRAM_ID
+  programId: PublicKey = PROGRAM_ID
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [POOL_SEED, admin.toBuffer(), mintA.toBuffer(), mintB.toBuffer()],
@@ -22,7 +22,7 @@ export function derivePoolPDA(
 export function deriveReservePDA(
   pool: PublicKey,
   mint: PublicKey,
-  programId: PublicKey = AMM_PROGRAM_ID
+  programId: PublicKey = PROGRAM_ID
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [RESERVE_SEED, pool.toBuffer(), mint.toBuffer()],
@@ -32,7 +32,7 @@ export function deriveReservePDA(
 
 export function deriveFeeVaultPDA(
   pool: PublicKey,
-  programId: PublicKey = AMM_PROGRAM_ID
+  programId: PublicKey = PROGRAM_ID
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [FEE_VAULT_SEED, pool.toBuffer()],
@@ -44,17 +44,10 @@ export function deriveFeeVaultPDA(
 // Parsers
 // =============================================================================
 
-function parseTwapOracle(raw: any): TwapOracle {
-  return {
-    cumulativeObservations: raw.cumulativeObservations,
-    lastUpdateUnixTime: raw.lastUpdateUnixTime,
-    createdAtUnixTime: raw.createdAtUnixTime,
-    lastPrice: raw.lastPrice,
-    lastObservation: raw.lastObservation,
-    maxObservationDelta: raw.maxObservationDelta,
-    startingObservation: raw.startingObservation,
-    warmupDuration: raw.warmupDuration,
-  };
+export function parsePoolState(state: any): PoolState {
+  if ("trading" in state) return PoolState.Trading;
+  if ("finalized" in state) return PoolState.Finalized;
+  throw new Error("Unknown pool state");
 }
 
 // =============================================================================
@@ -69,185 +62,177 @@ export async function fetchPoolAccount(
 
   return {
     admin: raw.admin,
+    liquidityProvider: raw.liquidityProvider,
     mintA: raw.mintA,
     mintB: raw.mintB,
     fee: raw.fee,
-    oracle: parseTwapOracle(raw.oracle),
-    bump: raw.bump,
+    oracle: {
+      cumulativeObservations: raw.oracle.cumulativeObservations,
+      lastUpdateUnixTime: raw.oracle.lastUpdateUnixTime,
+      createdAtUnixTime: raw.oracle.createdAtUnixTime,
+      lastPrice: raw.oracle.lastPrice,
+      lastObservation: raw.oracle.lastObservation,
+      maxObservationDelta: raw.oracle.maxObservationDelta,
+      startingObservation: raw.oracle.startingObservation,
+      warmupDuration: raw.oracle.warmupDuration,
+    },
+    state: parsePoolState(raw.state),
+    bumps: {
+      pool: raw.bumps.pool,
+      reserveA: raw.bumps.reserveA,
+      reserveB: raw.bumps.reserveB,
+      feeVault: raw.bumps.feeVault,
+    },
   };
 }
 
 // =============================================================================
-// Quote / Swap Math
+// Math Utilities
 // =============================================================================
 
+const PRICE_SCALE_BN = new BN(PRICE_SCALE.toString());
+
+export function calculateSpotPrice(
+  reserveA: BN,
+  reserveB: BN,
+  decimalsA: number,
+  decimalsB: number,
+): BN {
+  if (reserveB.isZero()) return new BN(0);
+
+  const decimalDiff = decimalsB - decimalsA;
+
+  if (decimalDiff >= 0) {
+    const multiplier = new BN(10).pow(new BN(decimalDiff));
+    return reserveA.mul(multiplier).mul(PRICE_SCALE_BN).div(reserveB);
+  } else {
+    const divisor = new BN(10).pow(new BN(-decimalDiff));
+    return reserveA.mul(PRICE_SCALE_BN).div(reserveB).div(divisor);
+  }
+}
+
 /**
- * Computes the output amount for a swap using constant product formula.
- * Formula: output = (input * reserve_out) / (reserve_in + input)
+ * Compute swap output using constant product formula with fees
  */
 export function computeSwapOutput(
   inputAmount: BN | number,
-  reserveIn: BN | number,
-  reserveOut: BN | number,
-  feeBps: number,
-  swapAToB: boolean
-): { output: BN; fee: BN } {
-  const input = new BN(inputAmount);
-  const resIn = new BN(reserveIn);
-  const resOut = new BN(reserveOut);
+  reserveIn: BN,
+  reserveOut: BN,
+  feeBps: number
+): { outputAmount: BN; feeAmount: BN } {
+  const input = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
 
-  if (swapAToB) {
-    // A -> B: fee on input
-    let fee = input.mul(new BN(feeBps)).div(new BN(10000));
-    if (feeBps > 0 && fee.isZero()) {
-      fee = new BN(1);
-    }
-    const taxedInput = input.sub(fee);
-    const numerator = taxedInput.mul(resOut);
-    const denominator = resIn.add(taxedInput);
-    const output = numerator.div(denominator);
-    return { output, fee };
-  } else {
-    // B -> A: fee on output
-    const numerator = input.mul(resIn);
-    const denominator = resOut.add(input);
-    const grossOutput = numerator.div(denominator);
-    let fee = grossOutput.mul(new BN(feeBps)).div(new BN(10000));
-    if (feeBps > 0 && fee.isZero()) {
-      fee = new BN(1);
-    }
-    const output = grossOutput.sub(fee);
-    return { output, fee };
+  if (reserveIn.isZero() || reserveOut.isZero()) {
+    return { outputAmount: new BN(0), feeAmount: new BN(0) };
   }
+
+  // Fee is collected from input token
+  const feeAmount = input.mul(new BN(feeBps)).div(new BN(10000));
+  const inputAfterFee = input.sub(feeAmount);
+
+  // Constant product: (reserveIn + inputAfterFee) * (reserveOut - output) = reserveIn * reserveOut
+  // output = reserveOut * inputAfterFee / (reserveIn + inputAfterFee)
+  const numerator = reserveOut.mul(inputAfterFee);
+  const denominator = reserveIn.add(inputAfterFee);
+  const outputAmount = numerator.div(denominator);
+
+  return { outputAmount, feeAmount };
 }
 
 /**
- * Computes the input amount needed to receive a specific output.
- * Inverse of computeSwapOutput.
+ * Compute swap input needed to get a specific output
  */
 export function computeSwapInput(
   outputAmount: BN | number,
-  reserveIn: BN | number,
-  reserveOut: BN | number,
-  feeBps: number,
-  swapAToB: boolean
-): { input: BN; fee: BN } {
-  const output = new BN(outputAmount);
-  const resIn = new BN(reserveIn);
-  const resOut = new BN(reserveOut);
+  reserveIn: BN,
+  reserveOut: BN,
+  feeBps: number
+): { inputAmount: BN; feeAmount: BN } {
+  const output = typeof outputAmount === "number" ? new BN(outputAmount) : outputAmount;
 
-  if (swapAToB) {
-    // A -> B: output from reserve_b
-    // output = (taxedInput * resOut) / (resIn + taxedInput)
-    // taxedInput = (output * resIn) / (resOut - output)
-    const numerator = output.mul(resIn);
-    const denominator = resOut.sub(output);
-    const taxedInput = numerator.div(denominator).add(new BN(1)); // Round up
-
-    // taxedInput = input - fee, fee = input * feeBps / 10000
-    // taxedInput = input * (1 - feeBps/10000) = input * (10000 - feeBps) / 10000
-    // input = taxedInput * 10000 / (10000 - feeBps)
-    const input = taxedInput.mul(new BN(10000)).div(new BN(10000 - feeBps)).add(new BN(1));
-    let fee = input.mul(new BN(feeBps)).div(new BN(10000));
-    if (feeBps > 0 && fee.isZero()) {
-      fee = new BN(1);
-    }
-    return { input, fee };
-  } else {
-    // B -> A: fee on output
-    // netOutput = grossOutput - fee, fee = grossOutput * feeBps / 10000
-    // netOutput = grossOutput * (10000 - feeBps) / 10000
-    // grossOutput = netOutput * 10000 / (10000 - feeBps)
-    const grossOutput = output.mul(new BN(10000)).div(new BN(10000 - feeBps)).add(new BN(1));
-    let fee = grossOutput.mul(new BN(feeBps)).div(new BN(10000));
-    if (feeBps > 0 && fee.isZero()) {
-      fee = new BN(1);
-    }
-
-    // grossOutput = (input * resIn) / (resOut + input)
-    // input = (grossOutput * resOut) / (resIn - grossOutput)
-    const numerator = grossOutput.mul(resOut);
-    const denominator = resIn.sub(grossOutput);
-    const input = numerator.div(denominator).add(new BN(1)); // Round up
-    return { input, fee };
+  if (reserveIn.isZero() || reserveOut.isZero() || output.gte(reserveOut)) {
+    return { inputAmount: new BN(0), feeAmount: new BN(0) };
   }
+
+  // inputAfterFee = reserveIn * output / (reserveOut - output)
+  const numerator = reserveIn.mul(output);
+  const denominator = reserveOut.sub(output);
+  const inputAfterFee = numerator.div(denominator).add(new BN(1)); // Round up
+
+  // inputAmount = inputAfterFee * 10000 / (10000 - feeBps)
+  const inputAmount = inputAfterFee.mul(new BN(10000)).div(new BN(10000 - feeBps)).add(new BN(1));
+  const feeAmount = inputAmount.mul(new BN(feeBps)).div(new BN(10000));
+
+  return { inputAmount, feeAmount };
 }
 
-/**
- * Calculates price impact as a percentage.
- * Price impact = 1 - (actualRate / spotRate)
- */
 export function calculatePriceImpact(
   inputAmount: BN,
   outputAmount: BN,
   reserveIn: BN,
-  reserveOut: BN
+  reserveOut: BN,
+  decimalsIn: number,
+  decimalsOut: number,
 ): number {
-  // Spot rate = reserveOut / reserveIn
-  // Actual rate = outputAmount / inputAmount
-  // Price impact = 1 - (actualRate / spotRate)
-  //              = 1 - (outputAmount * reserveIn) / (inputAmount * reserveOut)
+  if (reserveIn.isZero() || reserveOut.isZero() || inputAmount.isZero()) {
+    return 0;
+  }
 
-  const spotNumerator = reserveOut.mul(new BN(10000));
-  const spotRate = spotNumerator.div(reserveIn);
+  const spotPrice = calculateSpotPrice(reserveIn, reserveOut, decimalsIn, decimalsOut);
+  const executionPrice = calculateSpotPrice(inputAmount, outputAmount, decimalsIn, decimalsOut);
 
-  const actualNumerator = outputAmount.mul(new BN(10000));
-  const actualRate = actualNumerator.div(inputAmount);
+  if (spotPrice.isZero()) return 0;
 
-  // Impact = (spotRate - actualRate) / spotRate * 100
-  if (spotRate.isZero()) return 0;
-  const impact = spotRate.sub(actualRate).mul(new BN(10000)).div(spotRate);
-  return impact.toNumber() / 100; // Return as percentage
+  const impact = executionPrice.sub(spotPrice).mul(new BN(10000)).div(spotPrice);
+  return Math.abs(impact.toNumber()) / 100;
 }
 
-/**
- * Creates a full swap quote with output, fee, price impact, and minimum output.
- */
 export function createSwapQuote(
   inputAmount: BN | number,
-  reserveIn: BN | number,
-  reserveOut: BN | number,
+  reserveIn: BN,
+  reserveOut: BN,
   feeBps: number,
-  swapAToB: boolean,
-  slippagePercent: number = 0.5
+  decimalsIn: number,
+  decimalsOut: number,
+  slippagePercent: number = 0.5,
 ): SwapQuote {
-  const input = new BN(inputAmount);
-  const resIn = new BN(reserveIn);
-  const resOut = new BN(reserveOut);
+  const input = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
 
-  const { output, fee } = computeSwapOutput(input, resIn, resOut, feeBps, swapAToB);
+  const { outputAmount, feeAmount } = computeSwapOutput(input, reserveIn, reserveOut, feeBps);
 
-  const priceImpact = calculatePriceImpact(input, output, resIn, resOut);
-
-  // Calculate minimum output with slippage tolerance
-  // minOutput = output * (100 - slippage) / 100
   const slippageBps = Math.floor(slippagePercent * 100);
-  const minOutputAmount = output.mul(new BN(10000 - slippageBps)).div(new BN(10000));
+  const minOutputAmount = outputAmount.mul(new BN(10000 - slippageBps)).div(new BN(10000));
+
+  const spotPriceBefore = calculateSpotPrice(reserveIn, reserveOut, decimalsIn, decimalsOut);
+  const newReserveIn = reserveIn.add(input);
+  const newReserveOut = reserveOut.sub(outputAmount);
+  const spotPriceAfter = calculateSpotPrice(newReserveIn, newReserveOut, decimalsIn, decimalsOut);
+
+  const priceImpact = calculatePriceImpact(input, outputAmount, reserveIn, reserveOut, decimalsIn, decimalsOut);
 
   return {
-    outputAmount: output,
-    feeAmount: fee,
-    priceImpact,
+    inputAmount: input,
+    outputAmount,
     minOutputAmount,
+    feeAmount,
+    priceImpact,
+    spotPriceBefore,
+    spotPriceAfter,
   };
 }
 
 // =============================================================================
-// TWAP Helpers
+// TWAP Utilities
 // =============================================================================
 
-/**
- * Calculates the TWAP from oracle state (client-side replication of on-chain logic).
- * Returns null if not enough time has passed since warmup.
- */
 export function calculateTwap(oracle: TwapOracle): BN | null {
-  const accumulationStart = oracle.createdAtUnixTime.add(new BN(oracle.warmupDuration));
+  const warmupEnd = oracle.createdAtUnixTime.add(new BN(oracle.warmupDuration));
 
-  if (oracle.lastUpdateUnixTime.lte(accumulationStart)) {
-    return null; // Still in warmup
+  if (oracle.lastUpdateUnixTime.lte(warmupEnd)) {
+    return null;
   }
 
-  const elapsed = oracle.lastUpdateUnixTime.sub(accumulationStart);
+  const elapsed = oracle.lastUpdateUnixTime.sub(warmupEnd);
 
   if (elapsed.isZero() || oracle.cumulativeObservations.isZero()) {
     return null;
@@ -256,16 +241,8 @@ export function calculateTwap(oracle: TwapOracle): BN | null {
   return oracle.cumulativeObservations.div(elapsed);
 }
 
-/**
- * Gets the current spot price from reserves (scaled by PRICE_SCALE).
- */
-export function calculateSpotPrice(reserveA: BN | number, reserveB: BN | number): BN {
-  const resA = new BN(reserveA);
-  const resB = new BN(reserveB);
-
-  if (resB.isZero()) {
-    return new BN(0);
-  }
-
-  return resA.mul(new BN(PRICE_SCALE.toString())).div(resB);
+export function isOracleInWarmup(oracle: TwapOracle, currentTime?: BN): boolean {
+  const now = currentTime ?? new BN(Math.floor(Date.now() / 1000));
+  const warmupEnd = oracle.createdAtUnixTime.add(new BN(oracle.warmupDuration));
+  return now.lt(warmupEnd);
 }

@@ -1,27 +1,25 @@
 {
-  "name": "@zcomb/vault-sdk",
-  "version": "0.1.5",
-  "description": "TS SDK for Combinator's QM Programs",
+  "name": "@combinator/sdk",
+  "version": "1.0.0",
+  "description": "SDK ZCombinator Programs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "src/generated/vault.json"],
-  "license": "AGPL-3.0-only",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/zcombinatorio/programs"
-  },
-  "keywords": ["solana", "anchor", "futarchy"],
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run build"
+    "prepublish": "npm run build"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
-    "@solana/web3.js": "^1.98.0",
-    "@solana/spl-token": "^0.4.14"
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.3"
-  }
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "license": "AGPL-3.0"
 }

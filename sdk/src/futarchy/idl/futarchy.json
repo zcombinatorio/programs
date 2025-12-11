@@ -1,0 +1,909 @@
+{
+  "address": "D2E45PQk715zosJaJcwauGP5PiyBipYQpNqsCrQMGMWV",
+  "metadata": {
+    "name": "futarchy",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "add_option",
+      "discriminator": [
+        229,
+        150,
+        102,
+        127,
+        99,
+        5,
+        34,
+        196
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "proposal",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "vault_program",
+          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+        },
+        {
+          "name": "amm_program",
+          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "finalize_proposal",
+      "discriminator": [
+        23,
+        68,
+        51,
+        167,
+        109,
+        173,
+        187,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "proposal",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "vault_program",
+          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+        },
+        {
+          "name": "amm_program",
+          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_moderator",
+      "discriminator": [
+        142,
+        175,
+        48,
+        111,
+        170,
+        41,
+        76,
+        51
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "global_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_mint"
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "global_config.moderator_id_counter",
+                "account": "GlobalConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [],
+      "returns": "u32"
+    },
+    {
+      "name": "initialize_proposal",
+      "discriminator": [
+        50,
+        73,
+        156,
+        98,
+        129,
+        149,
+        21,
+        158
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "moderator.id",
+                "account": "ModeratorAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "vault_program",
+          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+        },
+        {
+          "name": "amm_program",
+          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        }
+      ],
+      "args": [
+        {
+          "name": "length",
+          "type": "u16"
+        },
+        {
+          "name": "fee",
+          "type": "u16"
+        },
+        {
+          "name": "twap_config",
+          "type": {
+            "defined": {
+              "name": "TWAPConfig"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "launch_proposal",
+      "discriminator": [
+        16,
+        211,
+        189,
+        119,
+        245,
+        72,
+        0,
+        229
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "proposal",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "vault_program",
+          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+        },
+        {
+          "name": "amm_program",
+          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        }
+      ],
+      "args": [
+        {
+          "name": "base_amount",
+          "type": "u64"
+        },
+        {
+          "name": "quote_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "redeem_liquidity",
+      "discriminator": [
+        180,
+        117,
+        142,
+        137,
+        227,
+        225,
+        97,
+        211
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "proposal"
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "vault_program",
+          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+        },
+        {
+          "name": "amm_program",
+          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "GlobalConfig",
+      "discriminator": [
+        149,
+        8,
+        156,
+        202,
+        160,
+        252,
+        176,
+        217
+      ]
+    },
+    {
+      "name": "ModeratorAccount",
+      "discriminator": [
+        129,
+        208,
+        190,
+        35,
+        9,
+        28,
+        249,
+        53
+      ]
+    },
+    {
+      "name": "ProposalAccount",
+      "discriminator": [
+        164,
+        190,
+        4,
+        248,
+        203,
+        124,
+        243,
+        64
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "LiquidityRedeemed",
+      "discriminator": [
+        78,
+        81,
+        213,
+        176,
+        1,
+        84,
+        138,
+        65
+      ]
+    },
+    {
+      "name": "ModeratorInitialized",
+      "discriminator": [
+        28,
+        29,
+        85,
+        133,
+        161,
+        89,
+        54,
+        108
+      ]
+    },
+    {
+      "name": "OptionAdded",
+      "discriminator": [
+        136,
+        202,
+        18,
+        117,
+        144,
+        187,
+        122,
+        249
+      ]
+    },
+    {
+      "name": "ProposalFinalized",
+      "discriminator": [
+        159,
+        104,
+        210,
+        220,
+        86,
+        209,
+        61,
+        51
+      ]
+    },
+    {
+      "name": "ProposalInitialized",
+      "discriminator": [
+        148,
+        198,
+        58,
+        182,
+        198,
+        50,
+        13,
+        60
+      ]
+    },
+    {
+      "name": "ProposalLaunched",
+      "discriminator": [
+        39,
+        113,
+        126,
+        109,
+        167,
+        203,
+        187,
+        47
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidVault",
+      "msg": "Vault account mismatch"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidPools",
+      "msg": "Pool account mismatch"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidMint",
+      "msg": "Mint mismatch"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidPoolProgram",
+      "msg": "Invalid Pool Program"
+    },
+    {
+      "code": 6004,
+      "name": "NotEnoughOptions",
+      "msg": "Minimum 2 options required"
+    },
+    {
+      "code": 6005,
+      "name": "TooManyOptions",
+      "msg": "Too many options"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidRemainingAccounts",
+      "msg": "Invalid remaining accounts"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidState",
+      "msg": "Invalid proposal state"
+    },
+    {
+      "code": 6008,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6009,
+      "name": "ProposalNotExpired",
+      "msg": "Proposal has not expired yet"
+    },
+    {
+      "code": 6010,
+      "name": "TwapNotReady",
+      "msg": "TWAP not ready"
+    },
+    {
+      "code": 6011,
+      "name": "CounterOverflow",
+      "msg": "Counter overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "GlobalConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "moderator_id_counter",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiquidityRedeemed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal_id",
+            "type": "u8"
+          },
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "redeemer",
+            "type": "pubkey"
+          },
+          {
+            "name": "winning_idx",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ModeratorAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u32"
+          },
+          {
+            "name": "quote_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposal_id_counter",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ModeratorInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u32"
+          },
+          {
+            "name": "moderator",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OptionAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal_id",
+            "type": "u8"
+          },
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "option_index",
+            "type": "u8"
+          },
+          {
+            "name": "pool",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "moderator",
+            "type": "pubkey"
+          },
+          {
+            "name": "id",
+            "type": "u8"
+          },
+          {
+            "name": "num_options",
+            "type": "u8"
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "ProposalState"
+              }
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "length",
+            "type": "u16"
+          },
+          {
+            "name": "base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "pools",
+            "type": {
+              "array": [
+                "pubkey",
+                6
+              ]
+            }
+          },
+          {
+            "name": "fee",
+            "type": "u16"
+          },
+          {
+            "name": "twap_config",
+            "type": {
+              "defined": {
+                "name": "TWAPConfig"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalFinalized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal_id",
+            "type": "u8"
+          },
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "winning_idx",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal_id",
+            "type": "u8"
+          },
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "moderator",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "length",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalLaunched",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal_id",
+            "type": "u8"
+          },
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "num_options",
+            "type": "u8"
+          },
+          {
+            "name": "base_amount",
+            "type": "u64"
+          },
+          {
+            "name": "quote_amount",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Setup"
+          },
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "Resolved",
+            "fields": [
+              "u8"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "TWAPConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "starting_observation",
+            "type": "u128"
+          },
+          {
+            "name": "max_observation_delta",
+            "type": "u128"
+          },
+          {
+            "name": "warmup_duration",
+            "type": "u32"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "GLOBAL_CONFIG_SEED",
+      "type": "bytes",
+      "value": "[103, 108, 111, 98, 97, 108, 95, 99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "MAX_OPTIONS",
+      "type": "u8",
+      "value": "6"
+    },
+    {
+      "name": "MIN_OPTIONS",
+      "type": "u8",
+      "value": "2"
+    },
+    {
+      "name": "MODERATOR_SEED",
+      "type": "bytes",
+      "value": "[109, 111, 100, 101, 114, 97, 116, 111, 114]"
+    },
+    {
+      "name": "PROPOSAL_SEED",
+      "type": "bytes",
+      "value": "[112, 114, 111, 112, 111, 115, 97, 108]"
+    }
+  ]
+}

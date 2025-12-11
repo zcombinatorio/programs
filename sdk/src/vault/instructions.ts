@@ -17,10 +17,9 @@ export function initialize(
   condBaseMint1: PublicKey,
   condQuoteMint0: PublicKey,
   condQuoteMint1: PublicKey,
-  nonce: number,
-  proposalId: number
+  nonce: number
 ) {
-  return program.methods.initialize(proposalId, nonce).accounts({
+  return program.methods.initialize(nonce).accounts({
     signer,
     vault: vaultPda,
     baseMint,
@@ -72,8 +71,7 @@ export function deposit(
   amount: BN | number
 ) {
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
-  const vaultTypeArg =
-    vaultType === VaultType.Base ? { base: {} } : { quote: {} };
+  const vaultTypeArg = vaultType === VaultType.Base ? { base: {} } : { quote: {} };
 
   return program.methods
     .deposit(vaultTypeArg, amountBN)
@@ -104,8 +102,7 @@ export function withdraw(
   amount: BN | number
 ) {
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
-  const vaultTypeArg =
-    vaultType === VaultType.Base ? { base: {} } : { quote: {} };
+  const vaultTypeArg = vaultType === VaultType.Base ? { base: {} } : { quote: {} };
 
   return program.methods
     .withdraw(vaultTypeArg, amountBN)
@@ -146,8 +143,7 @@ export function redeemWinnings(
   condMints: PublicKey[],
   vaultType: VaultType
 ) {
-  const vaultTypeArg =
-    vaultType === VaultType.Base ? { base: {} } : { quote: {} };
+  const vaultTypeArg = vaultType === VaultType.Base ? { base: {} } : { quote: {} };
 
   return program.methods
     .redeemWinnings(vaultTypeArg)

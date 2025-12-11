@@ -1,5 +1,14 @@
-import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
+import { PublicKey } from "@solana/web3.js";
+
+// =============================================================================
+// Enums
+// =============================================================================
+
+export enum PoolState {
+  Trading = "trading",
+  Finalized = "finalized",
+}
 
 // =============================================================================
 // Account Types
@@ -16,13 +25,36 @@ export interface TwapOracle {
   warmupDuration: number;
 }
 
+export interface PoolBumps {
+  pool: number;
+  reserveA: number;
+  reserveB: number;
+  feeVault: number;
+}
+
 export interface PoolAccount {
   admin: PublicKey;
+  liquidityProvider: PublicKey;
   mintA: PublicKey;
   mintB: PublicKey;
   fee: number;
   oracle: TwapOracle;
-  bump: number;
+  state: PoolState;
+  bumps: PoolBumps;
+}
+
+// =============================================================================
+// Quote Types
+// =============================================================================
+
+export interface SwapQuote {
+  inputAmount: BN;
+  outputAmount: BN;
+  minOutputAmount: BN;
+  feeAmount: BN;
+  priceImpact: number;
+  spotPriceBefore: BN;
+  spotPriceAfter: BN;
 }
 
 // =============================================================================
@@ -37,48 +69,38 @@ export interface PoolCreatedEvent {
   fee: number;
 }
 
-export interface CondSwapEvent {
-  pool: PublicKey;
-  trader: PublicKey;
-  swapAToB: boolean;
-  inputAmount: BN;
-  outputAmount: BN;
-  feeAmount: BN;
-}
-
-export interface TWAPUpdateEvent {
-  unixTime: BN;
-  price: BN;
-  observation: BN;
-  cumulativeObservations: BN;
-}
-
 export interface LiquidityAddedEvent {
   pool: PublicKey;
-  amountA: BN;
-  amountB: BN;
+  amountA: bigint;
+  amountB: bigint;
 }
 
 export interface LiquidityRemovedEvent {
   pool: PublicKey;
-  amountA: BN;
-  amountB: BN;
+  amountA: bigint;
+  amountB: bigint;
+}
+
+export interface CondSwapEvent {
+  pool: PublicKey;
+  trader: PublicKey;
+  swapAToB: boolean;
+  inputAmount: bigint;
+  outputAmount: bigint;
+  feeAmount: bigint;
+}
+
+export interface TWAPUpdateEvent {
+  unixTime: bigint;
+  price: BN;
+  observation: BN;
+  cumulativeObservations: BN;
+  twap: BN;
 }
 
 export type AMMEvent =
   | { name: "PoolCreated"; data: PoolCreatedEvent }
-  | { name: "CondSwap"; data: CondSwapEvent }
-  | { name: "TWAPUpdate"; data: TWAPUpdateEvent }
   | { name: "LiquidityAdded"; data: LiquidityAddedEvent }
-  | { name: "LiquidityRemoved"; data: LiquidityRemovedEvent };
-
-// =============================================================================
-// Quote Types
-// =============================================================================
-
-export interface SwapQuote {
-  outputAmount: BN;
-  feeAmount: BN;
-  priceImpact: number;
-  minOutputAmount: BN;
-}
+  | { name: "LiquidityRemoved"; data: LiquidityRemovedEvent }
+  | { name: "CondSwap"; data: CondSwapEvent }
+  | { name: "TWAPUpdate"; data: TWAPUpdateEvent };

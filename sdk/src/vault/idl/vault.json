@@ -453,10 +453,6 @@
         {
           "name": "proposal_id",
           "type": "u8"
-        },
-        {
-          "name": "nonce",
-          "type": "u8"
         }
       ]
     },
@@ -806,6 +802,99 @@
       ]
     }
   ],
+  "events": [
+    {
+      "name": "OptionAdded",
+      "discriminator": [
+        136,
+        202,
+        18,
+        117,
+        144,
+        187,
+        122,
+        249
+      ]
+    },
+    {
+      "name": "VaultActivated",
+      "discriminator": [
+        76,
+        220,
+        220,
+        110,
+        216,
+        252,
+        88,
+        84
+      ]
+    },
+    {
+      "name": "VaultDeposit",
+      "discriminator": [
+        4,
+        248,
+        234,
+        163,
+        99,
+        238,
+        140,
+        45
+      ]
+    },
+    {
+      "name": "VaultFinalized",
+      "discriminator": [
+        200,
+        144,
+        206,
+        248,
+        111,
+        213,
+        163,
+        0
+      ]
+    },
+    {
+      "name": "VaultInitialized",
+      "discriminator": [
+        180,
+        43,
+        207,
+        2,
+        18,
+        71,
+        3,
+        75
+      ]
+    },
+    {
+      "name": "VaultWithdrawal",
+      "discriminator": [
+        168,
+        109,
+        95,
+        252,
+        76,
+        240,
+        237,
+        56
+      ]
+    },
+    {
+      "name": "WinningsRedeemed",
+      "discriminator": [
+        165,
+        63,
+        125,
+        179,
+        230,
+        236,
+        63,
+        99
+      ]
+    }
+  ],
   "errors": [
     {
       "code": 6000,
@@ -869,21 +958,40 @@
     },
     {
       "code": 6012,
-      "name": "NoWinningOption",
-      "msg": "No winning option set"
-    },
-    {
-      "code": 6013,
       "name": "NoConditionalTokens",
       "msg": "No conditional tokens"
     },
     {
-      "code": 6014,
+      "code": 6013,
       "name": "InvalidMint",
       "msg": "Invalid mint for vault type"
     }
   ],
   "types": [
+    {
+      "name": "OptionAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "option_index",
+            "type": "u8"
+          },
+          {
+            "name": "cond_base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "cond_quote_mint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
     {
       "name": "VaultAccount",
       "type": {
@@ -940,13 +1048,103 @@
             }
           },
           {
-            "name": "winning_idx",
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultActivated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "num_options",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultDeposit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_type",
             "type": {
-              "option": "u8"
+              "defined": {
+                "name": "VaultType"
+              }
             }
           },
           {
-            "name": "bump",
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultFinalized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "winning_idx",
+            "type": "u8"
+          },
+          {
+            "name": "winning_base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "winning_quote_mint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "nonce",
             "type": "u8"
           }
         ]
@@ -964,7 +1162,10 @@
             "name": "Active"
           },
           {
-            "name": "Finalized"
+            "name": "Finalized",
+            "fields": [
+              "u8"
+            ]
           }
         ]
       }
@@ -982,6 +1183,79 @@
           }
         ]
       }
+    },
+    {
+      "name": "VaultWithdrawal",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_type",
+            "type": {
+              "defined": {
+                "name": "VaultType"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WinningsRedeemed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_type",
+            "type": {
+              "defined": {
+                "name": "VaultType"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "MAX_OPTIONS",
+      "type": "u8",
+      "value": "8"
+    },
+    {
+      "name": "MIN_OPTIONS",
+      "type": "u8",
+      "value": "2"
+    },
+    {
+      "name": "VAULT_SEED",
+      "type": "bytes",
+      "value": "[118, 97, 117, 108, 116]"
     }
   ]
 }

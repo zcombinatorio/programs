@@ -1,15 +1,15 @@
 import { Program, AnchorProvider, Idl, BN } from "@coral-xyz/anchor";
-import { PublicKey, SystemProgram, ComputeBudgetProgram } from "@solana/web3.js";
+import { PublicKey, ComputeBudgetProgram, SystemProgram } from "@solana/web3.js";
 import {
   getAccount,
   getAssociatedTokenAddressSync,
-  TokenAccountNotFoundError,
+  getMint,
   NATIVE_MINT,
   createSyncNativeInstruction,
   createCloseAccountInstruction,
   createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
-import { AMM_PROGRAM_ID, FEE_AUTHORITY } from "./constants";
+import { PROGRAM_ID, FEE_AUTHORITY } from "./constants";
 import { PoolAccount, SwapQuote } from "./types";
 import {
   derivePoolPDA,
@@ -17,21 +17,20 @@ import {
   deriveFeeVaultPDA,
   fetchPoolAccount,
   createSwapQuote,
-  calculateTwap,
   calculateSpotPrice,
+  calculateTwap,
 } from "./utils";
 import {
   createPool,
-  createPoolWithLiquidity,
   addLiquidity,
   removeLiquidity,
   swap,
   crankTwap,
+  ceaseTrading,
 } from "./instructions";
 
-import IDL from "./generated/amm.json";
+import IDL from "./idl/amm.json";
 
-// Max compute units for swap operations
 const MAX_COMPUTE_UNITS = 300_000;
 
 export class AMMClient {
@@ -39,7 +38,7 @@ export class AMMClient {
   public programId: PublicKey;
 
   constructor(provider: AnchorProvider, programId?: PublicKey) {
-    this.programId = programId ?? AMM_PROGRAM_ID;
+    this.programId = programId ?? PROGRAM_ID;
     this.program = new Program(IDL as Idl, provider);
   }
 
@@ -71,9 +70,7 @@ export class AMMClient {
     return fetchPoolAccount(this.program, poolPda);
   }
 
-  async fetchReserves(
-    poolPda: PublicKey
-  ): Promise<{ reserveA: BN; reserveB: BN }> {
+  async fetchReserves(poolPda: PublicKey): Promise<{ reserveA: BN; reserveB: BN }> {
     const pool = await this.fetchPool(poolPda);
     const [reserveAPda] = this.deriveReservePDA(poolPda, pool.mintA);
     const [reserveBPda] = this.deriveReservePDA(poolPda, pool.mintB);
@@ -91,82 +88,84 @@ export class AMMClient {
     };
   }
 
-  /**
-   * Fetches the TWAP from the pool's oracle.
-   * Returns null if still in warmup period.
-   */
+  async fetchMintDecimals(poolPda: PublicKey): Promise<{ decimalsA: number; decimalsB: number }> {
+    const pool = await this.fetchPool(poolPda);
+    const connection = this.program.provider.connection;
+    const [mintA, mintB] = await Promise.all([
+      getMint(connection, pool.mintA),
+      getMint(connection, pool.mintB),
+    ]);
+    return { decimalsA: mintA.decimals, decimalsB: mintB.decimals };
+  }
+
+  async fetchSpotPrice(poolPda: PublicKey): Promise<BN> {
+    const { reserveA, reserveB } = await this.fetchReserves(poolPda);
+    const { decimalsA, decimalsB } = await this.fetchMintDecimals(poolPda);
+    return calculateSpotPrice(reserveA, reserveB, decimalsA, decimalsB);
+  }
+
   async fetchTwap(poolPda: PublicKey): Promise<BN | null> {
     const pool = await this.fetchPool(poolPda);
     return calculateTwap(pool.oracle);
-  }
-
-  /**
-   * Fetches the current spot price from reserves (scaled by 1e12).
-   */
-  async fetchPrice(poolPda: PublicKey): Promise<BN> {
-    const { reserveA, reserveB } = await this.fetchReserves(poolPda);
-    return calculateSpotPrice(reserveA, reserveB);
-  }
-
-  /**
-   * Fetches the last recorded oracle price (scaled by 1e12).
-   */
-  async fetchOraclePrice(poolPda: PublicKey): Promise<BN> {
-    const pool = await this.fetchPool(poolPda);
-    return pool.oracle.lastPrice;
   }
 
   // ===========================================================================
   // Quote
   // ===========================================================================
 
-  /**
-   * Gets a quote for a swap including output amount, fees, and price impact.
-   */
   async quote(
     poolPda: PublicKey,
     swapAToB: boolean,
     inputAmount: BN | number,
-    slippagePercent: number = 0.5
+    slippagePercent: number = 0.5,
   ): Promise<SwapQuote> {
     const pool = await this.fetchPool(poolPda);
     const { reserveA, reserveB } = await this.fetchReserves(poolPda);
+    const { decimalsA, decimalsB } = await this.fetchMintDecimals(poolPda);
 
     const [reserveIn, reserveOut] = swapAToB
       ? [reserveA, reserveB]
       : [reserveB, reserveA];
+
+    const [decimalsIn, decimalsOut] = swapAToB
+      ? [decimalsA, decimalsB]
+      : [decimalsB, decimalsA];
 
     return createSwapQuote(
       inputAmount,
       reserveIn,
       reserveOut,
       pool.fee,
-      swapAToB,
-      slippagePercent
+      decimalsIn,
+      decimalsOut,
+      slippagePercent,
     );
   }
 
   // ===========================================================================
-  // Instruction Builders (Low-Level)
+  // Instruction Builders
   // ===========================================================================
 
   createPool(
-    signer: PublicKey,
+    payer: PublicKey,
+    admin: PublicKey,
     mintA: PublicKey,
     mintB: PublicKey,
     fee: number,
     startingObservation: BN,
     maxObservationDelta: BN,
-    warmupDuration: number
+    warmupDuration: number,
+    liquidityProvider: PublicKey | null = null
   ) {
-    const [poolPda] = this.derivePoolPDA(signer, mintA, mintB);
+    const [poolPda] = this.derivePoolPDA(admin, mintA, mintB);
     const [reserveA] = this.deriveReservePDA(poolPda, mintA);
     const [reserveB] = this.deriveReservePDA(poolPda, mintB);
     const [feeVault] = this.deriveFeeVaultPDA(poolPda);
 
     const builder = createPool(
       this.program,
-      signer,
+      payer,
+      admin,
       mintA,
       mintB,
       poolPda,
@@ -176,53 +175,8 @@ export class AMMClient {
       fee,
       startingObservation,
       maxObservationDelta,
-      warmupDuration
-    );
-
-    return {
-      builder,
-      poolPda,
-      reserveA,
-      reserveB,
-      feeVault,
-    };
-  }
-
-  createPoolWithLiquidity(
-    signer: PublicKey,
-    mintA: PublicKey,
-    mintB: PublicKey,
-    fee: number,
-    amountA: BN | number,
-    amountB: BN | number,
-    startingObservation: BN,
-    maxObservationDelta: BN,
-    warmupDuration: number
-  ) {
-    const [poolPda] = this.derivePoolPDA(signer, mintA, mintB);
-    const [reserveA] = this.deriveReservePDA(poolPda, mintA);
-    const [reserveB] = this.deriveReservePDA(poolPda, mintB);
-    const [feeVault] = this.deriveFeeVaultPDA(poolPda);
-    const signerTokenAccA = getAssociatedTokenAddressSync(mintA, signer);
-    const signerTokenAccB = getAssociatedTokenAddressSync(mintB, signer);
-
-    const builder = createPoolWithLiquidity(
-      this.program,
-      signer,
-      mintA,
-      mintB,
-      poolPda,
-      reserveA,
-      reserveB,
-      feeVault,
-      signerTokenAccA,
-      signerTokenAccB,
-      fee,
-      amountA,
-      amountB,
-      startingObservation,
-      maxObservationDelta,
-      warmupDuration
+      warmupDuration,
+      liquidityProvider
     );
 
     return {
@@ -321,6 +275,10 @@ export class AMMClient {
     return crankTwap(this.program, poolPda, reserveA, reserveB);
   }
 
+  ceaseTrading(admin: PublicKey, poolPda: PublicKey) {
+    return ceaseTrading(this.program, admin, poolPda);
+  }
+
   // ===========================================================================
   // High-Level Swap with Slippage
   // ===========================================================================
@@ -371,10 +329,6 @@ export class AMMClient {
     // Pre-instructions: compute budget + token account creation
     const preIxs = [
       ComputeBudgetProgram.setComputeUnitLimit({ units: MAX_COMPUTE_UNITS }),
-    ];
-
-    // Create token accounts if needed (idempotent)
-    preIxs.push(
       createAssociatedTokenAccountIdempotentInstruction(
         trader,
         traderAccountA,
@@ -386,12 +340,12 @@ export class AMMClient {
         traderAccountB,
         trader,
         pool.mintB
-      )
-    );
+      ),
+    ];
 
     const postIxs: any[] = [];
 
-    // Handle WSOL for input token
+    // Handle WSOL for input/output tokens
     const inputMint = swapAToB ? pool.mintA : pool.mintB;
     const outputMint = swapAToB ? pool.mintB : pool.mintA;
     const inputAta = swapAToB ? traderAccountA : traderAccountB;
