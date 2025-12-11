@@ -30,9 +30,17 @@ A Solana program that enables conditional token markets by allowing users to dep
 
 ### Initialize
 
-`initialize` creates a vault with 2 options. Use `addOption` to add more options (up to 8 total).
+Creates a vault with 2 options. Use `addOption` to add more options (up to 8 total).
 
 > If using more than 4 options, user vault actions (deposit, withdraw, redeem) require compute budget limit >450k CU. The SDK's higher-level functions already include this compute budget instruction and wrap/unwrap SOL instructions.
+
+### Activate
+
+Sets the vault state to "Active". This enables withdrawals & deposits. Disables adding additional options.
+
+### Finalize
+
+Sets the vault state to "Finalized" with a winning index — the index of the winning conditional mint. Disables withdrawals & deposits. Allows users to redeem winnings.
 
 ### Deposit
 
