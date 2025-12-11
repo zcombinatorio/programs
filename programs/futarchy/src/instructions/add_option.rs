@@ -44,7 +44,6 @@ pub struct AddOption<'info> {
     pub amm_program: Program<'info, Amm>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-
     // Remaining accounts (in order):
     // 0: vault
     // 1: base_mint
@@ -59,7 +58,7 @@ pub struct AddOption<'info> {
 }
 
 pub fn add_option_handler<'info>(
-    ctx: Context<'_, '_, 'info, 'info, AddOption<'info>>
+    ctx: Context<'_, '_, 'info, 'info, AddOption<'info>>,
 ) -> Result<()> {
     require!(
         ctx.remaining_accounts.len() >= 10,
@@ -80,10 +79,7 @@ pub fn add_option_handler<'info>(
 
     let curr_options = proposal.num_options;
 
-    require!(
-        curr_options < MAX_OPTIONS,
-        FutarchyError::TooManyOptions
-    );
+    require!(curr_options < MAX_OPTIONS, FutarchyError::TooManyOptions);
 
     // Update state
     proposal.pools[curr_options as usize] = ctx.remaining_accounts[5].key(); // pool
@@ -141,7 +137,7 @@ pub fn add_option_handler<'info>(
         proposal.twap_config.starting_observation,
         proposal.twap_config.max_observation_delta,
         proposal.twap_config.warmup_duration,
-        Some(ctx.accounts.signer.key())
+        Some(ctx.accounts.signer.key()),
     )?;
 
     emit!(OptionAdded {
