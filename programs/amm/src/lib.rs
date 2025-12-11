@@ -54,4 +54,8 @@ pub mod amm {
     pub fn crank_twap(ctx: Context<CrankTwap>) -> Result<()> {
         instructions::crank_twap::crank_twap_handler(ctx)
     }
+
+    pub fn cease_trading(ctx: Context<CeaseTrading>) -> Result<()> {
+        instructions::cease_trading::cease_trading_handler(ctx)
+    }
 }

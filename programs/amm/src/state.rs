@@ -1,18 +1,29 @@
-use anchor_lang::prelude::*;
 use crate::twap::TwapOracle;
+use anchor_lang::prelude::*;
+
+#[derive(Copy, Clone, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
+pub enum PoolState {
+    Trading,
+    Finalized,
+}
 
 #[account]
 #[derive(InitSpace)]
 pub struct PoolAccount {
+    // Given full state-change & liquidity permissions
+    // Sole liquidity provider
+    // In prod, given to the proposal PDA
     pub admin: Pubkey,
 
     // Mints
-    pub mint_a: Pubkey,
-    pub mint_b: Pubkey,
+    // Fees are collected in mint_a
+    pub mint_a: Pubkey, // In prod, cond. quote
+    pub mint_b: Pubkey, // In prod, cond. base
 
     // Fee (basis points)
     pub fee: u16,
     pub oracle: TwapOracle,
+    pub state: PoolState,
 
     pub bump: u8,
 }

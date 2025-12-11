@@ -5,6 +5,9 @@ pub enum AmmError {
     #[msg("Invalid admin")]
     InvalidAdmin,
 
+    #[msg("Invalid state")]
+    InvalidState,
+
     #[msg("Invalid amount")]
     InvalidAmount,
 

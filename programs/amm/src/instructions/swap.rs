@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
 
-use crate::{constants::*, errors::*, state::PoolAccount, utils::{transfer_tokens, transfer_signed}};
+use crate::{PoolState, constants::*, errors::*, state::PoolAccount, utils::{transfer_signed, transfer_tokens}};
 
 #[event]
 pub struct CondSwap {
@@ -26,6 +26,7 @@ pub struct Swap<'info> {
             pool.mint_b.as_ref(),
         ],
         bump = pool.bump,
+        constraint = pool.state == PoolState::Trading @ AmmError::InvalidState
     )]
     pub pool: Box<Account<'info, PoolAccount>>,
 

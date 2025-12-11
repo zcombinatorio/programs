@@ -130,6 +130,7 @@ pub fn create_pool_handler(
         warmup_duration,
     );
     pool.bump = ctx.bumps.pool;
+    pool.state = PoolState::Trading;
 
     emit!(PoolCreated {
         pool: pool.key(),

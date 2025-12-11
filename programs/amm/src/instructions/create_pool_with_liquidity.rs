@@ -143,6 +143,7 @@ pub fn create_pool_with_liquidity_handler(
         max_observation_delta,
         warmup_duration,
     );
+    pool.state = PoolState::Trading;
 
     transfer_tokens(
         ctx.accounts.signer_token_acc_a.to_account_info(),

@@ -17,14 +17,13 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
-use anchor_spl::token::{TokenAccount};
 
 use crate::constants::*;
 use crate::state::{PoolAccount, PoolState};
 use crate::errors::*;
 
 #[derive(Accounts)]
-pub struct CrankTwap<'info> {
+pub struct CeaseTrading<'info> {
     #[account(
         mut,
         seeds = [
@@ -37,37 +36,9 @@ pub struct CrankTwap<'info> {
         constraint = pool.state == PoolState::Trading @ AmmError::InvalidState
     )]
     pub pool: Box<Account<'info, PoolAccount>>,
-
-    #[account(
-        seeds = [
-            RESERVE_SEED,
-            pool.key().as_ref(),
-            pool.mint_a.as_ref(),
-        ],
-        bump,
-        token::mint = pool.mint_a,
-        token::authority = pool,
-    )]
-    pub reserve_a: Account<'info, TokenAccount>,
-
-    #[account(
-        seeds = [
-            RESERVE_SEED,
-            pool.key().as_ref(),
-            pool.mint_b.as_ref(),
-        ],
-        bump,
-        token::mint = pool.mint_b,
-        token::authority = pool,
-    )]
-    pub reserve_b: Account<'info, TokenAccount>,
 }
 
-pub fn crank_twap_handler(ctx: Context<CrankTwap>) -> Result<()> {
-    let reserve_a = ctx.accounts.reserve_a.amount;
-    let reserve_b = ctx.accounts.reserve_b.amount;
-
-    ctx.accounts.pool.oracle.crank_twap(reserve_a, reserve_b)?;
-
+pub fn cease_trading_handler(ctx: Context<CeaseTrading>) -> Result<()> {
+    ctx.accounts.pool.state = PoolState::Finalized;
     Ok(())
 }
