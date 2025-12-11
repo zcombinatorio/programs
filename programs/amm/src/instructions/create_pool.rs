@@ -112,6 +112,8 @@ pub fn create_pool_handler(
     starting_observation: u128,
     max_observation_delta: u128,
     warmup_duration: u32,
+    // Optional seperate provider
+    liquidity_provider: Option<Pubkey>,
 ) -> Result<()> {
     // Fee cannot exceed maximum
     require!(fee <= MAX_FEE, AmmError::InvalidFee);
@@ -120,6 +122,8 @@ pub fn create_pool_handler(
     let clock = Clock::get()?;
 
     pool.admin = ctx.accounts.signer.key();
+    pool.liquidity_provider = 
+        liquidity_provider.unwrap_or(ctx.accounts.signer.key());
     pool.mint_a = ctx.accounts.mint_a.key();
     pool.mint_b = ctx.accounts.mint_b.key();
     pool.fee = fee;

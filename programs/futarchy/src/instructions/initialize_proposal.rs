@@ -165,6 +165,7 @@ pub fn initialize_proposal<'info>(
         twap_config.starting_observation,
         twap_config.max_observation_delta,
         twap_config.warmup_duration,
+        Some(ctx.accounts.signer.key())
     )?;
 
     // Create pool 1
@@ -190,6 +191,7 @@ pub fn initialize_proposal<'info>(
         twap_config.starting_observation,
         twap_config.max_observation_delta,
         twap_config.warmup_duration,
+        Some(ctx.accounts.signer.key())
     )?;
 
     Ok(())

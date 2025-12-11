@@ -23,8 +23,9 @@ pub mod amm {
         starting_observation: u128,
         max_observation_delta: u128,
         warmup_duration: u32,
+        liquidity_provider: Option<Pubkey>
     ) -> Result<()> {
-        instructions::create_pool::create_pool_handler(ctx, fee, starting_observation, max_observation_delta, warmup_duration)
+        instructions::create_pool::create_pool_handler(ctx, fee, starting_observation, max_observation_delta, warmup_duration, liquidity_provider)
     }
 
     pub fn add_liquidity(ctx: Context<AddLiquidity>, amount_a: u64, amount_b: u64) -> Result<()> {

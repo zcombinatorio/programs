@@ -10,10 +10,12 @@ pub enum PoolState {
 #[account]
 #[derive(InitSpace)]
 pub struct PoolAccount {
-    // Given full state-change & liquidity permissions
-    // Sole liquidity provider
+    // Given full state-change
     // In prod, given to the proposal PDA
     pub admin: Pubkey,
+
+    // Sole liquidity provider
+    pub liquidity_provider: Pubkey,
 
     // Mints
     // Fees are collected in mint_a

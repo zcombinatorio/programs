@@ -144,6 +144,7 @@ pub fn add_option<'info>(
         proposal.twap_config.starting_observation,
         proposal.twap_config.max_observation_delta,
         proposal.twap_config.warmup_duration,
+        Some(ctx.accounts.signer.key())
     )?;
 
     Ok(())

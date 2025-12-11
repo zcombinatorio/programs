@@ -32,7 +32,7 @@ pub struct LiquidityAdded {
 pub struct AddLiquidity<'info> {
     // Only allow the pool admin to add liquidity
     #[account(
-        constraint = depositor.key() == pool.admin @ AmmError::InvalidAdmin,
+        constraint = depositor.key() == pool.liquidity_provider @ AmmError::InvalidAdmin,
     )]
     pub depositor: Signer<'info>,
 
