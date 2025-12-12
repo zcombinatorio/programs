@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/amm.json`.
  */
 export type Amm = {
-  "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz",
+  "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC",
   "metadata": {
     "name": "amm",
     "version": "0.1.0",
@@ -1213,7 +1213,7 @@ export type Amm = {
     {
       "name": "maxFee",
       "type": "u16",
-      "value": "10000"
+      "value": "5000"
     },
     {
       "name": "poolSeed",

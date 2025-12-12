@@ -1,5 +1,5 @@
 {
-  "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz",
+  "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC",
   "metadata": {
     "name": "amm",
     "version": "0.1.0",
@@ -1207,7 +1207,7 @@
     {
       "name": "MAX_FEE",
       "type": "u16",
-      "value": "10000"
+      "value": "5000"
     },
     {
       "name": "POOL_SEED",

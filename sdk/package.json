@@ -1,7 +1,7 @@
 {
   "name": "@combinator/sdk",
   "version": "1.0.0",
-  "description": "SDK ZCombinator Programs",
+  "description": "SDK for ZCombinator Programs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

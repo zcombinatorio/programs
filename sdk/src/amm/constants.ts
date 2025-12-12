@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 
-export const PROGRAM_ID = new PublicKey("3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz");
+export const PROGRAM_ID = new PublicKey("AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC");
 export const FEE_AUTHORITY = new PublicKey("FEEnkcCNE2623LYCPtLf63LFzXpCFigBLTu4qZovRGZC");
 
 export const POOL_SEED = Buffer.from("pool");
