@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { expect } from "chai";
 
-import { VaultClient, VaultType, VaultState } from "../../../sdk/src";
+import { VaultClient, VaultType, VaultState, parseVaultState } from "../../../sdk/src";
 import {
   OPTION_COUNTS,
   DEPOSIT_AMOUNT,
@@ -31,7 +31,6 @@ describe("Vault Lifecycle", () => {
       let condBaseMints: PublicKey[];
       let condQuoteMints: PublicKey[];
       const nonce = numOptions; // Use numOptions as unique nonce (2 or 10)
-      const proposalId = numOptions; // Same as nonce for unique PDA per test
 
       before(async () => {
         // Create fresh mints for this test suite
@@ -52,8 +51,7 @@ describe("Vault Lifecycle", () => {
           wallet.publicKey,
           baseMint,
           quoteMint,
-          nonce,
-          proposalId
+          nonce
         );
         await builder.rpc();
         vaultPda = pda;
@@ -77,9 +75,9 @@ describe("Vault Lifecycle", () => {
           expect(vault.baseMint.toBase58()).to.equal(baseMint.toBase58());
           expect(vault.quoteMint.toBase58()).to.equal(quoteMint.toBase58());
           expect(vault.numOptions).to.equal(numOptions);
-          expect(vault.state).to.equal("setup");
+          const { state } = parseVaultState(vault.state);
+          expect(state).to.equal(VaultState.Setup);
           expect(vault.nonce).to.equal(nonce);
-          expect(vault.proposalId).to.equal(proposalId);
         });
 
         it("activates vault", async () => {
@@ -191,7 +189,7 @@ describe("Vault Lifecycle", () => {
           );
 
           // User should receive their winning token balance
-          expect(finalBalance - initialBalance).to.equal(winningAmount);
+          expect(finalBalance.sub(initialBalance).toNumber()).to.equal(winningAmount.toNumber());
 
           // Vault should be empty
           await expectVaultBalance(client, vaultPda, VaultType.Base, 0);

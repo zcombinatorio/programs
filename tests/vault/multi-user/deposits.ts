@@ -51,7 +51,6 @@ describe("Multi-User Deposits", () => {
       const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 30,
-        proposalId: 30,
       });
       vaultPda = ctx.vaultPda;
     });
@@ -135,7 +134,6 @@ describe("Multi-User Deposits", () => {
       const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 31,
-        proposalId: 31,
       });
       vaultPda = ctx.vaultPda;
     });
@@ -215,7 +213,6 @@ describe("Multi-User Deposits", () => {
       const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 32,
-        proposalId: 32,
       });
       vaultPda = ctx.vaultPda;
     });

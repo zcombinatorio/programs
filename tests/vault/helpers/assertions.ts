@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import { PublicKey } from "@solana/web3.js";
+import { BN } from "@coral-xyz/anchor";
 
-import { VaultClient, VaultState, VaultType } from "../../../sdk/src";
+import { VaultClient, VaultState, VaultType, parseVaultState } from "../../../sdk/src";
 
 /**
  * Assert that a promise rejects with a specific Anchor error code
@@ -63,9 +64,10 @@ export async function expectVaultState(
   expectedState: VaultState
 ): Promise<void> {
   const vault = await client.fetchVault(vaultPda);
-  expect(vault.state).to.equal(
+  const { state: parsedState } = parseVaultState(vault.state);
+  expect(parsedState).to.equal(
     expectedState,
-    `Expected vault state "${expectedState}" but got "${vault.state}"`
+    `Expected vault state "${expectedState}" but got "${parsedState}"`
   );
 }
 
@@ -95,7 +97,8 @@ export async function expectCondBalances(
   expectedBalances: number[]
 ): Promise<void> {
   const { condBalances } = await client.fetchUserBalances(vaultPda, user, vaultType);
-  expect(condBalances).to.deep.equal(
+  const actualBalances = condBalances.map((b: BN) => b.toNumber());
+  expect(actualBalances).to.deep.equal(
     expectedBalances,
     `Conditional balances mismatch`
   );
@@ -111,9 +114,9 @@ export async function expectVaultBalance(
   expectedBalance: number
 ): Promise<void> {
   const balance = await client.fetchVaultBalance(vaultPda, vaultType);
-  expect(balance).to.equal(
+  expect(balance.toNumber()).to.equal(
     expectedBalance,
-    `Expected vault balance ${expectedBalance} but got ${balance}`
+    `Expected vault balance ${expectedBalance} but got ${balance.toNumber()}`
   );
 }
 
@@ -126,9 +129,10 @@ export async function expectWinningIndex(
   expectedIdx: number
 ): Promise<void> {
   const vault = await client.fetchVault(vaultPda);
-  expect(vault.winningIdx).to.equal(
+  const { winningIdx } = parseVaultState(vault.state);
+  expect(winningIdx).to.equal(
     expectedIdx,
-    `Expected winning index ${expectedIdx} but got ${vault.winningIdx}`
+    `Expected winning index ${expectedIdx} but got ${winningIdx}`
   );
 }
 

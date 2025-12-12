@@ -10,7 +10,6 @@ export interface VaultTestContext {
   quoteMint: PublicKey;
   numOptions: number;
   nonce: number;
-  proposalId: number;
   condBaseMints: PublicKey[];
   condQuoteMints: PublicKey[];
 }
@@ -18,20 +17,17 @@ export interface VaultTestContext {
 export interface CreateVaultOptions {
   numOptions?: number; // default: 2 (MIN_OPTIONS)
   nonce?: number; // default: auto-generated
-  proposalId?: number; // default: auto-generated
 }
 
-// Auto-incrementing counters for unique vaults
+// Auto-incrementing counter for unique vaults
 // Start at 150 to avoid collisions with hardcoded values (which use 100-130 range)
 let nonceCounter = 150;
-let proposalIdCounter = 150;
 
 /**
- * Reset counters (call in beforeEach if needed)
+ * Reset counter (call in beforeEach if needed)
  */
 export function resetCounters(): void {
   nonceCounter = 150;
-  proposalIdCounter = 150;
 }
 
 /**
@@ -46,7 +42,6 @@ export async function createVaultInSetupState(
 ): Promise<VaultTestContext> {
   const numOptions = options.numOptions ?? 2;
   const nonce = options.nonce ?? nonceCounter++;
-  const proposalId = options.proposalId ?? proposalIdCounter++;
 
   // Initialize vault (creates 2 base + 2 quote options)
   const {
@@ -56,7 +51,7 @@ export async function createVaultInSetupState(
     condBaseMint1,
     condQuoteMint0,
     condQuoteMint1,
-  } = client.initialize(wallet.publicKey, baseMint, quoteMint, nonce, proposalId);
+  } = client.initialize(wallet.publicKey, baseMint, quoteMint, nonce);
   await builder.rpc();
 
   const condBaseMints: PublicKey[] = [condBaseMint0, condBaseMint1];
@@ -77,7 +72,6 @@ export async function createVaultInSetupState(
     quoteMint,
     numOptions,
     nonce,
-    proposalId,
     condBaseMints,
     condQuoteMints,
   };

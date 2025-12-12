@@ -69,7 +69,8 @@ export class VaultClient {
   async fetchUserATAs(vaultPda: PublicKey, user: PublicKey, vaultType: VaultType) {
     const vault = await this.fetchVault(vaultPda);
     const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
-    const condMints = vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints;
+    const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
+      .slice(0, vault.numOptions);
     return {
       userAta: getAssociatedTokenAddressSync(mint, user),
       userCondATAs: condMints.map((m) => getAssociatedTokenAddressSync(m, user)),
@@ -188,7 +189,8 @@ export class VaultClient {
   ) {
     const vault = await this.fetchVault(vaultPda);
     const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
-    const condMints = vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints;
+    const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
+      .slice(0, vault.numOptions);
 
     const builder = deposit(
       this.program,
@@ -236,7 +238,8 @@ export class VaultClient {
   ) {
     const vault = await this.fetchVault(vaultPda);
     const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
-    const condMints = vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints;
+    const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
+      .slice(0, vault.numOptions);
 
     const builder = withdraw(
       this.program,
@@ -270,7 +273,8 @@ export class VaultClient {
   async redeemWinnings(signer: PublicKey, vaultPda: PublicKey, vaultType: VaultType) {
     const vault = await this.fetchVault(vaultPda);
     const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
-    const condMints = vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints;
+    const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
+      .slice(0, vault.numOptions);
 
     const builder = redeemWinnings(
       this.program,

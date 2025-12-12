@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { expect } from "chai";
 
-import { VaultClient, VaultType, VaultState } from "../../../sdk/src";
+import { VaultClient, VaultType, VaultState, parseVaultState } from "../../../sdk/src";
 import {
   DEPOSIT_AMOUNT,
   getTestContext,
@@ -32,7 +32,6 @@ describe("Vault Types", () => {
     let vaultPda: PublicKey;
     const numOptions = 3;
     const nonce = 20;
-    const proposalId = 20;
 
     before(async () => {
       // Initialize vault with both base and quote mints
@@ -43,8 +42,7 @@ describe("Vault Types", () => {
         wallet.publicKey,
         baseMint,
         quoteMint,
-        nonce,
-        proposalId
+        nonce
       );
       await builder.rpc();
       vaultPda = pda;
@@ -58,7 +56,8 @@ describe("Vault Types", () => {
       const vault = await client.fetchVault(vaultPda);
       expect(vault.baseMint.toBase58()).to.equal(baseMint.toBase58());
       expect(vault.quoteMint.toBase58()).to.equal(quoteMint.toBase58());
-      expect(vault.state).to.equal("setup");
+      const { state } = parseVaultState(vault.state);
+      expect(state).to.equal(VaultState.Setup);
       expect(vault.numOptions).to.equal(3);
     });
 
@@ -157,7 +156,8 @@ describe("Vault Types", () => {
       await expectVaultState(client, vaultPda, VaultState.Finalized);
 
       const vault = await client.fetchVault(vaultPda);
-      expect(vault.winningIdx).to.equal(1);
+      const { winningIdx } = parseVaultState(vault.state);
+      expect(winningIdx).to.equal(1);
     });
 
     it("redeems from base side", async () => {

@@ -45,7 +45,6 @@ describe("Interleaved Deposit/Withdraw", () => {
       const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 40,
-        proposalId: 40,
       });
       vaultPda = ctx.vaultPda;
     });
@@ -170,7 +169,6 @@ describe("Interleaved Deposit/Withdraw", () => {
       const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 41,
-        proposalId: 41,
       });
       vaultPda = ctx.vaultPda;
     });
@@ -186,12 +184,7 @@ describe("Interleaved Deposit/Withdraw", () => {
         VaultType.Base,
         5 * ONE_TOKEN
       );
-      await sendAndLog(
-        aliceBuilder,
-        aliceClient,
-        alice.wallet,
-        numOptions
-      );
+      await sendAndLog(aliceBuilder, aliceClient, alice.wallet);
 
       // Bob deposits 3M
       const bobBuilder = await bobClient.deposit(
@@ -248,7 +241,6 @@ describe("Interleaved Deposit/Withdraw", () => {
       const ctx = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         numOptions,
         nonce: 42,
-        proposalId: 42,
       });
       vaultPda = ctx.vaultPda;
 

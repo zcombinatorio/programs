@@ -4,7 +4,7 @@ import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { expect } from "chai";
 
-import { VaultClient, VaultType } from "../../../sdk/src";
+import { VaultClient, VaultType, parseVaultState } from "../../../sdk/src";
 import {
   DEPOSIT_AMOUNT,
   getTestContext,
@@ -118,7 +118,8 @@ describe("Validation Errors", () => {
       await client.finalize(wallet.publicKey, ctx.vaultPda, 4).rpc();
 
       const vault = await client.fetchVault(ctx.vaultPda);
-      expect(vault.winningIdx).to.equal(4);
+      const { winningIdx } = parseVaultState(vault.state);
+      expect(winningIdx).to.equal(4);
     });
   });
 
@@ -167,8 +168,9 @@ describe("Validation Errors", () => {
       const fakeMint = Keypair.generate().publicKey;
       const vaultTypeArg = { base: {} };
 
-      // Provide 3 pairs instead of 2
-      const accounts = vault.condBaseMints.flatMap((m) => [
+      // Provide 3 pairs instead of 2 (slice first, then add extra)
+      const condMints = vault.condBaseMints.slice(0, vault.numOptions);
+      const accounts = condMints.flatMap((m) => [
         { pubkey: m, isSigner: false, isWritable: true },
         {
           pubkey: getAssociatedTokenAddressSync(m, wallet.publicKey),
@@ -291,8 +293,9 @@ describe("Validation Errors", () => {
       const wrongUser = Keypair.generate().publicKey;
       const vaultTypeArg = { base: {} };
 
-      // Provide ATAs for wrong user
-      const accounts = vault.condBaseMints.flatMap((m) => [
+      // Provide ATAs for wrong user (slice to numOptions)
+      const condMints = vault.condBaseMints.slice(0, vault.numOptions);
+      const accounts = condMints.flatMap((m) => [
         { pubkey: m, isSigner: false, isWritable: true },
         {
           pubkey: getAssociatedTokenAddressSync(m, wrongUser),
@@ -352,18 +355,18 @@ describe("Validation Errors", () => {
       // Create two vaults
       const ctx1 = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         nonce: 60,
-        proposalId: 60,
       });
       const ctx2 = await createVaultInActiveState(client, wallet, baseMint, quoteMint, {
         nonce: 61,
-        proposalId: 61,
       });
 
       const vault1 = await client.fetchVault(ctx1.vaultPda);
+      const vault2 = await client.fetchVault(ctx2.vaultPda);
       const vaultTypeArg = { base: {} };
 
-      // Try to use vault1's conditional mints with vault2
-      const accounts = vault1.condBaseMints.flatMap((m) => [
+      // Try to use vault1's conditional mints with vault2 (slice to vault2's numOptions)
+      const condMints = vault1.condBaseMints.slice(0, vault2.numOptions);
+      const accounts = condMints.flatMap((m) => [
         { pubkey: m, isSigner: false, isWritable: true },
         {
           pubkey: getAssociatedTokenAddressSync(m, wallet.publicKey),
