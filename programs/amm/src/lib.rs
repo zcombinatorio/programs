@@ -11,7 +11,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz");
+declare_id!("AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC");
 
 #[program]
 pub mod amm {

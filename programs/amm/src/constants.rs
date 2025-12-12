@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[constant]
-pub const MAX_FEE: u16 = 10000; // 100%
+pub const MAX_FEE: u16 = 5000; // 50%
 
 // Fee vault authority
 #[constant]
