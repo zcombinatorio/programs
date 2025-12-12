@@ -1,4 +1,4 @@
-import { Program, AnchorProvider, Idl, BN } from "@coral-xyz/anchor";
+import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, ComputeBudgetProgram, SystemProgram } from "@solana/web3.js";
 import {
   getAccount,
@@ -10,7 +10,7 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
 import { PROGRAM_ID, FEE_AUTHORITY } from "./constants";
-import { PoolAccount, SwapQuote } from "./types";
+import { Amm, PoolAccount, SwapQuote } from "./types";
 import {
   derivePoolPDA,
   deriveReservePDA,
@@ -29,17 +29,17 @@ import {
   ceaseTrading,
 } from "./instructions";
 
-import IDL from "./idl/amm.json";
+import { AmmIDL } from "./generated";
 
 const MAX_COMPUTE_UNITS = 300_000;
 
 export class AMMClient {
-  public program: Program;
+  public program: Program<Amm>;
   public programId: PublicKey;
 
   constructor(provider: AnchorProvider, programId?: PublicKey) {
     this.programId = programId ?? PROGRAM_ID;
-    this.program = new Program(IDL as Idl, provider);
+    this.program = new Program(AmmIDL as Amm, provider);
   }
 
   // ===========================================================================

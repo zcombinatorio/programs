@@ -1,7 +1,28 @@
-import { PublicKey } from "@solana/web3.js";
+import { IdlAccounts, IdlEvents, IdlTypes } from "@coral-xyz/anchor";
+
+// Re-export the generated IDL type
+export { Vault } from "./generated";
+import type { Vault } from "./generated";
 
 // =============================================================================
-// Enums
+// IDL-derived Types (primary account/state types)
+// =============================================================================
+
+export type VaultAccount = IdlAccounts<Vault>["vaultAccount"];
+export type VaultStateRaw = IdlTypes<Vault>["vaultState"];
+export type VaultTypeRaw = IdlTypes<Vault>["vaultType"];
+
+// Event types from IDL
+export type VaultInitializedEvent = IdlEvents<Vault>["vaultInitialized"];
+export type VaultActivatedEvent = IdlEvents<Vault>["vaultActivated"];
+export type VaultDepositEvent = IdlEvents<Vault>["vaultDeposit"];
+export type VaultWithdrawalEvent = IdlEvents<Vault>["vaultWithdrawal"];
+export type VaultFinalizedEvent = IdlEvents<Vault>["vaultFinalized"];
+export type OptionAddedEvent = IdlEvents<Vault>["optionAdded"];
+export type WinningsRedeemedEvent = IdlEvents<Vault>["winningsRedeemed"];
+
+// =============================================================================
+// SDK Enums (user-friendly for parsing)
 // =============================================================================
 
 export enum VaultType {
@@ -16,74 +37,8 @@ export enum VaultState {
 }
 
 // =============================================================================
-// Account Types
+// Event Union Type
 // =============================================================================
-
-export interface VaultAccount {
-  owner: PublicKey;
-  baseMint: PublicKey;
-  quoteMint: PublicKey;
-  nonce: number;
-  proposalId: number;
-  state: VaultState;
-  numOptions: number;
-  condBaseMints: PublicKey[];
-  condQuoteMints: PublicKey[];
-  winningIdx: number | null;
-  bump: number;
-}
-
-// =============================================================================
-// Event Types
-// =============================================================================
-
-export interface VaultInitializedEvent {
-  vault: PublicKey;
-  owner: PublicKey;
-  baseMint: PublicKey;
-  quoteMint: PublicKey;
-  nonce: number;
-}
-
-export interface VaultActivatedEvent {
-  vault: PublicKey;
-  numOptions: number;
-}
-
-export interface VaultDepositEvent {
-  vault: PublicKey;
-  user: PublicKey;
-  vaultType: VaultType;
-  amount: bigint;
-}
-
-export interface VaultWithdrawalEvent {
-  vault: PublicKey;
-  user: PublicKey;
-  vaultType: VaultType;
-  amount: bigint;
-}
-
-export interface VaultFinalizedEvent {
-  vault: PublicKey;
-  winningIdx: number;
-  winningBaseMint: PublicKey;
-  winningQuoteMint: PublicKey;
-}
-
-export interface OptionAddedEvent {
-  vault: PublicKey;
-  optionIndex: number;
-  condBaseMint: PublicKey;
-  condQuoteMint: PublicKey;
-}
-
-export interface WinningsRedeemedEvent {
-  vault: PublicKey;
-  user: PublicKey;
-  vaultType: VaultType;
-  amount: bigint;
-}
 
 export type VaultEvent =
   | { name: "VaultInitialized"; data: VaultInitializedEvent }

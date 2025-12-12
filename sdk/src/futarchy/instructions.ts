@@ -1,20 +1,20 @@
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { TWAPConfig } from "./types";
+import { Futarchy, TWAPConfig } from "./types";
 
 // =============================================================================
 // Instruction Builders
 // =============================================================================
 
 export function initializeModerator(
-  program: Program,
+  program: Program<Futarchy>,
   payer: PublicKey,
   globalConfig: PublicKey,
   baseMint: PublicKey,
   quoteMint: PublicKey,
   moderator: PublicKey
 ) {
-  return program.methods.initializeModerator().accounts({
+  return program.methods.initializeModerator().accountsPartial({
     payer,
     globalConfig,
     baseMint,
@@ -24,22 +24,18 @@ export function initializeModerator(
 }
 
 export function initializeProposal(
-  program: Program,
+  program: Program<Futarchy>,
   signer: PublicKey,
   moderator: PublicKey,
   proposal: PublicKey,
   length: number,
   fee: number,
-  twapConfig: {
-    startingObservation: BN;
-    maxObservationDelta: BN;
-    warmupDuration: number;
-  },
+  twapConfig: TWAPConfig,
   remainingAccounts: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[]
 ) {
   return program.methods
     .initializeProposal(length, fee, twapConfig)
-    .accounts({
+    .accountsPartial({
       signer,
       moderator,
       proposal,
@@ -48,14 +44,14 @@ export function initializeProposal(
 }
 
 export function addOption(
-  program: Program,
+  program: Program<Futarchy>,
   signer: PublicKey,
   proposal: PublicKey,
   remainingAccounts: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[]
 ) {
   return program.methods
     .addOption()
-    .accounts({
+    .accountsPartial({
       signer,
       proposal,
     })
@@ -63,7 +59,7 @@ export function addOption(
 }
 
 export function launchProposal(
-  program: Program,
+  program: Program<Futarchy>,
   signer: PublicKey,
   proposal: PublicKey,
   vault: PublicKey,
@@ -76,7 +72,7 @@ export function launchProposal(
 
   return program.methods
     .launchProposal(baseAmountBN, quoteAmountBN)
-    .accounts({
+    .accountsPartial({
       signer,
       proposal,
       vault,
@@ -85,7 +81,7 @@ export function launchProposal(
 }
 
 export function finalizeProposal(
-  program: Program,
+  program: Program<Futarchy>,
   signer: PublicKey,
   proposal: PublicKey,
   vault: PublicKey,
@@ -93,7 +89,7 @@ export function finalizeProposal(
 ) {
   return program.methods
     .finalizeProposal()
-    .accounts({
+    .accountsPartial({
       signer,
       proposal,
       vault,
@@ -102,7 +98,7 @@ export function finalizeProposal(
 }
 
 export function redeemLiquidity(
-  program: Program,
+  program: Program<Futarchy>,
   signer: PublicKey,
   proposal: PublicKey,
   vault: PublicKey,
@@ -111,7 +107,7 @@ export function redeemLiquidity(
 ) {
   return program.methods
     .redeemLiquidity()
-    .accounts({
+    .accountsPartial({
       signer,
       proposal,
       vault,

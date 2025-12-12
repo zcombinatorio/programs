@@ -1,7 +1,7 @@
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { POOL_SEED, RESERVE_SEED, FEE_VAULT_SEED, PROGRAM_ID, PRICE_SCALE } from "./constants";
-import { PoolState, PoolAccount, TwapOracle, SwapQuote } from "./types";
+import { Amm, PoolState, PoolAccount, TwapOracle, SwapQuote } from "./types";
 
 // =============================================================================
 // PDA Derivation
@@ -55,35 +55,10 @@ export function parsePoolState(state: any): PoolState {
 // =============================================================================
 
 export async function fetchPoolAccount(
-  program: Program,
+  program: Program<Amm>,
   poolPda: PublicKey
 ): Promise<PoolAccount> {
-  const raw = await (program.account as any).poolAccount.fetch(poolPda);
-
-  return {
-    admin: raw.admin,
-    liquidityProvider: raw.liquidityProvider,
-    mintA: raw.mintA,
-    mintB: raw.mintB,
-    fee: raw.fee,
-    oracle: {
-      cumulativeObservations: raw.oracle.cumulativeObservations,
-      lastUpdateUnixTime: raw.oracle.lastUpdateUnixTime,
-      createdAtUnixTime: raw.oracle.createdAtUnixTime,
-      lastPrice: raw.oracle.lastPrice,
-      lastObservation: raw.oracle.lastObservation,
-      maxObservationDelta: raw.oracle.maxObservationDelta,
-      startingObservation: raw.oracle.startingObservation,
-      warmupDuration: raw.oracle.warmupDuration,
-    },
-    state: parsePoolState(raw.state),
-    bumps: {
-      pool: raw.bumps.pool,
-      reserveA: raw.bumps.reserveA,
-      reserveB: raw.bumps.reserveB,
-      feeVault: raw.bumps.feeVault,
-    },
-  };
+  return program.account.poolAccount.fetch(poolPda);
 }
 
 // =============================================================================

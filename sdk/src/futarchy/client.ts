@@ -1,4 +1,4 @@
-import { Program, AnchorProvider, Idl, BN } from "@coral-xyz/anchor";
+import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
 import {
   PublicKey,
   ComputeBudgetProgram,
@@ -12,6 +12,7 @@ import {
 import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { PROGRAM_ID } from "./constants";
 import {
+  Futarchy,
   GlobalConfig,
   ModeratorAccount,
   ProposalAccount,
@@ -24,6 +25,7 @@ import {
   fetchGlobalConfig,
   fetchModeratorAccount,
   fetchProposalAccount,
+  parseProposalState,
   isProposalExpired,
   getTimeRemaining,
 } from "./utils";
@@ -39,19 +41,19 @@ import {
 import { VaultClient, deriveVaultPDA, deriveConditionalMint, VaultType } from "../vault";
 import { AMMClient, derivePoolPDA, deriveReservePDA, deriveFeeVaultPDA, FEE_AUTHORITY } from "../amm";
 
-import IDL from "./idl/futarchy.json";
+import { FutarchyIDL } from "./generated";
 
 const MAX_COMPUTE_UNITS = 600_000;
 
 export class FutarchyClient {
-  public program: Program;
+  public program: Program<Futarchy>;
   public programId: PublicKey;
   public vault: VaultClient;
   public amm: AMMClient;
 
   constructor(provider: AnchorProvider, programId?: PublicKey) {
     this.programId = programId ?? PROGRAM_ID;
-    this.program = new Program(IDL as Idl, provider);
+    this.program = new Program(FutarchyIDL as Futarchy, provider);
     this.vault = new VaultClient(provider);
     this.amm = new AMMClient(provider);
   }
@@ -373,11 +375,10 @@ export class FutarchyClient {
     const vault = await this.vault.fetchVault(proposal.vault);
     const numOptions = proposal.numOptions;
 
-    if (proposal.winningIdx === null) {
+    const { winningIdx } = parseProposalState(proposal.state);
+    if (winningIdx === null) {
       throw new Error("Proposal not finalized");
     }
-
-    const winningIdx = proposal.winningIdx;
     const winningPool = proposal.pools[winningIdx];
 
     // Derive winning pool reserves

@@ -1,14 +1,14 @@
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { VaultType } from "./types";
+import { Vault, VaultType } from "./types";
 
 // =============================================================================
 // Instruction Builders
 // =============================================================================
 
 export function initialize(
-  program: Program,
+  program: Program<Vault>,
   signer: PublicKey,
   vaultPda: PublicKey,
   baseMint: PublicKey,
@@ -19,7 +19,7 @@ export function initialize(
   condQuoteMint1: PublicKey,
   nonce: number
 ) {
-  return program.methods.initialize(nonce).accounts({
+  return program.methods.initialize(nonce).accountsPartial({
     signer,
     vault: vaultPda,
     baseMint,
@@ -32,7 +32,7 @@ export function initialize(
 }
 
 export function addOption(
-  program: Program,
+  program: Program<Vault>,
   signer: PublicKey,
   vaultPda: PublicKey,
   baseMint: PublicKey,
@@ -40,7 +40,7 @@ export function addOption(
   condBaseMint: PublicKey,
   condQuoteMint: PublicKey
 ) {
-  return program.methods.addOption().accounts({
+  return program.methods.addOption().accountsPartial({
     signer,
     vault: vaultPda,
     baseMint,
@@ -51,18 +51,18 @@ export function addOption(
 }
 
 export function activate(
-  program: Program,
+  program: Program<Vault>,
   signer: PublicKey,
   vaultPda: PublicKey
 ) {
-  return program.methods.activate().accounts({
+  return program.methods.activate().accountsPartial({
     signer,
     vault: vaultPda,
   });
 }
 
 export function deposit(
-  program: Program,
+  program: Program<Vault>,
   signer: PublicKey,
   vaultPda: PublicKey,
   mint: PublicKey,
@@ -75,7 +75,7 @@ export function deposit(
 
   return program.methods
     .deposit(vaultTypeArg, amountBN)
-    .accounts({
+    .accountsPartial({
       signer,
       vault: vaultPda,
       mint,
@@ -93,7 +93,7 @@ export function deposit(
 }
 
 export function withdraw(
-  program: Program,
+  program: Program<Vault>,
   signer: PublicKey,
   vaultPda: PublicKey,
   mint: PublicKey,
@@ -106,7 +106,7 @@ export function withdraw(
 
   return program.methods
     .withdraw(vaultTypeArg, amountBN)
-    .accounts({
+    .accountsPartial({
       signer,
       vault: vaultPda,
       mint,
@@ -124,19 +124,19 @@ export function withdraw(
 }
 
 export function finalize(
-  program: Program,
+  program: Program<Vault>,
   signer: PublicKey,
   vaultPda: PublicKey,
   winningIdx: number
 ) {
-  return program.methods.finalize(winningIdx).accounts({
+  return program.methods.finalize(winningIdx).accountsPartial({
     signer,
     vault: vaultPda,
   });
 }
 
 export function redeemWinnings(
-  program: Program,
+  program: Program<Vault>,
   signer: PublicKey,
   vaultPda: PublicKey,
   mint: PublicKey,
@@ -147,7 +147,7 @@ export function redeemWinnings(
 
   return program.methods
     .redeemWinnings(vaultTypeArg)
-    .accounts({
+    .accountsPartial({
       signer,
       vault: vaultPda,
       mint,

@@ -1,7 +1,7 @@
-import { Program, BN } from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { GLOBAL_CONFIG_SEED, MODERATOR_SEED, PROPOSAL_SEED, PROGRAM_ID } from "./constants";
-import { GlobalConfig, ModeratorAccount, ProposalAccount, ProposalState, TWAPConfig } from "./types";
+import { Futarchy, GlobalConfig, ModeratorAccount, ProposalAccount, ProposalState } from "./types";
 
 // =============================================================================
 // PDA Derivation
@@ -57,60 +57,25 @@ export function parseProposalState(state: any): { state: ProposalState; winningI
 // =============================================================================
 
 export async function fetchGlobalConfig(
-  program: Program,
+  program: Program<Futarchy>,
   programId: PublicKey = PROGRAM_ID
 ): Promise<GlobalConfig> {
   const [globalConfigPda] = deriveGlobalConfigPDA(programId);
-  const raw = await (program.account as any).globalConfig.fetch(globalConfigPda);
-
-  return {
-    moderatorIdCounter: raw.moderatorIdCounter,
-  };
+  return program.account.globalConfig.fetch(globalConfigPda);
 }
 
 export async function fetchModeratorAccount(
-  program: Program,
+  program: Program<Futarchy>,
   moderatorPda: PublicKey
 ): Promise<ModeratorAccount> {
-  const raw = await (program.account as any).moderatorAccount.fetch(moderatorPda);
-
-  return {
-    id: raw.id,
-    quoteMint: raw.quoteMint,
-    baseMint: raw.baseMint,
-    proposalIdCounter: raw.proposalIdCounter,
-    bump: raw.bump,
-  };
+  return program.account.moderatorAccount.fetch(moderatorPda);
 }
 
 export async function fetchProposalAccount(
-  program: Program,
+  program: Program<Futarchy>,
   proposalPda: PublicKey
 ): Promise<ProposalAccount> {
-  const raw = await (program.account as any).proposalAccount.fetch(proposalPda);
-  const { state, winningIdx } = parseProposalState(raw.state);
-
-  return {
-    creator: raw.creator,
-    moderator: raw.moderator,
-    id: raw.id,
-    numOptions: raw.numOptions,
-    state,
-    createdAt: raw.createdAt,
-    length: raw.length,
-    baseMint: raw.baseMint,
-    quoteMint: raw.quoteMint,
-    vault: raw.vault,
-    pools: raw.pools.slice(0, raw.numOptions),
-    fee: raw.fee,
-    twapConfig: {
-      startingObservation: raw.twapConfig.startingObservation,
-      maxObservationDelta: raw.twapConfig.maxObservationDelta,
-      warmupDuration: raw.twapConfig.warmupDuration,
-    },
-    bump: raw.bump,
-    winningIdx,
-  };
+  return program.account.proposalAccount.fetch(proposalPda);
 }
 
 /**

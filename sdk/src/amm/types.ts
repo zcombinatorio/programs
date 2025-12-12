@@ -1,46 +1,32 @@
-import { BN } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { BN, IdlAccounts, IdlEvents, IdlTypes } from "@coral-xyz/anchor";
+
+// Re-export the generated IDL type
+export { Amm } from "./generated";
+import type { Amm } from "./generated";
 
 // =============================================================================
-// Enums
+// IDL-derived Types (primary account/state types)
+// =============================================================================
+
+export type PoolAccount = IdlAccounts<Amm>["poolAccount"];
+export type PoolStateRaw = IdlTypes<Amm>["poolState"];
+export type TwapOracle = IdlTypes<Amm>["twapOracle"];
+export type PoolBumps = IdlTypes<Amm>["poolBumps"];
+
+// Event types from IDL
+export type PoolCreatedEvent = IdlEvents<Amm>["poolCreated"];
+export type LiquidityAddedEvent = IdlEvents<Amm>["liquidityAdded"];
+export type LiquidityRemovedEvent = IdlEvents<Amm>["liquidityRemoved"];
+export type CondSwapEvent = IdlEvents<Amm>["condSwap"];
+export type TWAPUpdateEvent = IdlEvents<Amm>["twapUpdate"];
+
+// =============================================================================
+// Enums (user-friendly for parsing)
 // =============================================================================
 
 export enum PoolState {
   Trading = "trading",
   Finalized = "finalized",
-}
-
-// =============================================================================
-// Account Types
-// =============================================================================
-
-export interface TwapOracle {
-  cumulativeObservations: BN;
-  lastUpdateUnixTime: BN;
-  createdAtUnixTime: BN;
-  lastPrice: BN;
-  lastObservation: BN;
-  maxObservationDelta: BN;
-  startingObservation: BN;
-  warmupDuration: number;
-}
-
-export interface PoolBumps {
-  pool: number;
-  reserveA: number;
-  reserveB: number;
-  feeVault: number;
-}
-
-export interface PoolAccount {
-  admin: PublicKey;
-  liquidityProvider: PublicKey;
-  mintA: PublicKey;
-  mintB: PublicKey;
-  fee: number;
-  oracle: TwapOracle;
-  state: PoolState;
-  bumps: PoolBumps;
 }
 
 // =============================================================================
@@ -58,45 +44,8 @@ export interface SwapQuote {
 }
 
 // =============================================================================
-// Event Types
+// Event Union Type
 // =============================================================================
-
-export interface PoolCreatedEvent {
-  pool: PublicKey;
-  admin: PublicKey;
-  mintA: PublicKey;
-  mintB: PublicKey;
-  fee: number;
-}
-
-export interface LiquidityAddedEvent {
-  pool: PublicKey;
-  amountA: bigint;
-  amountB: bigint;
-}
-
-export interface LiquidityRemovedEvent {
-  pool: PublicKey;
-  amountA: bigint;
-  amountB: bigint;
-}
-
-export interface CondSwapEvent {
-  pool: PublicKey;
-  trader: PublicKey;
-  swapAToB: boolean;
-  inputAmount: bigint;
-  outputAmount: bigint;
-  feeAmount: bigint;
-}
-
-export interface TWAPUpdateEvent {
-  unixTime: bigint;
-  price: BN;
-  observation: BN;
-  cumulativeObservations: BN;
-  twap: BN;
-}
 
 export type AMMEvent =
   | { name: "PoolCreated"; data: PoolCreatedEvent }

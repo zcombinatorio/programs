@@ -1,4 +1,4 @@
-import { Program, AnchorProvider, Idl, BN } from "@coral-xyz/anchor";
+import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, ComputeBudgetProgram, SystemProgram } from "@solana/web3.js";
 import {
   getAccount,
@@ -10,7 +10,7 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
 import { PROGRAM_ID } from "./constants";
-import { VaultType, VaultAccount } from "./types";
+import { Vault, VaultType, VaultAccount } from "./types";
 import {
   deriveVaultPDA,
   deriveConditionalMint,
@@ -26,17 +26,17 @@ import {
   redeemWinnings,
 } from "./instructions";
 
-import IDL from "./idl/vault.json";
+import { VaultIDL } from "./generated";
 
 const MAX_COMPUTE_UNITS = 450_000;
 
 export class VaultClient {
-  public program: Program;
+  public program: Program<Vault>;
   public programId: PublicKey;
 
   constructor(provider: AnchorProvider, programId?: PublicKey) {
     this.programId = programId ?? PROGRAM_ID;
-    this.program = new Program(IDL as Idl, provider);
+    this.program = new Program(VaultIDL as Vault, provider);
   }
 
   // ===========================================================================

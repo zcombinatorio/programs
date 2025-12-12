@@ -1,8 +1,29 @@
-import { BN } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { BN, IdlAccounts, IdlEvents, IdlTypes } from "@coral-xyz/anchor";
+
+// Re-export the generated IDL type
+export { Futarchy } from "./generated";
+import type { Futarchy } from "./generated";
 
 // =============================================================================
-// Enums
+// IDL-derived Types (primary account/state types)
+// =============================================================================
+
+export type GlobalConfig = IdlAccounts<Futarchy>["globalConfig"];
+export type ModeratorAccount = IdlAccounts<Futarchy>["moderatorAccount"];
+export type ProposalAccount = IdlAccounts<Futarchy>["proposalAccount"];
+export type ProposalStateRaw = IdlTypes<Futarchy>["proposalState"];
+export type TWAPConfig = IdlTypes<Futarchy>["twapConfig"];
+
+// Event types from IDL
+export type ModeratorInitializedEvent = IdlEvents<Futarchy>["moderatorInitialized"];
+export type ProposalInitializedEvent = IdlEvents<Futarchy>["proposalInitialized"];
+export type ProposalLaunchedEvent = IdlEvents<Futarchy>["proposalLaunched"];
+export type OptionAddedEvent = IdlEvents<Futarchy>["optionAdded"];
+export type ProposalFinalizedEvent = IdlEvents<Futarchy>["proposalFinalized"];
+export type LiquidityRedeemedEvent = IdlEvents<Futarchy>["liquidityRedeemed"];
+
+// =============================================================================
+// Enums (user-friendly for parsing)
 // =============================================================================
 
 export enum ProposalState {
@@ -12,95 +33,8 @@ export enum ProposalState {
 }
 
 // =============================================================================
-// Account Types
+// Event Union Type
 // =============================================================================
-
-export interface GlobalConfig {
-  moderatorIdCounter: number;
-}
-
-export interface ModeratorAccount {
-  id: number;
-  quoteMint: PublicKey;
-  baseMint: PublicKey;
-  proposalIdCounter: number;
-  bump: number;
-}
-
-export interface TWAPConfig {
-  startingObservation: BN;
-  maxObservationDelta: BN;
-  warmupDuration: number;
-}
-
-export interface ProposalAccount {
-  creator: PublicKey;
-  moderator: PublicKey;
-  id: number;
-  numOptions: number;
-  state: ProposalState;
-  createdAt: BN;
-  length: number;
-  baseMint: PublicKey;
-  quoteMint: PublicKey;
-  vault: PublicKey;
-  pools: PublicKey[];
-  fee: number;
-  twapConfig: TWAPConfig;
-  bump: number;
-  winningIdx: number | null;
-}
-
-// =============================================================================
-// Event Types
-// =============================================================================
-
-export interface ModeratorInitializedEvent {
-  id: number;
-  moderator: PublicKey;
-  baseMint: PublicKey;
-  quoteMint: PublicKey;
-}
-
-export interface ProposalInitializedEvent {
-  proposalId: number;
-  proposal: PublicKey;
-  moderator: PublicKey;
-  creator: PublicKey;
-  vault: PublicKey;
-  baseMint: PublicKey;
-  quoteMint: PublicKey;
-  length: number;
-}
-
-export interface ProposalLaunchedEvent {
-  proposalId: number;
-  proposal: PublicKey;
-  numOptions: number;
-  baseAmount: bigint;
-  quoteAmount: bigint;
-  createdAt: bigint;
-}
-
-export interface OptionAddedEvent {
-  proposalId: number;
-  proposal: PublicKey;
-  optionIndex: number;
-  pool: PublicKey;
-}
-
-export interface ProposalFinalizedEvent {
-  proposalId: number;
-  proposal: PublicKey;
-  winningIdx: number;
-}
-
-export interface LiquidityRedeemedEvent {
-  proposalId: number;
-  proposal: PublicKey;
-  redeemer: PublicKey;
-  winningIdx: number;
-}
 
 export type FutarchyEvent =
   | { name: "ModeratorInitialized"; data: ModeratorInitializedEvent }

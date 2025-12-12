@@ -1,7 +1,7 @@
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { VAULT_SEED, CONDITIONAL_MINT_SEED, PROGRAM_ID } from "./constants";
-import { VaultType, VaultState, VaultAccount } from "./types";
+import { Vault, VaultType, VaultState, VaultAccount } from "./types";
 
 // =============================================================================
 // PDA Derivation
@@ -62,23 +62,8 @@ export function parseVaultState(state: any): { state: VaultState; winningIdx: nu
 // =============================================================================
 
 export async function fetchVaultAccount(
-  program: Program,
+  program: Program<Vault>,
   vaultPda: PublicKey
 ): Promise<VaultAccount> {
-  const raw = await (program.account as any).vaultAccount.fetch(vaultPda);
-  const { state, winningIdx } = parseVaultState(raw.state);
-
-  return {
-    owner: raw.owner,
-    baseMint: raw.baseMint,
-    quoteMint: raw.quoteMint,
-    nonce: raw.nonce,
-    proposalId: raw.proposalId,
-    state,
-    numOptions: raw.numOptions,
-    condBaseMints: raw.condBaseMints.slice(0, raw.numOptions),
-    condQuoteMints: raw.condQuoteMints.slice(0, raw.numOptions),
-    winningIdx,
-    bump: raw.bump,
-  };
+  return program.account.vaultAccount.fetch(vaultPda);
 }
