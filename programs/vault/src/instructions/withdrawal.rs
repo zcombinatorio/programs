@@ -101,7 +101,6 @@ pub fn withdrawal_handler<'info>(
         VAULT_SEED,
         vault.owner.as_ref(),
         &[vault.nonce],
-        &[vault.proposal_id],
         &[vault.bump],
     ];
 
