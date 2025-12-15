@@ -35,16 +35,21 @@ pub struct VaultInitialized {
 #[derive(Accounts)]
 #[instruction(nonce: u8)]
 pub struct InitializeVault<'info> {
+    /// Payer for account rent
     #[account(mut)]
-    pub signer: Signer<'info>,
+    pub payer: Signer<'info>,
+
+    /// Owner of the vault - used for PDA derivation. Can be a PDA or signer.
+    /// CHECK: This can be any account that will own the vault
+    pub owner: UncheckedAccount<'info>,
 
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         space = 8 + VaultAccount::INIT_SPACE,
         seeds = [
             VAULT_SEED,
-            signer.key().as_ref(),
+            owner.key().as_ref(),
             &[nonce]
         ],
         bump,
@@ -57,7 +62,7 @@ pub struct InitializeVault<'info> {
     // Escrow ATA for base mint
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         associated_token::mint = base_mint,
         associated_token::authority = vault,
         associated_token::token_program = token_program,
@@ -67,7 +72,7 @@ pub struct InitializeVault<'info> {
     // Escrow ATA for quote mint
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         associated_token::mint = quote_mint,
         associated_token::authority = vault,
         associated_token::token_program = token_program,
@@ -78,7 +83,7 @@ pub struct InitializeVault<'info> {
     // Conditional mint 0
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         mint::decimals = base_mint.decimals,
         mint::authority = vault,
         seeds = [
@@ -94,7 +99,7 @@ pub struct InitializeVault<'info> {
     // Conditional mint 1
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         mint::decimals = base_mint.decimals,
         mint::authority = vault,
         seeds = [
@@ -111,7 +116,7 @@ pub struct InitializeVault<'info> {
     // Conditional quote mint 0
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         mint::decimals = quote_mint.decimals,
         mint::authority = vault,
         seeds = [
@@ -127,7 +132,7 @@ pub struct InitializeVault<'info> {
     // Conditional quote mint 1
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         mint::decimals = quote_mint.decimals,
         mint::authority = vault,
         seeds = [
@@ -149,7 +154,7 @@ pub struct InitializeVault<'info> {
 pub fn initialize_handler(ctx: Context<InitializeVault>, nonce: u8) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
-    vault.owner = ctx.accounts.signer.key();
+    vault.owner = ctx.accounts.owner.key();
     vault.base_mint = ctx.accounts.base_mint.key();
     vault.quote_mint = ctx.accounts.quote_mint.key();
     vault.nonce = nonce;

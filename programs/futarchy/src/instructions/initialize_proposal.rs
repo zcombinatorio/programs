@@ -123,21 +123,12 @@ pub fn initialize_proposal_handler<'info>(
     // pools[2..] already default/zeroed
     proposal.vault = ctx.remaining_accounts[2].key();
 
-    // Build proposal PDA signer seeds
-    let moderator_key = moderator.key();
-    let proposal_seeds = &[
-        PROPOSAL_SEED,
-        moderator_key.as_ref(),
-        &[proposal_id],
-        &[ctx.bumps.proposal],
-    ];
-    let signer_seeds = &[&proposal_seeds[..]];
-
-    // Initialize Vault with proposal PDA as signer
-    let init_vault_ctx = CpiContext::new_with_signer(
+    // Initialize Vault with proposal PDA as owner, signer as payer
+    let init_vault_ctx = CpiContext::new(
         ctx.accounts.vault_program.to_account_info(),
         InitializeVault {
-            signer: proposal.to_account_info(),
+            payer: ctx.accounts.signer.to_account_info(),
+            owner: proposal.to_account_info(),
             base_mint: ctx.remaining_accounts[0].to_account_info(),
             quote_mint: ctx.remaining_accounts[1].to_account_info(),
             vault: ctx.remaining_accounts[2].to_account_info(),
@@ -151,7 +142,6 @@ pub fn initialize_proposal_handler<'info>(
             token_program: ctx.accounts.token_program.to_account_info(),
             associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
         },
-        signer_seeds,
     );
 
     vault::cpi::initialize(init_vault_ctx, proposal_id)?;
