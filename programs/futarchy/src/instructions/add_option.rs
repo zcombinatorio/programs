@@ -98,7 +98,8 @@ pub fn add_option_handler<'info>(
     let add_option_ctx = CpiContext::new_with_signer(
         ctx.accounts.vault_program.to_account_info(),
         AddVaultOption {
-            signer: proposal.to_account_info(),
+            payer: ctx.accounts.signer.to_account_info(),
+            owner: proposal.to_account_info(),
             base_mint: ctx.remaining_accounts[1].to_account_info(),
             quote_mint: ctx.remaining_accounts[2].to_account_info(),
             vault: ctx.remaining_accounts[0].to_account_info(),

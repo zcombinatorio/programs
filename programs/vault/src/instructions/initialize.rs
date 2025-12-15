@@ -39,9 +39,8 @@ pub struct InitializeVault<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// Owner of the vault - used for PDA derivation. Can be a PDA or signer.
-    /// CHECK: This can be any account that will own the vault
-    pub owner: UncheckedAccount<'info>,
+    /// Owner of the vault — needs to sign
+    pub owner: Signer<'info>,
 
     #[account(
         init,

@@ -34,8 +34,13 @@ pub struct OptionAdded {
 
 #[derive(Accounts)]
 pub struct AddOption<'info> {
+    /// Payer for account rent
     #[account(mut)]
-    pub signer: Signer<'info>,
+    pub payer: Signer<'info>,
+
+    /// Owner of the vault — needs to sign
+    #[account(address = vault.owner @ VaultError::Unauthorized)]
+    pub owner: Signer<'info>,
 
     #[account(
         mut,
@@ -45,7 +50,6 @@ pub struct AddOption<'info> {
             &[vault.nonce],
         ],
         bump = vault.bump,
-        constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
         constraint = vault.state == VaultState::Setup @ VaultError::InvalidState,
     )]
     pub vault: Box<Account<'info, VaultAccount>>,
@@ -61,7 +65,7 @@ pub struct AddOption<'info> {
     // Conditional base mint
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         mint::decimals = base_mint.decimals,
         mint::authority = vault,
         seeds = [
@@ -77,7 +81,7 @@ pub struct AddOption<'info> {
     // Conditional quote mint
     #[account(
         init,
-        payer = signer,
+        payer = payer,
         mint::decimals = quote_mint.decimals,
         mint::authority = vault,
         seeds = [

@@ -33,7 +33,13 @@ pub struct VaultFinalized {
 #[derive(Accounts)]
 #[instruction(winning_idx: u8)]
 pub struct FinalizeVault<'info> {
-    pub signer: Signer<'info>,
+    /// Payer for account rent
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    /// Owner of the vault — needs to sign
+    #[account(address = vault.owner @ VaultError::Unauthorized)]
+    pub owner: Signer<'info>,
 
     #[account(
         mut,
@@ -43,7 +49,6 @@ pub struct FinalizeVault<'info> {
             &[vault.nonce],
         ],
         bump = vault.bump,
-        constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
         constraint = vault.state == VaultState::Active @ VaultError::InvalidState,
     )]
     pub vault: Box<Account<'info, VaultAccount>>,

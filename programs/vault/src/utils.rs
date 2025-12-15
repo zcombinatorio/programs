@@ -18,7 +18,7 @@
  */
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token;
-use anchor_spl::token::{self, MintTo, Transfer, Burn};
+use anchor_spl::token::{self, Burn, MintTo, Transfer};
 
 // User-signed token transfer
 pub fn transfer_tokens<'info>(

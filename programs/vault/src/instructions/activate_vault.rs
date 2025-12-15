@@ -30,7 +30,13 @@ pub struct VaultActivated {
 
 #[derive(Accounts)]
 pub struct ActivateVault<'info> {
-    pub signer: Signer<'info>,
+    /// Payer for account rent
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    /// Owner of the vault - used for PDA derivation. Can be a PDA or signer.
+    #[account(address = vault.owner @ VaultError::Unauthorized)]
+    pub owner: Signer<'info>,
 
     #[account(
         mut,
@@ -40,7 +46,7 @@ pub struct ActivateVault<'info> {
             &[vault.nonce],
         ],
         bump = vault.bump,
-        constraint = vault.owner == signer.key() @ VaultError::Unauthorized,
+        constraint = vault.owner == owner.key() @ VaultError::Unauthorized,
         constraint = vault.state == VaultState::Setup @ VaultError::InvalidState,
     )]
     pub vault: Box<Account<'info, VaultAccount>>,

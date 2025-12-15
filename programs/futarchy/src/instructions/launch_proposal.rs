@@ -108,7 +108,8 @@ pub fn launch_proposal_handler<'info>(
     let activate_ctx = CpiContext::new_with_signer(
         ctx.accounts.vault_program.to_account_info(),
         ActivateVault {
-            signer: ctx.accounts.proposal.to_account_info(),
+            payer: ctx.accounts.signer.to_account_info(),
+            owner: ctx.accounts.proposal.to_account_info(),
             vault: ctx.accounts.vault.to_account_info(),
         },
         signer_seeds,
