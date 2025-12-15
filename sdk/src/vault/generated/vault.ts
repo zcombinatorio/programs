@@ -27,7 +27,18 @@ export type Vault = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "payer",
+          "docs": [
+            "Payer for account rent"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Owner of the vault - used for PDA derivation. Can be a PDA or signer."
+          ],
           "signer": true
         },
         {
@@ -51,8 +62,18 @@ export type Vault = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "payer",
+          "docs": [
+            "Payer for account rent"
+          ],
           "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Owner of the vault — needs to sign"
+          ],
           "signer": true
         },
         {
@@ -269,7 +290,18 @@ export type Vault = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "payer",
+          "docs": [
+            "Payer for account rent"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Owner of the vault — needs to sign"
+          ],
           "signer": true
         },
         {
@@ -298,8 +330,18 @@ export type Vault = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "payer",
+          "docs": [
+            "Payer for account rent"
+          ],
           "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Owner of the vault — needs to sign"
+          ],
           "signer": true
         },
         {

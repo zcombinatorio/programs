@@ -270,16 +270,21 @@ export class FutarchyClient {
     const vault = await this.vault.fetchVault(proposal.vault);
     const numOptions = proposal.numOptions;
 
+    // Slice arrays to numOptions (fixed-size arrays from Rust include empty slots)
+    const condBaseMints = vault.condBaseMints.slice(0, numOptions);
+    const condQuoteMints = vault.condQuoteMints.slice(0, numOptions);
+    const pools = proposal.pools.slice(0, numOptions);
+
     // Derive all user conditional token ATAs
-    const userCondBaseATAs = vault.condBaseMints.map((m) => getAssociatedTokenAddressSync(m, signer));
-    const userCondQuoteATAs = vault.condQuoteMints.map((m) => getAssociatedTokenAddressSync(m, signer));
+    const userCondBaseATAs = condBaseMints.map((m) => getAssociatedTokenAddressSync(m, signer));
+    const userCondQuoteATAs = condQuoteMints.map((m) => getAssociatedTokenAddressSync(m, signer));
 
     // Derive reserve accounts for each pool
     const reservesA: PublicKey[] = [];
     const reservesB: PublicKey[] = [];
     for (let i = 0; i < numOptions; i++) {
-      const [resA] = deriveReservePDA(proposal.pools[i], vault.condQuoteMints[i], this.amm.programId);
-      const [resB] = deriveReservePDA(proposal.pools[i], vault.condBaseMints[i], this.amm.programId);
+      const [resA] = deriveReservePDA(pools[i], condQuoteMints[i], this.amm.programId);
+      const [resB] = deriveReservePDA(pools[i], condBaseMints[i], this.amm.programId);
       reservesA.push(resA);
       reservesB.push(resB);
     }
@@ -296,11 +301,11 @@ export class FutarchyClient {
     ];
 
     // 6..6+N: cond_base_mints
-    for (const mint of vault.condBaseMints) {
+    for (const mint of condBaseMints) {
       remainingAccounts.push({ pubkey: mint, isSigner: false, isWritable: true });
     }
     // 6+N..6+2N: cond_quote_mints
-    for (const mint of vault.condQuoteMints) {
+    for (const mint of condQuoteMints) {
       remainingAccounts.push({ pubkey: mint, isSigner: false, isWritable: true });
     }
     // 6+2N..6+3N: user_cond_base_atas
@@ -312,7 +317,7 @@ export class FutarchyClient {
       remainingAccounts.push({ pubkey: ata, isSigner: false, isWritable: true });
     }
     // 6+4N..6+5N: pools
-    for (const pool of proposal.pools) {
+    for (const pool of pools) {
       remainingAccounts.push({ pubkey: pool, isSigner: false, isWritable: true });
     }
     // 6+5N..6+6N: reserves_a

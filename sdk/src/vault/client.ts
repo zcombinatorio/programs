@@ -125,12 +125,14 @@ export class VaultClient {
   // ===========================================================================
 
   initialize(
-    signer: PublicKey,
+    payer: PublicKey,
     baseMint: PublicKey,
     quoteMint: PublicKey,
-    nonce: number
+    nonce: number,
+    owner?: PublicKey // Optional owner, defaults to payer
   ) {
-    const [vaultPda] = this.deriveVaultPDA(signer, nonce);
+    const vaultOwner = owner ?? payer;
+    const [vaultPda] = this.deriveVaultPDA(vaultOwner, nonce);
     const [condBaseMint0] = this.deriveConditionalMint(vaultPda, VaultType.Base, 0);
     const [condBaseMint1] = this.deriveConditionalMint(vaultPda, VaultType.Base, 1);
     const [condQuoteMint0] = this.deriveConditionalMint(vaultPda, VaultType.Quote, 0);
@@ -138,7 +140,8 @@ export class VaultClient {
 
     const builder = initialize(
       this.program,
-      signer,
+      payer,
+      vaultOwner,
       vaultPda,
       baseMint,
       quoteMint,
@@ -159,14 +162,15 @@ export class VaultClient {
     };
   }
 
-  async addOption(signer: PublicKey, vaultPda: PublicKey) {
+  async addOption(payer: PublicKey, owner: PublicKey, vaultPda: PublicKey) {
     const vault = await this.fetchVault(vaultPda);
     const [condBaseMint] = this.deriveConditionalMint(vaultPda, VaultType.Base, vault.numOptions);
     const [condQuoteMint] = this.deriveConditionalMint(vaultPda, VaultType.Quote, vault.numOptions);
 
     const builder = addOption(
       this.program,
-      signer,
+      payer,
+      owner,
       vaultPda,
       vault.baseMint,
       vault.quoteMint,
@@ -177,8 +181,8 @@ export class VaultClient {
     return { builder, condBaseMint, condQuoteMint };
   }
 
-  activate(signer: PublicKey, vaultPda: PublicKey) {
-    return activate(this.program, signer, vaultPda);
+  activate(payer: PublicKey, owner: PublicKey, vaultPda: PublicKey) {
+    return activate(this.program, payer, owner, vaultPda);
   }
 
   async deposit(
@@ -266,8 +270,8 @@ export class VaultClient {
     return builder.preInstructions([computeBudgetIx]);
   }
 
-  finalize(signer: PublicKey, vaultPda: PublicKey, winningIdx: number) {
-    return finalize(this.program, signer, vaultPda, winningIdx);
+  finalize(payer: PublicKey, owner: PublicKey, vaultPda: PublicKey, winningIdx: number) {
+    return finalize(this.program, payer, owner, vaultPda, winningIdx);
   }
 
   async redeemWinnings(signer: PublicKey, vaultPda: PublicKey, vaultType: VaultType) {

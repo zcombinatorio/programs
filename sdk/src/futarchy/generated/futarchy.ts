@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/futarchy.json`.
  */
 export type Futarchy = {
-  "address": "D2E45PQk715zosJaJcwauGP5PiyBipYQpNqsCrQMGMWV",
+  "address": "FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC",
   "metadata": {
     "name": "futarchy",
     "version": "0.1.0",
@@ -45,7 +45,7 @@ export type Futarchy = {
         },
         {
           "name": "ammProgram",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         },
         {
           "name": "tokenProgram",
@@ -89,7 +89,7 @@ export type Futarchy = {
         },
         {
           "name": "ammProgram",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         }
       ],
       "args": []
@@ -238,7 +238,7 @@ export type Futarchy = {
         },
         {
           "name": "ammProgram",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         },
         {
           "name": "tokenProgram",
@@ -304,7 +304,7 @@ export type Futarchy = {
         },
         {
           "name": "ammProgram",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         },
         {
           "name": "tokenProgram",
@@ -361,7 +361,7 @@ export type Futarchy = {
         },
         {
           "name": "ammProgram",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         },
         {
           "name": "tokenProgram",

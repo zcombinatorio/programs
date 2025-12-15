@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 
-export const PROGRAM_ID = new PublicKey("D2E45PQk715zosJaJcwauGP5PiyBipYQpNqsCrQMGMWV");
+export const PROGRAM_ID = new PublicKey("FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC");
 
 export const GLOBAL_CONFIG_SEED = Buffer.from("global_config");
 export const MODERATOR_SEED = Buffer.from("moderator");

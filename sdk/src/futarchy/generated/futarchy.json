@@ -1,5 +1,5 @@
 {
-  "address": "D2E45PQk715zosJaJcwauGP5PiyBipYQpNqsCrQMGMWV",
+  "address": "FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC",
   "metadata": {
     "name": "futarchy",
     "version": "0.1.0",
@@ -39,7 +39,7 @@
         },
         {
           "name": "amm_program",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         },
         {
           "name": "token_program",
@@ -83,7 +83,7 @@
         },
         {
           "name": "amm_program",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         }
       ],
       "args": []
@@ -232,7 +232,7 @@
         },
         {
           "name": "amm_program",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         },
         {
           "name": "token_program",
@@ -298,7 +298,7 @@
         },
         {
           "name": "amm_program",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         },
         {
           "name": "token_program",
@@ -355,7 +355,7 @@
         },
         {
           "name": "amm_program",
-          "address": "3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz"
+          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
         },
         {
           "name": "token_program",

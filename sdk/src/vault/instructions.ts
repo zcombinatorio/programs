@@ -9,7 +9,8 @@ import { Vault, VaultType } from "./types";
 
 export function initialize(
   program: Program<Vault>,
-  signer: PublicKey,
+  payer: PublicKey,
+  owner: PublicKey,
   vaultPda: PublicKey,
   baseMint: PublicKey,
   quoteMint: PublicKey,
@@ -20,7 +21,8 @@ export function initialize(
   nonce: number
 ) {
   return program.methods.initialize(nonce).accountsPartial({
-    signer,
+    payer,
+    owner,
     vault: vaultPda,
     baseMint,
     quoteMint,
@@ -33,7 +35,8 @@ export function initialize(
 
 export function addOption(
   program: Program<Vault>,
-  signer: PublicKey,
+  payer: PublicKey,
+  owner: PublicKey,
   vaultPda: PublicKey,
   baseMint: PublicKey,
   quoteMint: PublicKey,
@@ -41,7 +44,8 @@ export function addOption(
   condQuoteMint: PublicKey
 ) {
   return program.methods.addOption().accountsPartial({
-    signer,
+    payer,
+    owner,
     vault: vaultPda,
     baseMint,
     quoteMint,
@@ -52,11 +56,13 @@ export function addOption(
 
 export function activate(
   program: Program<Vault>,
-  signer: PublicKey,
+  payer: PublicKey,
+  owner: PublicKey,
   vaultPda: PublicKey
 ) {
   return program.methods.activate().accountsPartial({
-    signer,
+    payer,
+    owner,
     vault: vaultPda,
   });
 }
@@ -125,12 +131,14 @@ export function withdraw(
 
 export function finalize(
   program: Program<Vault>,
-  signer: PublicKey,
+  payer: PublicKey,
+  owner: PublicKey,
   vaultPda: PublicKey,
   winningIdx: number
 ) {
   return program.methods.finalize(winningIdx).accountsPartial({
-    signer,
+    payer,
+    owner,
     vault: vaultPda,
   });
 }
