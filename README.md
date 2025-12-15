@@ -2,9 +2,12 @@
 
 | Program | Address | Version | Deprecated |
 |---------|---------|---------|------------|
-| futarchy | D2E45PQk715zosJaJcwauGP5PiyBipYQpNqsCrQMGMWV | 0.1.0 | |
-| amm | 3bt3f7BRg7zTZL8LbVTa5QeoD29Svd8t1L3xGwrjgmgz | 0.1.0 | |
+| futarchy | FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC | 0.1.0 | |
+| amm | AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC | 0.1.0 | |
+| vault | VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC | 0.1.0 | |
 | vault | vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc | 0.0.0 | ❌ |
+
+AMM Fee Authority: FEEnkcCNE2623LYCPtLf63LFzXpCFigBLTu4qZovRGZC
 
 ---
 
