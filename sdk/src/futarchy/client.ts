@@ -5,6 +5,7 @@ import {
   AddressLookupTableProgram,
   AddressLookupTableAccount,
   SystemProgram,
+  Transaction,
   TransactionInstruction,
   TransactionMessage,
   VersionedTransaction,
@@ -43,7 +44,7 @@ import { AMMClient, derivePoolPDA, deriveReservePDA, deriveFeeVaultPDA, FEE_AUTH
 
 import { FutarchyIDL } from "./generated";
 
-const MAX_COMPUTE_UNITS = 600_000;
+const MAX_COMPUTE_UNITS = 500_000;
 
 export class FutarchyClient {
   public program: Program<Futarchy>;
@@ -443,15 +444,18 @@ export class FutarchyClient {
   // Address Lookup Table
   // ===========================================================================
 
+  /**
+   * Creates an Address Lookup Table for a proposal.
+   * This method handles creating and extending the ALT atomically to avoid stale slot issues.
+   *
+   * @returns The ALT address after creation and extension
+   */
   async createProposalALT(
     creator: PublicKey,
     moderatorPda: PublicKey,
     numOptions: number = 2,
-  ): Promise<{
-    createIx: TransactionInstruction;
-    extendIx: TransactionInstruction;
-    altAddress: PublicKey;
-  }> {
+  ): Promise<{ altAddress: PublicKey }> {
+    const provider = this.program.provider as AnchorProvider;
     const moderator = await this.fetchModerator(moderatorPda);
     const proposalId = moderator.proposalIdCounter;
     const [proposalPda] = this.deriveProposalPDA(moderatorPda, proposalId);
@@ -502,21 +506,41 @@ export class FutarchyClient {
       );
     }
 
-    const slot = await this.program.provider.connection.getSlot();
+    // Get the most recent slot using "finalized" commitment for stability
+    const slot = await provider.connection.getSlot("finalized");
+
     const [createIx, altAddress] = AddressLookupTableProgram.createLookupTable({
       authority: creator,
       payer: creator,
       recentSlot: slot,
     });
 
-    const extendIx = AddressLookupTableProgram.extendLookupTable({
-      payer: creator,
-      authority: creator,
-      lookupTable: altAddress,
-      addresses,
+    // Send create transaction immediately, skip preflight to avoid slot timing issues
+    const createTx = new Transaction().add(createIx);
+    createTx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+    createTx.feePayer = creator;
+    const signedTx = await provider.wallet.signTransaction(createTx);
+    const sig = await provider.connection.sendRawTransaction(signedTx.serialize(), {
+      skipPreflight: true,
     });
+    await provider.connection.confirmTransaction(sig, "confirmed");
 
-    return { createIx, extendIx, altAddress };
+    // Split addresses into chunks to avoid transaction size limits
+    // Each address is 32 bytes, ~20 addresses per extend instruction is safe
+    const CHUNK_SIZE = 20;
+    for (let i = 0; i < addresses.length; i += CHUNK_SIZE) {
+      const chunk = addresses.slice(i, i + CHUNK_SIZE);
+      const extendIx = AddressLookupTableProgram.extendLookupTable({
+        payer: creator,
+        authority: creator,
+        lookupTable: altAddress,
+        addresses: chunk,
+      });
+      const extendTx = new Transaction().add(extendIx);
+      await provider.sendAndConfirm(extendTx);
+    }
+
+    return { altAddress };
   }
 
   async fetchALT(altAddress: PublicKey): Promise<AddressLookupTableAccount> {
