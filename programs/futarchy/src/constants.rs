@@ -9,6 +9,12 @@ pub const MODERATOR_SEED: &[u8] = b"moderator";
 #[constant]
 pub const PROPOSAL_SEED: &[u8] = b"proposal";
 
+#[constant]
+pub const MODERATOR_VERSION: u8 = 1;
+
+#[constant]
+pub const PROPOSAL_VERSION: u8 = 1;
+
 // Maximum number of conditional options
 // Bottle-necked by launch_proposal (64 account max)
 #[constant]

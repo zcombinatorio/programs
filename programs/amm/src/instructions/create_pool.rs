@@ -26,11 +26,12 @@ use crate::twap::TwapOracle;
 
 #[event]
 pub struct PoolCreated {
+    pub version: u8,
     pub pool: Pubkey,
-    pub admin: Pubkey,
     pub mint_a: Pubkey,
     pub mint_b: Pubkey,
     pub fee: u16,
+    pub admin: Pubkey,
 }
 
 #[derive(Accounts)]
@@ -124,6 +125,7 @@ pub fn create_pool_handler(
     let clock = Clock::get()?;
 
     ctx.accounts.pool.set_inner(PoolAccount {
+        version: AMM_VERSION,
         admin: ctx.accounts.admin.key(),
         liquidity_provider: liquidity_provider.unwrap_or(ctx.accounts.admin.key()),
         mint_a: ctx.accounts.mint_a.key(),
@@ -145,11 +147,12 @@ pub fn create_pool_handler(
     });
 
     emit!(PoolCreated {
+        version: AMM_VERSION,
         pool: ctx.accounts.pool.key(),
         admin: ctx.accounts.admin.key(),
         mint_a: ctx.accounts.mint_a.key(),
         mint_b: ctx.accounts.mint_b.key(),
-        fee,
+        fee: fee,
     });
 
     Ok(())

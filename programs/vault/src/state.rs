@@ -40,6 +40,8 @@ pub enum VaultState {
 #[derive(InitSpace)]
 #[account]
 pub struct VaultAccount {
+    pub version: u8,
+    pub bump: u8,
     pub owner: Pubkey,      // Vault creator
     pub base_mint: Pubkey,  // Base mint
     pub quote_mint: Pubkey, // Quote mint
@@ -51,6 +53,4 @@ pub struct VaultAccount {
     pub num_options: u8,
     pub cond_base_mints: [Pubkey; MAX_OPTIONS as usize], // allocate for max options
     pub cond_quote_mints: [Pubkey; MAX_OPTIONS as usize], // allocate for max options
-
-    pub bump: u8,
 }

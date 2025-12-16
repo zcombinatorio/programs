@@ -18,12 +18,10 @@ pub struct PoolBumps {
 #[account]
 #[derive(InitSpace)]
 pub struct PoolAccount {
-    // Given full state-change
-    // In prod, given to the proposal PDA
-    pub admin: Pubkey,
+    pub version: u8,
+    pub bumps: PoolBumps,
 
-    // Sole liquidity provider
-    pub liquidity_provider: Pubkey,
+    pub state: PoolState,
 
     // Mints
     // Fees are collected in mint_a
@@ -32,8 +30,13 @@ pub struct PoolAccount {
 
     // Fee (basis points)
     pub fee: u16,
-    pub oracle: TwapOracle,
-    pub state: PoolState,
 
-    pub bumps: PoolBumps,
+    // Given full state-change
+    // In prod, given to the proposal PDA
+    pub admin: Pubkey,
+
+    // Sole liquidity provider
+    pub liquidity_provider: Pubkey,
+
+    pub oracle: TwapOracle,
 }

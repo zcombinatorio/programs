@@ -15,7 +15,6 @@ pub struct OptionAdded {
     pub proposal_id: u8,
     pub proposal: Pubkey,
     pub option_index: u8,
-    pub pool: Pubkey,
 }
 
 #[derive(Accounts)]
@@ -145,7 +144,6 @@ pub fn add_option_handler<'info>(
         proposal_id: proposal.id,
         proposal: proposal.key(),
         option_index: curr_options,
-        pool: ctx.remaining_accounts[5].key(),
     });
 
     Ok(())

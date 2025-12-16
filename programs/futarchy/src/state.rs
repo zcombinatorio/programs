@@ -5,18 +5,20 @@ use crate::constants::MAX_OPTIONS;
 #[account]
 #[derive(InitSpace)]
 pub struct GlobalConfig {
+    pub version: u8,
     pub moderator_id_counter: u32, // global counter (starts at 0)
 }
 
 #[account]
 #[derive(InitSpace)]
 pub struct ModeratorAccount {
+    pub version: u8,
+    pub bump: u8,
     pub id: u32, // moderator id (globally unique)
-    pub admin: Pubkey,
     pub quote_mint: Pubkey,
     pub base_mint: Pubkey,
     pub proposal_id_counter: u8, // next proposal id
-    pub bump: u8,
+    pub admin: Pubkey,
 }
 
 #[derive(Copy, Clone, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
@@ -29,7 +31,8 @@ pub enum ProposalState {
 #[account]
 #[derive(InitSpace)]
 pub struct ProposalAccount {
-    pub creator: Pubkey, // Should match moderator admin
+    pub version: u8,
+    pub bump: u8,
     pub moderator: Pubkey,
     pub id: u8,
     pub num_options: u8,
@@ -44,11 +47,11 @@ pub struct ProposalAccount {
     pub vault: Pubkey,
     pub pools: [Pubkey; MAX_OPTIONS as usize],
 
+    pub creator: Pubkey, // Should match moderator admin
+
     // AMM configuration
     pub fee: u16,
     pub twap_config: TWAPConfig,
-
-    pub bump: u8,
 }
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, Copy)]

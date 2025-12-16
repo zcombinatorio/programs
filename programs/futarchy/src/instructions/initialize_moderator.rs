@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::MODERATOR_SEED;
+use crate::{MODERATOR_SEED, MODERATOR_VERSION};
 use crate::constants::GLOBAL_CONFIG_SEED;
 use crate::errors::FutarchyError;
 use crate::state::{GlobalConfig, ModeratorAccount};
@@ -8,11 +8,12 @@ use anchor_spl::token::Mint;
 
 #[event]
 pub struct ModeratorInitialized {
+    pub version: u8,
     pub id: u32,
     pub moderator: Pubkey,
-    pub admin: Pubkey,
     pub base_mint: Pubkey,
     pub quote_mint: Pubkey,
+    pub admin: Pubkey,
 }
 
 #[derive(Accounts)]
@@ -59,6 +60,7 @@ pub fn initialize_moderator_handler(ctx: Context<InitializeModerator>) -> Result
 
     // Initialize moderator
     moderator.set_inner(ModeratorAccount {
+        version: MODERATOR_VERSION,
         id: id,
         admin: ctx.accounts.signer.key(),
         quote_mint: ctx.accounts.quote_mint.key(),
@@ -68,6 +70,7 @@ pub fn initialize_moderator_handler(ctx: Context<InitializeModerator>) -> Result
     });
 
     emit!(ModeratorInitialized {
+        version: MODERATOR_VERSION,
         id,
         moderator: moderator.key(),
         admin: moderator.admin,

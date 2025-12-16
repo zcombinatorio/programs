@@ -1,5 +1,6 @@
 use amm::cpi::accounts::CreatePool;
 use anchor_lang::prelude::*;
+use vault::VAULT_VERSION;
 use vault::cpi::accounts::InitializeVault;
 
 use crate::constants::*;
@@ -12,14 +13,12 @@ use vault::program::Vault;
 
 #[event]
 pub struct ProposalInitialized {
+    pub version: u8,
     pub proposal_id: u8,
     pub proposal: Pubkey,
     pub moderator: Pubkey,
+    pub length: u16,
     pub creator: Pubkey,
-    pub vault: Pubkey,
-    pub base_mint: Pubkey,
-    pub quote_mint: Pubkey,
-    pub length: u16
 }
 
 #[derive(Accounts)]
@@ -109,7 +108,7 @@ pub fn initialize_proposal_handler<'info>(
     // Store state
     let proposal_id = moderator.proposal_id_counter;
     moderator.proposal_id_counter += 1;
-  
+    proposal.version = PROPOSAL_VERSION;
     proposal.id = proposal_id;
     proposal.creator = ctx.accounts.signer.key();
     proposal.moderator = moderator.key();
@@ -214,13 +213,11 @@ pub fn initialize_proposal_handler<'info>(
     )?;
 
     emit!(ProposalInitialized {
+        version: VAULT_VERSION,
         proposal_id,
         proposal: proposal.key(),
         moderator: moderator.key(),
         creator: proposal.creator,
-        vault: proposal.vault,
-        base_mint: proposal.base_mint,
-        quote_mint: proposal.quote_mint,
         length
     });
 

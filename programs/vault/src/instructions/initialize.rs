@@ -25,6 +25,7 @@ use crate::state::*;
 
 #[event]
 pub struct VaultInitialized {
+    pub version: u8,
     pub vault: Pubkey,
     pub owner: Pubkey,
     pub base_mint: Pubkey,
@@ -153,6 +154,7 @@ pub struct InitializeVault<'info> {
 pub fn initialize_handler(ctx: Context<InitializeVault>, nonce: u8) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
+    vault.version = VAULT_VERSION;
     vault.owner = ctx.accounts.owner.key();
     vault.base_mint = ctx.accounts.base_mint.key();
     vault.quote_mint = ctx.accounts.quote_mint.key();
@@ -170,6 +172,7 @@ pub fn initialize_handler(ctx: Context<InitializeVault>, nonce: u8) -> Result<()
     vault.bump = ctx.bumps.vault;
 
     emit!(VaultInitialized {
+        version: VAULT_VERSION,
         vault: vault.key(),
         owner: vault.owner,
         base_mint: vault.base_mint,

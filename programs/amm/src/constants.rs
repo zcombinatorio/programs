@@ -15,3 +15,6 @@ pub const POOL_SEED: &[u8] = b"pool";
 
 #[constant]
 pub const FEE_VAULT_SEED: &[u8] = b"fee_vault";
+
+#[constant]
+pub const AMM_VERSION: u8 = 1;
