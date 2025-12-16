@@ -92,7 +92,7 @@ pub fn initialize_proposal_handler<'info>(
     );
 
     // Validate mints match moderator
-    let moderator = &ctx.accounts.moderator;
+    let moderator = &mut ctx.accounts.moderator;
     require!(
         ctx.remaining_accounts[0].key() == moderator.base_mint,
         FutarchyError::InvalidMint
@@ -102,7 +102,6 @@ pub fn initialize_proposal_handler<'info>(
         FutarchyError::InvalidMint
     );
 
-    let moderator = &mut ctx.accounts.moderator;
     let proposal = &mut ctx.accounts.proposal;
 
     // Store state

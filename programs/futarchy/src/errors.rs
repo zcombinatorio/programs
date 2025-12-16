@@ -37,4 +37,10 @@ pub enum FutarchyError {
 
     #[msg("Counter overflow")]
     CounterOverflow,
+
+    #[msg("Winning index exceeds number of options")]
+    InvalidWinningIndex,
+
+    #[msg("Invalid account version")]
+    InvalidVersion,
 }
