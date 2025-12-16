@@ -12,6 +12,7 @@ pub struct GlobalConfig {
 #[derive(InitSpace)]
 pub struct ModeratorAccount {
     pub id: u32, // moderator id (globally unique)
+    pub admin: Pubkey,
     pub quote_mint: Pubkey,
     pub base_mint: Pubkey,
     pub proposal_id_counter: u8, // next proposal id
@@ -28,7 +29,7 @@ pub enum ProposalState {
 #[account]
 #[derive(InitSpace)]
 pub struct ProposalAccount {
-    pub creator: Pubkey,
+    pub creator: Pubkey, // Should match moderator admin
     pub moderator: Pubkey,
     pub id: u8,
     pub num_options: u8,

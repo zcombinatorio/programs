@@ -24,7 +24,10 @@ pub struct ProposalInitialized {
 
 #[derive(Accounts)]
 pub struct InitializeProposal<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        address = moderator.admin
+    )]
     pub signer: Signer<'info>,
 
     #[account(

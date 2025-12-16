@@ -10,6 +10,7 @@ use anchor_spl::token::Mint;
 pub struct ModeratorInitialized {
     pub id: u32,
     pub moderator: Pubkey,
+    pub admin: Pubkey,
     pub base_mint: Pubkey,
     pub quote_mint: Pubkey,
 }
@@ -17,11 +18,11 @@ pub struct ModeratorInitialized {
 #[derive(Accounts)]
 pub struct InitializeModerator<'info> {
     #[account(mut)]
-    pub payer: Signer<'info>,
+    pub signer: Signer<'info>,
 
     #[account(
         init_if_needed,
-        payer = payer,
+        payer = signer,
         space = 8 + GlobalConfig::INIT_SPACE,
         seeds = [GLOBAL_CONFIG_SEED],
         bump
@@ -33,7 +34,7 @@ pub struct InitializeModerator<'info> {
 
     #[account(
         init,
-        payer = payer,
+        payer = signer,
         space = 8 + ModeratorAccount::INIT_SPACE,
         seeds = [
             MODERATOR_SEED,
@@ -57,15 +58,19 @@ pub fn initialize_moderator_handler(ctx: Context<InitializeModerator>) -> Result
         .ok_or(FutarchyError::CounterOverflow)?;
 
     // Initialize moderator
-    moderator.id = id;
-    moderator.base_mint = ctx.accounts.base_mint.key();
-    moderator.quote_mint = ctx.accounts.quote_mint.key();
-    moderator.proposal_id_counter = 0;
-    moderator.bump = ctx.bumps.moderator;
+    moderator.set_inner(ModeratorAccount {
+        id: id,
+        admin: ctx.accounts.signer.key(),
+        quote_mint: ctx.accounts.quote_mint.key(),
+        base_mint: ctx.accounts.base_mint.key(),
+        proposal_id_counter: 0,
+        bump: ctx.bumps.moderator
+    });
 
     emit!(ModeratorInitialized {
         id,
         moderator: moderator.key(),
+        admin: moderator.admin,
         base_mint: moderator.base_mint,
         quote_mint: moderator.quote_mint
     });
