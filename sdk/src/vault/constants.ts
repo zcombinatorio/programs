@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 
-export const PROGRAM_ID = new PublicKey("vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc");
+export const PROGRAM_ID = new PublicKey("VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC");
 
 export const VAULT_SEED = Buffer.from("vault");
 export const CONDITIONAL_MINT_SEED = Buffer.from("cmint");
