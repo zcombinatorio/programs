@@ -32,6 +32,7 @@ pub struct RedeemLiquidity<'info> {
         ],
         bump = proposal.bump,
         constraint = proposal.creator == signer.key() @ FutarchyError::Unauthorized,
+        constraint = proposal.version != 0 @FutarchyError::InvalidVersion // Don't allow historical proposals
     )]
     pub proposal: Box<Account<'info, ProposalAccount>>,
 
