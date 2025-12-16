@@ -25,7 +25,7 @@ pub mod futarchy {
         length: u16,
         fee: u16,
         twap_config: TWAPConfig,
-    ) -> Result<()> {
+    ) -> Result<u8> {
         instructions::initialize_proposal::initialize_proposal_handler(ctx, length, fee, twap_config)
     }
 

@@ -85,7 +85,7 @@ pub fn initialize_proposal_handler<'info>(
     length: u16,
     fee: u16, // AMM Fee
     twap_config: TWAPConfig,
-) -> Result<()> {
+) -> Result<u8> {
     require!(
         ctx.remaining_accounts.len() >= 18,
         FutarchyError::InvalidRemainingAccounts
@@ -220,5 +220,5 @@ pub fn initialize_proposal_handler<'info>(
         length
     });
 
-    Ok(())
+    Ok(proposal_id)
 }
