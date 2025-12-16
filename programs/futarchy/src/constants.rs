@@ -15,6 +15,9 @@ pub const MODERATOR_VERSION: u8 = 1;
 #[constant]
 pub const PROPOSAL_VERSION: u8 = 1;
 
+#[constant]
+pub const GLOBAL_CONFIG_VERSION: u8 = 1;
+
 // Maximum number of conditional options
 // Bottle-necked by launch_proposal (64 account max)
 #[constant]

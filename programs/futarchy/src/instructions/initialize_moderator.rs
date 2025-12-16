@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{MODERATOR_SEED, MODERATOR_VERSION};
-use crate::constants::GLOBAL_CONFIG_SEED;
+use crate::constants::{GLOBAL_CONFIG_VERSION, GLOBAL_CONFIG_SEED};
 use crate::errors::FutarchyError;
 use crate::state::{GlobalConfig, ModeratorAccount};
 use anchor_spl::token::Mint;
@@ -52,12 +52,18 @@ pub fn initialize_moderator_handler(ctx: Context<InitializeModerator>) -> Result
     let global_config = &mut ctx.accounts.global_config;
     let moderator = &mut ctx.accounts.moderator;
 
+    // Initialize global config if new (version == 0 means uninitialized)
+    if global_config.version == 0 {
+        global_config.version = GLOBAL_CONFIG_VERSION;
+        global_config.moderator_id_counter = 0;
+    }
+
     // Store current counter as this moderator's ID, then increment
     let id = global_config.moderator_id_counter;
     global_config.moderator_id_counter = id
         .checked_add(1)
         .ok_or(FutarchyError::CounterOverflow)?;
-
+    
     // Initialize moderator
     moderator.set_inner(ModeratorAccount {
         version: MODERATOR_VERSION,
