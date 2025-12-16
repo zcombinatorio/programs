@@ -60,7 +60,7 @@ pub mod futarchy {
         num_options: u8,
         winning_idx: u8,
         length: u16,
-    ) -> Result<()> {
+    ) -> Result<u8> {
         instructions::add_historical_proposal_handler(ctx, num_options, winning_idx, length)
     }
 }

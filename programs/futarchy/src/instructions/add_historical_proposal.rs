@@ -44,7 +44,7 @@ pub fn add_historical_proposal_handler<'info>(
     num_options: u8,
     winning_idx: u8,
     length: u16,
-) -> Result<()> { 
+) -> Result<u8> { 
     require!(winning_idx < num_options, FutarchyError::InvalidWinningIndex);
     let moderator = &mut ctx.accounts.moderator;
     let proposal = &mut ctx.accounts.proposal;
@@ -65,5 +65,5 @@ pub fn add_historical_proposal_handler<'info>(
 
     // pools, vaults, amm configs are zeroed
 
-    Ok(())
+    Ok(proposal_id)
 }
