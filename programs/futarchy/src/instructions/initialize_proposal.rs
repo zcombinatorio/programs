@@ -104,9 +104,11 @@ pub fn initialize_proposal_handler<'info>(
 
     let proposal = &mut ctx.accounts.proposal;
 
-    // Store state
+    // Store state with checked counter increment
     let proposal_id = moderator.proposal_id_counter;
-    moderator.proposal_id_counter += 1;
+    moderator.proposal_id_counter = proposal_id
+        .checked_add(1)
+        .ok_or(FutarchyError::CounterOverflow)?;
     proposal.version = PROPOSAL_VERSION;
     proposal.id = proposal_id;
     proposal.creator = ctx.accounts.signer.key();

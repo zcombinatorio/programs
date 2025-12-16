@@ -43,6 +43,7 @@ pub struct AddOption<'info> {
     pub amm_program: Program<'info, Amm>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+    
     // Remaining accounts (in order):
     // 0: vault
     // 1: base_mint

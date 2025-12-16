@@ -44,21 +44,30 @@ pub fn add_historical_proposal_handler<'info>(
     num_options: u8,
     winning_idx: u8,
     length: u16,
-) -> Result<u8> { 
+    created_at: i64,
+) -> Result<u8> {
+    // Validate num_options bounds
+    require!(num_options >= MIN_OPTIONS, FutarchyError::NotEnoughOptions);
+    require!(num_options <= MAX_OPTIONS, FutarchyError::TooManyOptions);
     require!(winning_idx < num_options, FutarchyError::InvalidWinningIndex);
+
     let moderator = &mut ctx.accounts.moderator;
     let proposal = &mut ctx.accounts.proposal;
 
-    // Store state
+    // Store state with checked counter increment
     let proposal_id = moderator.proposal_id_counter;
-    moderator.proposal_id_counter += 1;
-    proposal.version = 0;
+    moderator.proposal_id_counter = proposal_id
+        .checked_add(1)
+        .ok_or(FutarchyError::CounterOverflow)?;
+
+    proposal.version = 0; // Historical proposals marked as version 0
     proposal.id = proposal_id;
     proposal.moderator = moderator.key();
     proposal.base_mint = moderator.base_mint;
     proposal.quote_mint = moderator.quote_mint;
     proposal.creator = ctx.accounts.signer.key();
     proposal.length = length;
+    proposal.created_at = created_at;
     proposal.bump = ctx.bumps.proposal;
     proposal.num_options = num_options;
     proposal.state = ProposalState::Resolved(winning_idx);
