@@ -17,6 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
+use crate::errors::AmmError;
 use std::cmp::Ordering;
 
 const PRICE_SCALE: u128 = 1_000_000_000_000_u128;
@@ -75,13 +76,13 @@ impl TwapOracle {
             max_observation_delta,
             starting_observation,
             warmup_duration,
-            min_recording_interval: MIN_RECORDING_INTERVAL
+            min_recording_interval: MIN_RECORDING_INTERVAL,
         }
     }
 
     /// Records a new price sample and updates the TWAP accumulator.
     /// Returns the current TWAP if available (None during warmup).
-    pub fn crank_twap(&mut self, reserves_a: u64, reserves_b: u64) -> Result<Option<u128>> {
+    pub fn crank_twap(&mut self, reserves_a: u64, reserves_b: u64) -> Result<u128> {
         let clock = Clock::get()?;
         let now = clock.unix_timestamp;
 
@@ -90,10 +91,14 @@ impl TwapOracle {
             || reserves_a == 0
             || reserves_b == 0
         {
-            return Ok(self.fetch_twap().ok());
+            return self.fetch_twap();
         }
 
-        let curr_price = (reserves_a as u128).saturating_mul(PRICE_SCALE) / reserves_b as u128;
+        let curr_price = (reserves_a as u128)
+            .saturating_mul(PRICE_SCALE)
+            .checked_div(reserves_b as u128)
+            .ok_or(AmmError::MathOverflow)?;
+
         let prev_obs = self.last_observation;
         let delta = self.max_observation_delta;
 
@@ -103,16 +108,20 @@ impl TwapOracle {
             .min(prev_obs.saturating_add(delta));
 
         // Accumulate weighted observation after warmup
-        let warmup_end = self.created_at_unix_time + self.warmup_duration as i64;
+        let warmup_end = self
+            .created_at_unix_time
+            .checked_add(self.warmup_duration as i64)
+            .ok_or(AmmError::MathOverflow)?;
 
         if now > warmup_end {
             let base_time = self.last_update_unix_time.max(warmup_end);
 
+            // Should never panic since now > warmup_end here
             let elapsed: u128 = (now - base_time).try_into().unwrap();
 
             self.cumulative_observations = self
                 .cumulative_observations
-                .wrapping_add(new_obs.saturating_mul(elapsed))
+                .wrapping_add(new_obs.saturating_mul(elapsed));
         }
 
         // Commit state
@@ -134,14 +143,14 @@ impl TwapOracle {
         }
 
         // Get final twap
-        let twap = self.fetch_twap().ok();
+        let twap = self.fetch_twap()?;
 
         emit!(TWAPUpdate {
             unix_time: now,
             price: curr_price,
             observation: new_obs,
             cumulative_observations: self.cumulative_observations,
-            twap: twap.unwrap_or(0)
+            twap: twap
         });
 
         Ok(twap)
@@ -149,10 +158,13 @@ impl TwapOracle {
 
     /// Computes the time-weighted average price since warmup completed.
     pub fn fetch_twap(&self) -> Result<u128> {
-        let accumulation_start = self.created_at_unix_time + self.warmup_duration as i64;
+        let accumulation_start = self
+            .created_at_unix_time
+            .checked_add(self.warmup_duration as i64)
+            .ok_or(AmmError::MathOverflow)?;
 
         require_gt!(self.last_update_unix_time, accumulation_start);
-
+        
         let elapsed = (self.last_update_unix_time - accumulation_start) as u128;
 
         require_neq!(elapsed, 0);

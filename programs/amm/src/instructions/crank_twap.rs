@@ -63,7 +63,7 @@ pub struct CrankTwap<'info> {
     pub reserve_b: Account<'info, TokenAccount>,
 }
 
-pub fn crank_twap_handler(ctx: Context<CrankTwap>) -> Result<Option<u128>> {
+pub fn crank_twap_handler(ctx: Context<CrankTwap>) -> Result<u128> {
     let reserve_a = ctx.accounts.reserve_a.amount;
     let reserve_b = ctx.accounts.reserve_b.amount;
 
