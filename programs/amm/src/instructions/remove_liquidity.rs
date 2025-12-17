@@ -32,7 +32,7 @@ pub struct LiquidityRemoved {
 pub struct RemoveLiquidity<'info> {
     // Only allow the liquidity provider (pool field) 
     #[account(
-        constraint = depositor.key() == pool.liquidity_provider @ AmmError::InvalidAdmin,
+        address= pool.liquidity_provider @ AmmError::InvalidDepositor,
     )]
     pub depositor: Signer<'info>,
 
@@ -97,6 +97,7 @@ pub fn remove_liquidity_handler(ctx: Context<RemoveLiquidity>, amount_a: u64, am
     require!(amount_b > 0, AmmError::InvalidAmount);
 
     // Ensure withdrawal doesn't exceed reserve balances
+    // Throws for empty reserves
     require!(amount_a <= ctx.accounts.reserve_a.amount, AmmError::InsufficientReserve);
     require!(amount_b <= ctx.accounts.reserve_b.amount, AmmError::InsufficientReserve);
 

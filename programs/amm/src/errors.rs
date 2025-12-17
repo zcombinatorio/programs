@@ -5,6 +5,9 @@ pub enum AmmError {
     #[msg("Invalid admin")]
     InvalidAdmin,
 
+    #[msg("Invalid depositor")]
+    InvalidDepositor,
+
     #[msg("Invalid state")]
     InvalidState,
 
@@ -22,6 +25,9 @@ pub enum AmmError {
 
     #[msg("Math overflow")]
     MathOverflow,
+
+    #[msg("Math underflow")]
+    MathUnderflow,
 
     #[msg("Output too small")]
     OutputTooSmall,

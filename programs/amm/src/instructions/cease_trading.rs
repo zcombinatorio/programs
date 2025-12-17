@@ -24,7 +24,7 @@ use crate::errors::*;
 
 #[derive(Accounts)]
 pub struct CeaseTrading<'info> {
-    #[account(constraint = pool.admin == admin.key() @ AmmError::InvalidAdmin)]
+    #[account(address = pool.admin @ AmmError::InvalidAdmin)]
     pub admin: Signer<'info>,
 
     #[account(

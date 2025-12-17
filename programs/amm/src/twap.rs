@@ -55,6 +55,8 @@ pub struct TwapOracle {
     pub starting_observation: u128,
     /// Seconds after creation before TWAP accumulation begins
     pub warmup_duration: u32,
+    /// Minimum time in-between TWAP recordings
+    pub min_recording_interval: i64,
 }
 
 impl TwapOracle {
@@ -73,6 +75,7 @@ impl TwapOracle {
             max_observation_delta,
             starting_observation,
             warmup_duration,
+            min_recording_interval: MIN_RECORDING_INTERVAL
         }
     }
 
@@ -83,7 +86,7 @@ impl TwapOracle {
         let now = clock.unix_timestamp;
 
         // Early exit: rate limit or no liquidity
-        if now < self.last_update_unix_time + MIN_RECORDING_INTERVAL
+        if now < self.last_update_unix_time + self.min_recording_interval
             || reserves_a == 0
             || reserves_b == 0
         {

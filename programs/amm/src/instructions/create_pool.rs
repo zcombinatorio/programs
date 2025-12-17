@@ -116,8 +116,7 @@ pub fn create_pool_handler(
     starting_observation: u128,
     max_observation_delta: u128,
     warmup_duration: u32,
-    // Optional seperate provider
-    liquidity_provider: Option<Pubkey>,
+    liquidity_provider: Option<Pubkey>, // Optional seperate provider
 ) -> Result<()> {
     // Fee cannot exceed maximum
     require!(fee <= MAX_FEE, AmmError::InvalidFee);
