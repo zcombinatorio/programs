@@ -17,7 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::get_associated_token_address;
 use anchor_spl::token::TokenAccount;
 
 use crate::common::UserVaultAction;
@@ -67,6 +66,11 @@ pub fn redeem_winnings_handler<'info>(
         let cond_mint_info = &ctx.remaining_accounts[i * 2];
         let user_cond_ata_info = &ctx.remaining_accounts[i * 2 + 1];
 
+        // Skip if ATA doesn't exist or is empty
+        if user_cond_ata_info.data_is_empty() {
+            continue;
+        }
+
         // Validate the conditional mint PDA
         require!(
             cond_mint_info.key() == vault_cond_mints[i],
@@ -74,17 +78,11 @@ pub fn redeem_winnings_handler<'info>(
         );
 
         // Validate user's ATA
-        let expected_user_ata =
-            get_associated_token_address(&ctx.accounts.signer.key(), &cond_mint_info.key());
-        require!(
-            user_cond_ata_info.key() == expected_user_ata,
-            VaultError::InvalidUserAta
-        );
-
-        // Skip if ATA doesn't exist or is empty
-        if user_cond_ata_info.data_is_empty() {
-            continue;
-        }
+        UserVaultAction::validate_user_ata(
+            &cond_mint_info.key(),
+            &ctx.accounts.signer.key(),
+            user_cond_ata_info,
+        )?;
 
         require!(
             user_cond_ata_info.owner == &ctx.accounts.token_program.key(),
@@ -99,7 +97,7 @@ pub fn redeem_winnings_handler<'info>(
             winning_amount = balance;
         }
 
-        // Burn all tokens and close user ATA
+        // Burn all tokens
         if balance > 0 {
             burn_tokens(
                 cond_mint_info.clone(),
@@ -110,6 +108,7 @@ pub fn redeem_winnings_handler<'info>(
             )?;
         }
 
+        // Close user token account
         close_token_account(
             user_cond_ata_info.clone(),
             ctx.accounts.signer.to_account_info(),
@@ -118,7 +117,7 @@ pub fn redeem_winnings_handler<'info>(
         )?;
     }
 
-    // Exit if no winnings
+    // Exit if no winnings, aka just burn & close accounts
     if winning_amount == 0 {
         return Ok(());
     }

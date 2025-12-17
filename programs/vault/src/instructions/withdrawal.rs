@@ -17,7 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::get_associated_token_address;
 
 use crate::common::UserVaultAction;
 use crate::constants::*;
@@ -70,24 +69,19 @@ pub fn withdrawal_handler<'info>(
             VaultError::InvalidConditionalMint
         );
 
-        let expected_user_ata =
-            get_associated_token_address(&ctx.accounts.signer.key(), &cond_mint_info.key());
-        require!(
-            user_cond_ata_info.key() == expected_user_ata,
-            VaultError::InvalidUserAta
-        );
-
         // User must have conditional tokens to withdraw
         require!(
             !user_cond_ata_info.data_is_empty(),
             VaultError::InvalidUserAta
         );
 
-        require!(
-            user_cond_ata_info.owner == &ctx.accounts.token_program.key(),
-            VaultError::InvalidAccountOwner
-        );
+        UserVaultAction::validate_user_ata(
+            &cond_mint_info.key(),
+            &ctx.accounts.signer.key(),
+            user_cond_ata_info,
+        )?;
 
+        // Will throw if token account doesn't have enough tokens
         burn_tokens(
             cond_mint_info.clone(),
             user_cond_ata_info.clone(),

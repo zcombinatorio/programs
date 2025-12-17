@@ -18,7 +18,8 @@
  */
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token::{ID as TOKEN_PROGRAM_ID, Mint, Token, TokenAccount};
+use anchor_spl::associated_token::get_associated_token_address;
 
 use crate::constants::*;
 use crate::errors::VaultError;
@@ -74,8 +75,29 @@ pub struct UserVaultAction<'info> {
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
+
     // Conditional mints passed via remaining_accounts
     // Expected order for each option i:
     // - remaining_accounts[i * 2 + 0]: cond_mint_i
     // - remaining_accounts[i * 2 + 1]: user_cond_ata_i (may need init)
+}
+
+impl UserVaultAction<'_> {
+    pub fn validate_user_ata(mint: &Pubkey, user: &Pubkey, user_ata_info: &AccountInfo) -> Result<()>{
+        let expected_user_ata = get_associated_token_address(user, mint);
+        require!(
+            user_ata_info.key() == expected_user_ata,
+            VaultError::InvalidUserAta
+        );
+
+        // Validate it's owned by the Token program, only if uninitialized
+        if !user_ata_info.data_is_empty() {
+            require!(
+                user_ata_info.owner == &TOKEN_PROGRAM_ID,
+                VaultError::InvalidAccountOwner
+            );
+        }
+
+        Ok(())
+    }
 }

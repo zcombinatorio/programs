@@ -40,7 +40,7 @@ pub struct InitializeVault<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// Owner of the vault — needs to sign
+    /// Owner of the vault
     pub owner: Signer<'info>,
 
     #[account(
@@ -162,6 +162,7 @@ pub fn initialize_handler(ctx: Context<InitializeVault>, nonce: u16) -> Result<(
     vault.num_options = 2; // First 2 options generated atomically
 
     // Store conditional mints
+    // cond_*_mints[2..] zero'd on account creation
     vault.cond_base_mints[0] = ctx.accounts.cond_base_mint_0.key();
     vault.cond_base_mints[1] = ctx.accounts.cond_base_mint_1.key();
 

@@ -46,7 +46,6 @@ pub struct ActivateVault<'info> {
             &vault.nonce.to_le_bytes(),
         ],
         bump = vault.bump,
-        constraint = vault.owner == owner.key() @ VaultError::Unauthorized,
         constraint = vault.state == VaultState::Setup @ VaultError::InvalidState,
     )]
     pub vault: Box<Account<'info, VaultAccount>>,
@@ -55,7 +54,7 @@ pub struct ActivateVault<'info> {
 pub fn activate_vault_handler(ctx: Context<ActivateVault>) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
-    // Never should be flagged, just a sanity check
+    // Sanity checks
     require!(
         vault.num_options >= MIN_OPTIONS,
         VaultError::NotEnoughOptions

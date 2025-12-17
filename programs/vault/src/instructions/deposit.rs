@@ -17,7 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::get_associated_token_address;
 
 use crate::common::UserVaultAction;
 use crate::constants::*;
@@ -88,12 +87,11 @@ pub fn deposit_handler<'info>(
             VaultError::InvalidConditionalMint
         );
 
-        let expected_user_ata =
-            get_associated_token_address(&ctx.accounts.signer.key(), &cond_mint_info.key());
-        require!(
-            user_cond_ata_info.key() == expected_user_ata,
-            VaultError::InvalidUserAta
-        );
+        UserVaultAction::validate_user_ata(
+            &cond_mint_info.key(),
+            &ctx.accounts.signer.key(),
+            user_cond_ata_info,
+        )?;
 
         // Create user's ATA if needed
         if user_cond_ata_info.data_is_empty() {
@@ -106,15 +104,9 @@ pub fn deposit_handler<'info>(
                 ctx.accounts.associated_token_program.to_account_info(),
                 ctx.accounts.system_program.to_account_info(),
             )?;
-        } else {
-            // Validate it's owned by the Token program
-            require!(
-                user_cond_ata_info.owner == &ctx.accounts.token_program.key(),
-                VaultError::InvalidAccountOwner
-            );
         }
 
-        // Mint conditional tokens directly to user's ATA
+        // Mint conditional tokens to user's ATA
         mint_to_signed(
             cond_mint_info.clone(),
             user_cond_ata_info.clone(),
