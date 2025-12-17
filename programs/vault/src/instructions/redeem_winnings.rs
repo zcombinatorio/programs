@@ -124,10 +124,11 @@ pub fn redeem_winnings_handler<'info>(
     }
 
     // 2. Transfer winning amount of regular tokens: vault -> user
+    let nonce_bytes = vault.nonce.to_le_bytes();
     let vault_seeds: &[&[u8]] = &[
         VAULT_SEED,
         vault.owner.as_ref(),
-        &[vault.nonce],
+        &nonce_bytes,
         &[vault.bump],
     ];
     transfer_signed(

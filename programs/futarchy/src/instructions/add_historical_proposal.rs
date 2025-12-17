@@ -29,7 +29,7 @@ pub struct AddHistoricalProposal<'info> {
         seeds = [
             PROPOSAL_SEED,
             moderator.key().as_ref(),
-            &[moderator.proposal_id_counter]
+            &moderator.proposal_id_counter.to_le_bytes()
         ],
         bump
     )]
@@ -45,7 +45,7 @@ pub fn add_historical_proposal_handler<'info>(
     winning_idx: u8,
     length: u16,
     created_at: i64,
-) -> Result<u8> {
+) -> Result<u16> {
     // Validate num_options bounds
     require!(num_options >= MIN_OPTIONS, FutarchyError::NotEnoughOptions);
     require!(num_options <= MAX_OPTIONS, FutarchyError::TooManyOptions);

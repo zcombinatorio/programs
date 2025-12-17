@@ -43,7 +43,7 @@ pub struct ActivateVault<'info> {
         seeds = [
             VAULT_SEED,
             vault.owner.as_ref(),
-            &[vault.nonce],
+            &vault.nonce.to_le_bytes(),
         ],
         bump = vault.bump,
         constraint = vault.owner == owner.key() @ VaultError::Unauthorized,

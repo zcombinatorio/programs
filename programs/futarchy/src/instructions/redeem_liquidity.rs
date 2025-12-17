@@ -13,7 +13,7 @@ use crate::state::{ProposalAccount, ProposalState};
 
 #[event]
 pub struct LiquidityRedeemed {
-    pub proposal_id: u8,
+    pub proposal_id: u16,
     pub proposal: Pubkey,
     pub redeemer: Pubkey,
     pub winning_idx: u8,
@@ -28,7 +28,7 @@ pub struct RedeemLiquidity<'info> {
         seeds = [
             PROPOSAL_SEED,
             proposal.moderator.as_ref(),
-            &[proposal.id]
+            &proposal.id.to_le_bytes()
         ],
         bump = proposal.bump,
         constraint = proposal.creator == signer.key() @ FutarchyError::Unauthorized,

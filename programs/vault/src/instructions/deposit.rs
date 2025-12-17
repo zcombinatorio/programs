@@ -70,10 +70,11 @@ pub fn deposit_handler<'info>(
     )?;
 
     // 2. For each conditional mint, mint tokens to user
+    let nonce_bytes = vault.nonce.to_le_bytes();
     let vault_seeds: &[&[u8]] = &[
         VAULT_SEED,
         vault.owner.as_ref(),
-        &[vault.nonce],
+        &nonce_bytes,
         &[vault.bump],
     ];
 

@@ -14,7 +14,7 @@ use vault::program::Vault;
 #[event]
 pub struct ProposalInitialized {
     pub version: u8,
-    pub proposal_id: u8,
+    pub proposal_id: u16,
     pub proposal: Pubkey,
     pub moderator: Pubkey,
     pub length: u16,
@@ -46,7 +46,7 @@ pub struct InitializeProposal<'info> {
         seeds = [
             PROPOSAL_SEED,
             moderator.key().as_ref(),
-            &[moderator.proposal_id_counter]
+            &moderator.proposal_id_counter.to_le_bytes()
         ],
         bump
     )]
@@ -85,7 +85,7 @@ pub fn initialize_proposal_handler<'info>(
     length: u16,
     fee: u16, // AMM Fee
     twap_config: TWAPConfig,
-) -> Result<u8> {
+) -> Result<u16> {
     require!(
         ctx.remaining_accounts.len() >= 18,
         FutarchyError::InvalidRemainingAccounts
@@ -130,7 +130,7 @@ pub fn initialize_proposal_handler<'info>(
     let proposal_seeds = &[
         PROPOSAL_SEED,
         proposal.moderator.as_ref(),
-        &[proposal_id],
+        &proposal_id.to_le_bytes(),
         &[ctx.bumps.proposal],
     ];
     let signer_seeds = &[&proposal_seeds[..]];

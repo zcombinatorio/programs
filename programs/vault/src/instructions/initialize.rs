@@ -30,11 +30,11 @@ pub struct VaultInitialized {
     pub owner: Pubkey,
     pub base_mint: Pubkey,
     pub quote_mint: Pubkey,
-    pub nonce: u8,
+    pub nonce: u16,
 }
 
 #[derive(Accounts)]
-#[instruction(nonce: u8)]
+#[instruction(nonce: u16)]
 pub struct InitializeVault<'info> {
     /// Payer for account rent
     #[account(mut)]
@@ -50,7 +50,7 @@ pub struct InitializeVault<'info> {
         seeds = [
             VAULT_SEED,
             owner.key().as_ref(),
-            &[nonce]
+            &nonce.to_le_bytes()
         ],
         bump,
     )]
@@ -151,7 +151,7 @@ pub struct InitializeVault<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-pub fn initialize_handler(ctx: Context<InitializeVault>, nonce: u8) -> Result<()> {
+pub fn initialize_handler(ctx: Context<InitializeVault>, nonce: u16) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
     vault.version = VAULT_VERSION;

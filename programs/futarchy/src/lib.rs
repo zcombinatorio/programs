@@ -25,7 +25,7 @@ pub mod futarchy {
         length: u16,
         fee: u16,
         twap_config: TWAPConfig,
-    ) -> Result<u8> {
+    ) -> Result<u16> {
         instructions::initialize_proposal::initialize_proposal_handler(ctx, length, fee, twap_config)
     }
 
@@ -61,7 +61,7 @@ pub mod futarchy {
         winning_idx: u8,
         length: u16,
         created_at: i64,
-    ) -> Result<u8> {
+    ) -> Result<u16> {
         instructions::add_historical_proposal_handler(ctx, num_options, winning_idx, length, created_at)
     }
 }

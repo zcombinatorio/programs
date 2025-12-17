@@ -47,7 +47,7 @@ pub struct AddOption<'info> {
         seeds = [
             VAULT_SEED,
             vault.owner.as_ref(),
-            &[vault.nonce],
+            &vault.nonce.to_le_bytes(),
         ],
         bump = vault.bump,
         constraint = vault.state == VaultState::Setup @ VaultError::InvalidState,

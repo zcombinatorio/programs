@@ -12,7 +12,7 @@ use vault::program::Vault;
 
 #[event]
 pub struct OptionAdded {
-    pub proposal_id: u8,
+    pub proposal_id: u16,
     pub proposal: Pubkey,
     pub option_index: u8,
 }
@@ -30,7 +30,7 @@ pub struct AddOption<'info> {
         seeds = [
             PROPOSAL_SEED,
             proposal.moderator.as_ref(),
-            &[proposal.id]
+            &proposal.id.to_le_bytes()
         ],
         bump = proposal.bump,
         constraint = proposal.state == ProposalState::Setup @ FutarchyError::InvalidState,
@@ -43,7 +43,7 @@ pub struct AddOption<'info> {
     pub amm_program: Program<'info, Amm>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    
+
     // Remaining accounts (in order):
     // 0: vault
     // 1: base_mint
@@ -89,7 +89,7 @@ pub fn add_option_handler<'info>(
     let proposal_seeds = &[
         PROPOSAL_SEED,
         proposal.moderator.as_ref(),
-        &[proposal.id],
+        &proposal.id.to_le_bytes(),
         &[proposal.bump],
     ];
     let signer_seeds = &[&proposal_seeds[..]];

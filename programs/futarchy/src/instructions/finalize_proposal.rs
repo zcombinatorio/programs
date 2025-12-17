@@ -11,7 +11,7 @@ use crate::state::{ProposalAccount, ProposalState};
 
 #[event]
 pub struct ProposalFinalized {
-    pub proposal_id: u8,
+    pub proposal_id: u16,
     pub proposal: Pubkey,
     pub winning_idx: u8,
 }
@@ -25,7 +25,7 @@ pub struct FinalizeProposal<'info> {
         seeds = [
             PROPOSAL_SEED,
             proposal.moderator.as_ref(),
-            &[proposal.id]
+            &proposal.id.to_le_bytes()
         ],
         bump = proposal.bump,
         constraint = proposal.state == ProposalState::Pending @ FutarchyError::InvalidState,
@@ -117,7 +117,7 @@ pub fn finalize_proposal_handler<'info>(
     let proposal_seeds = &[
         PROPOSAL_SEED,
         moderator_key.as_ref(),
-        &[proposal_id],
+        &proposal_id.to_le_bytes(),
         &[proposal_bump],
     ];
     let signer_seeds = &[&proposal_seeds[..]];

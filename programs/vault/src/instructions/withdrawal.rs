@@ -97,10 +97,11 @@ pub fn withdrawal_handler<'info>(
         )?;
     }
 
+    let nonce_bytes = vault.nonce.to_le_bytes();
     let vault_seeds: &[&[u8]] = &[
         VAULT_SEED,
         vault.owner.as_ref(),
-        &[vault.nonce],
+        &nonce_bytes,
         &[vault.bump],
     ];
 

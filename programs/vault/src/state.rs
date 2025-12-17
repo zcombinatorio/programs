@@ -45,8 +45,8 @@ pub struct VaultAccount {
     pub owner: Pubkey,      // Vault creator
     pub base_mint: Pubkey,  // Base mint
     pub quote_mint: Pubkey, // Quote mint
-    pub nonce: u8,          // Unique identifier (e.g. protocol_id)
-    pub proposal_id: u8,
+    pub nonce: u16,         // Unique identifier (e.g. proposal_id)
+    pub proposal_id: u16,
     pub state: VaultState,
 
     // Number of markets (2 <= n <= MAX_OPTIONS)

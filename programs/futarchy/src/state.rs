@@ -17,7 +17,7 @@ pub struct ModeratorAccount {
     pub id: u32, // moderator id (globally unique)
     pub quote_mint: Pubkey,
     pub base_mint: Pubkey,
-    pub proposal_id_counter: u8, // next proposal id
+    pub proposal_id_counter: u16, // next proposal id
     pub admin: Pubkey,
 }
 
@@ -34,7 +34,7 @@ pub struct ProposalAccount {
     pub version: u8,
     pub bump: u8,
     pub moderator: Pubkey,
-    pub id: u8,
+    pub id: u16,
     pub num_options: u8,
     pub state: ProposalState,
 

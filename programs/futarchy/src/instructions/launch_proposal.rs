@@ -13,7 +13,7 @@ use vault::VaultType;
 
 #[event]
 pub struct ProposalLaunched {
-    pub proposal_id: u8,
+    pub proposal_id: u16,
     pub proposal: Pubkey,
     pub num_options: u8,
     pub base_amount: u64,
@@ -31,7 +31,7 @@ pub struct LaunchProposal<'info> {
         seeds = [
             PROPOSAL_SEED,
             proposal.moderator.as_ref(),
-            &[proposal.id]
+            &proposal.id.to_le_bytes()
         ],
         bump = proposal.bump,
         constraint = proposal.state == ProposalState::Setup @ FutarchyError::InvalidState,
@@ -96,10 +96,11 @@ pub fn launch_proposal_handler<'info>(
     // Build proposal PDA signer seeds
     let proposal_id = ctx.accounts.proposal.id;
     let proposal_bump = ctx.accounts.proposal.bump;
+    let id_bytes = proposal_id.to_le_bytes();
     let proposal_seeds = &[
         PROPOSAL_SEED,
         ctx.accounts.proposal.moderator.as_ref(),
-        &[proposal_id],
+        &id_bytes[..],
         &[proposal_bump],
     ];
     let signer_seeds = &[&proposal_seeds[..]];
