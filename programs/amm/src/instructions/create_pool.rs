@@ -39,8 +39,7 @@ pub struct CreatePool<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// CHECK: Admin pubkey stored in pool state
-    pub admin: UncheckedAccount<'info>,
+    pub admin: Signer<'info>,
 
     // Mints; Fees are collected in mint A
     pub mint_a: Account<'info, Mint>,
