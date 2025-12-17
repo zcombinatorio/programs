@@ -23,6 +23,7 @@ cluster = "localnet"
 wallet = ".keys/authority.json"
 
 [scripts]
+prop = "./scripts/sync-idl.sh"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
 test-vault = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/vault/**/*.ts\""
 test-amm = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/amm/**/*.ts\""
