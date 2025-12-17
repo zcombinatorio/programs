@@ -26,12 +26,15 @@ pub mod futarchy {
         fee: u16,
         twap_config: TWAPConfig,
     ) -> Result<u16> {
-        instructions::initialize_proposal::initialize_proposal_handler(ctx, length, fee, twap_config)
+        instructions::initialize_proposal::initialize_proposal_handler(
+            ctx,
+            length,
+            fee,
+            twap_config,
+        )
     }
 
-    pub fn add_option<'info>(
-        ctx: Context<'_, '_, 'info, 'info, AddOption<'info>>,
-    ) -> Result<()> {
+    pub fn add_option<'info>(ctx: Context<'_, '_, 'info, 'info, AddOption<'info>>) -> Result<()> {
         instructions::add_option::add_option_handler(ctx)
     }
 
@@ -62,6 +65,12 @@ pub mod futarchy {
         length: u16,
         created_at: i64,
     ) -> Result<u16> {
-        instructions::add_historical_proposal_handler(ctx, num_options, winning_idx, length, created_at)
+        instructions::add_historical_proposal_handler(
+            ctx,
+            num_options,
+            winning_idx,
+            length,
+            created_at,
+        )
     }
 }
