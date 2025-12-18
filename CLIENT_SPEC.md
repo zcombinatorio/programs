@@ -2,13 +2,10 @@
 
 ## Overview
 
-This SDK enables your platform to create and manage DAOs for your clients' tokens. Your platform's master token provides the liquidity infrastructure, and your clients' tokens (child DAOs) borrow from it to run decision markets.
+This SDK enables your platform to manage governance for your token and your clients' tokens using a **Parent/Child DAO hierarchy**.
 
-**Your platform's role**:
-- Own and operate the master token with spot liquidity
-- Onboard client tokens by creating child DAOs for them
-- Store user balances for client tokens
-- Verify user eligibility and create proposals on their behalf
+- **Your platform** owns a Parent DAO (your master token with spot liquidity)
+- **Your clients** get Child DAOs (their tokens, no spot liquidity, borrow from your parent)
 
 ---
 
@@ -16,31 +13,31 @@ This SDK enables your platform to create and manage DAOs for your clients' token
 
 | Term | Definition |
 |------|------------|
-| **Master Token** | Your platform's token - has spot liquidity, provides infrastructure |
-| **Client Token** | A token belonging to one of your clients (no spot liquidity) |
-| **Child DAO** | A DAO for a client token, linked to your master |
-| **User** | Someone holding a client token who wants to create a proposal |
+| **Parent DAO** | Your platform's DAO - has spot liquidity, can create proposals directly |
+| **Child DAO** | A DAO for one of your client's tokens - no liquidity, proposals proxy to parent |
+| **Proposal** | A decision market that uses parent's liquidity regardless of which DAO initiates |
 
 ---
 
-## 1. Create a DAO
+## 1. Create Parent DAO
 
-Create a child DAO for one of your client's tokens. This sets up governance infrastructure including a treasury multisig.
+Create your platform's parent DAO. This is done once during platform setup.
 
 ### Request
 
 ```typescript
-POST /api/daos
+POST /api/daos/parent
 
 Headers:
   X-API-Key: your-api-key
 
 {
-  tokenMint: string;          // Your client's token mint address
-  clientWallet: string;       // Your client's wallet (becomes treasury co-signer)
-  master: string;             // Your master token mint
-  tokenSymbol?: string;       // e.g., "MYTOKEN"
-  tokenName?: string;         // e.g., "My Token"
+  tokenMint: string;          // Your platform's token mint
+  ownerWallet: string;        // Your platform wallet (becomes treasury co-signer, can create children)
+  poolAddress: string;        // Your token's spot pool (DAMM/DLMM)
+  poolType: "damm" | "dlmm";
+  tokenSymbol?: string;
+  tokenName?: string;
 }
 ```
 
@@ -49,39 +46,64 @@ Headers:
 ```typescript
 {
   daoId: number;
-  tokenMint: string;
-
-  // Treasury - your client can send funds here (optional)
-  treasuryVault: string;
-
-  // Mint authority (optional)
-  mintAuthVault: string;
-
-  // Immediately active
-  status: "active";
-
-  // Master relationship
-  isChild: true;
-  masterDaoId: number;
-  masterTokenMint: string;
+  treasuryVault: string;      // Optional - your platform can send funds here
+  mintAuthVault: string;      // Optional - for mint authority governance
 }
 ```
 
 ### What happens
 
-1. We create a 2/3 treasury multisig where your client is a co-signer
-2. We create a 1/1 mint authority multisig (optional - for future token minting governance)
-3. DAO is immediately `active` and ready for proposals
-
-### Optional
-
-Your client can send funds to `treasuryVault` or transfer mint authority to `mintAuthVault`. These multisigs are available but not required for proposal creation.
+1. We create a 2/3 treasury multisig where your platform is a co-signer
+2. We create a 1/1 mint authority multisig
+3. We create the on-chain moderator (linked to your spot pool)
+4. Parent DAO is immediately ready for proposals
 
 ---
 
-## 2. Get DAO Details
+## 2. Create Child DAO
 
-Retrieve details about a DAO.
+Create a child DAO for one of your clients. You must own the parent DAO.
+
+### Request
+
+```typescript
+POST /api/daos/child
+
+Headers:
+  X-API-Key: your-api-key
+
+{
+  parentDaoId: number;        // Your parent DAO ID
+  tokenMint: string;          // Your client's token mint
+  clientWallet: string;       // Your client's wallet (becomes treasury co-signer)
+  tokenSymbol?: string;
+  tokenName?: string;
+}
+```
+
+### Response
+
+```typescript
+{
+  daoId: number;
+  parentDaoId: number;
+  treasuryVault: string;      // Optional - your client can send funds here
+  mintAuthVault: string;      // Optional - for mint authority governance
+}
+```
+
+### What happens
+
+1. We verify you own the parent DAO
+2. We create a 2/3 treasury multisig where your client is a co-signer
+3. We create a 1/1 mint authority multisig
+4. Child DAO is immediately ready for proposals (proxied to parent)
+
+---
+
+## 3. Get DAO Details
+
+Retrieve details about a DAO (parent or child).
 
 ### Request
 
@@ -99,33 +121,59 @@ Headers:
   daoId: number;
   tokenMint: string;
   tokenSymbol?: string;
-  tokenName?: string;
-  status: "active";
 
-  // Multisigs
+  isParent: boolean;
+  parentDaoId?: number;       // If child
+  childDaoIds?: number[];     // If parent
+
   treasuryVault: string;
-  treasuryBalance: string;          // Current balance (informational)
   mintAuthVault: string;
 
-  // Master relationship
-  isChild: boolean;
-  masterDaoId?: number;
-  masterTokenMint?: string;
+  // Only for parent
+  poolAddress?: string;
 
-  // Current proposal (if any)
   activeProposalId?: number;
 }
 ```
 
 ---
 
-## 3. Create a Proposal
+## 4. List Child DAOs
 
-Create a decision market proposal for a client token.
+Get all child DAOs under a parent.
+
+### Request
+
+```typescript
+GET /api/daos/:parentDaoId/children
+
+Headers:
+  X-API-Key: your-api-key
+```
+
+### Response
+
+```typescript
+{
+  parentDaoId: number;
+  children: {
+    daoId: number;
+    tokenMint: string;
+    tokenSymbol?: string;
+    activeProposalId?: number;
+  }[];
+}
+```
+
+---
+
+## 5. Create a Proposal
+
+Create a proposal for any DAO (parent or child). Child proposals use parent's liquidity.
 
 ### Your platform's responsibility
 
-Before calling this endpoint, verify that the user has sufficient balance of your client's token in your system. You handle user authentication and balance verification; we handle proposal creation.
+Before calling this endpoint, verify that the user has sufficient balance of the relevant token in your system. You handle user authentication and balance verification; we handle proposal creation.
 
 ### Request
 
@@ -136,7 +184,7 @@ Headers:
   X-API-Key: your-api-key
 
 {
-  daoId: number;              // The DAO to create proposal for
+  daoId: number;              // Parent or child DAO ID
 
   // Proposal config
   length: number;             // Duration in seconds (e.g., 604800 = 7 days)
@@ -145,7 +193,7 @@ Headers:
   // Optional metadata
   title?: string;
   description?: string;
-  optionLabels?: string[];    // e.g., ["Yes", "No"] or ["Option A", "Option B", "Option C"]
+  optionLabels?: string[];    // e.g., ["Yes", "No"]
 }
 ```
 
@@ -154,42 +202,44 @@ Headers:
 ```typescript
 {
   proposalId: number;
-  daoId: number;
+  initiatingDaoId: number;    // The DAO that initiated (could be child)
+  parentDaoId: number;        // The parent DAO (liquidity source)
 
   // On-chain addresses
   proposalAddress: string;
   vaultAddress: string;
+  pools: string[];            // Trading pools (one per option)
 
-  // Trading pools (one per option)
-  pools: string[];
-
-  // Status
   status: "active";
   expiresAt: number;          // Unix timestamp
-
-  // For your UI
-  tradeUrl: string;           // Direct link to trade page
 }
 ```
 
 ### What happens
 
+**If parent DAO**:
 1. We verify your API key
-2. We pull liquidity from your master token's spot pool
+2. We pull liquidity from your parent's spot pool
 3. We create the proposal with conditional token markets
-4. Users trade your master token's conditionals (your client's token appears in URL for branding)
+
+**If child DAO**:
+1. We verify your API key
+2. We resolve the parent DAO
+3. We pull liquidity from the PARENT's spot pool
+4. We create the proposal using the PARENT's infrastructure
+5. Users trade parent token conditionals (child token appears in URL for branding)
 
 ### Errors
 
 | Error | Meaning |
 |-------|---------|
 | `DAO_NOT_FOUND` | Invalid daoId |
-| `MASTER_HAS_ACTIVE_PROPOSAL` | Master token already has a live proposal - wait for it to finish |
+| `PARENT_HAS_ACTIVE_PROPOSAL` | Parent already has a live proposal (direct or via another child) |
 | `INVALID_API_KEY` | Check your API key |
 
 ---
 
-## 4. Get Proposal Status
+## 6. Get Proposal Status
 
 Check the status of a proposal.
 
@@ -207,7 +257,8 @@ Headers:
 ```typescript
 {
   proposalId: number;
-  daoId: number;
+  initiatingDaoId: number;
+  parentDaoId: number;
 
   status: "active" | "finalizing" | "finalized";
 
@@ -231,37 +282,6 @@ Headers:
 
 ---
 
-## 5. List DAOs
-
-Get all DAOs created by your platform.
-
-### Request
-
-```typescript
-GET /api/daos
-
-Headers:
-  X-API-Key: your-api-key
-```
-
-### Response
-
-```typescript
-{
-  daos: {
-    daoId: number;
-    tokenMint: string;
-    tokenSymbol?: string;
-    isChild: boolean;
-    masterTokenMint?: string;
-    treasuryVault: string;
-    activeProposalId?: number;
-  }[];
-}
-```
-
----
-
 ## Integration Flow
 
 ```
@@ -269,25 +289,33 @@ Headers:
 │                    YOUR PLATFORM                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  1. New client onboards to your platform                        │
+│  SETUP (once)                                                   │
+│  ─────────────                                                  │
+│  1. Create your Parent DAO                                      │
+│     └── POST /api/daos/parent { tokenMint, ownerWallet, pool }  │
+│                                                                  │
+│  ONBOARDING (per client)                                        │
+│  ────────────────────────                                       │
+│  2. Client onboards to your platform                            │
 │     └── You store user balances for their token                 │
 │                                                                  │
-│  2. You create a child DAO for your client's token (one-time)   │
-│     └── POST /api/daos { tokenMint, master, clientWallet }      │
-│     └── DAO is immediately active                               │
+│  3. Create a Child DAO for your client                          │
+│     └── POST /api/daos/child { parentDaoId, tokenMint, ... }    │
 │                                                                  │
-│  3. User wants to create a proposal                             │
+│  PROPOSALS (ongoing)                                            │
+│  ───────────────────                                            │
+│  4. User wants to create a proposal                             │
 │     └── User authenticates with your platform                   │
 │     └── You verify user's token balance in your system          │
-│     └── If eligible: POST /api/proposals { daoId, ... }         │
+│     └── POST /api/proposals { daoId, ... }                      │
 │                                                                  │
-│  4. Users trade on the proposal                                 │
-│     └── They trade your master token's conditionals directly    │
-│     └── Your client's token appears in URL for branding         │
+│  5. Users trade on the proposal                                 │
+│     └── They trade your parent token's conditionals directly    │
+│     └── Child token appears in URL for branding                 │
 │                                                                  │
-│  5. Proposal finalizes                                          │
+│  6. Proposal finalizes                                          │
 │     └── Winner determined by highest TWAP                       │
-│     └── Liquidity returns to your master's spot pool            │
+│     └── Liquidity returns to your parent's spot pool            │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -310,18 +338,7 @@ X-API-Key: your-api-key
 | 2 | Your platform | Verify user has sufficient token balance |
 | 3 | Your platform | Call our API with your API key |
 | 4 | Us | Verify your API key |
-| 5 | Us | Create proposal using protocol infrastructure |
-
-Your platform handles user-level auth and eligibility. We handle platform-level auth and on-chain execution.
-
----
-
-## Configuration
-
-When your platform onboards, we set up:
-
-1. **API Key** - For authenticating your platform's requests
-2. **Master DAO** - A DAO for your platform's master token (must have spot liquidity)
+| 5 | Us | Execute proposal using parent's infrastructure |
 
 ---
 
@@ -331,9 +348,19 @@ When your platform onboards, we set up:
 |------------|-------|
 | Options per proposal | 2-6 |
 | Proposal duration | Configurable (e.g., 1-30 days) |
-| Concurrent proposals per master | 1 at a time |
+| Concurrent proposals per parent | 1 at a time |
+| Child DAO nesting | Not allowed (children cannot have children) |
 
-**Important**: Only one proposal can be active on your master token at a time. If a client tries to create a proposal while another client (or your master itself) has an active proposal, it will fail with `MASTER_HAS_ACTIVE_PROPOSAL`.
+**Important**: Only one proposal can be active on your parent DAO at a time. This includes proposals initiated by the parent itself OR by any child. If a child tries to create a proposal while another child (or the parent) has an active proposal, it will fail with `PARENT_HAS_ACTIVE_PROPOSAL`.
+
+---
+
+## Configuration
+
+When your platform onboards, we set up:
+
+1. **API Key** - For authenticating your platform's requests
+2. **Parent DAO** - Your platform's master token with spot liquidity
 
 ---
 

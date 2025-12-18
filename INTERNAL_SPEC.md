@@ -1,113 +1,172 @@
-# DAO Creation & Master/Child Moderator System Specification
+# DAO SDK - Internal Specification
 
 ## Overview
 
-This spec defines a TypeScript SDK for creating **DAOs** on the Combinator protocol. A DAO consists of:
+This spec defines a TypeScript SDK for creating and managing DAOs on the Combinator protocol using a **Parent/Child DAO hierarchy**.
 
-1. **Treasury** - A 2/3 Squads multisig for holding funds
-2. **Mint Authority** - A 1/1 Squads multisig for token mint control
-3. **Moderator** - Either a master (has own spot LP) or child (borrows master's LP)
-
-**Core unlock**: A new token without its own spot pool can run decision markets by borrowing an established master token's liquidity and infrastructure. This enables governance participation for tokens that haven't yet bootstrapped their own markets.
-
-**Use case**: Token X has no spot pool yet. Token Y is established with liquidity. Child moderator for Token X points to master Token Y. Proposals created for Token X actually run on Token Y's conditional markets, using Token Y's spot LP.
+**Architecture (System B)**:
+- Parent DAOs have spot liquidity (1:1 with a moderator)
+- Child DAOs have no liquidity, proxy proposals to their parent
+- Moderators are an implementation detail, not exposed to clients
 
 ---
 
-## 1. DAO Creation Flow
+## 1. Core Entities
 
-### 1.1 SDK Function: `createDAO`
+| Entity | Description |
+|--------|-------------|
+| **Parent DAO** | Has treasury, mint auth, spot liquidity (via moderator). Can create proposals directly. |
+| **Child DAO** | Has treasury, mint auth. No liquidity. Proxies proposals to parent. |
+| **Moderator** | On-chain entity for proposal creation. 1:1 with parent DAO. Implementation detail. |
+
+---
+
+## 2. SDK Functions
+
+### 2.1 `createParentDAO`
+
+Creates a parent DAO with spot liquidity. This is typically done once per platform.
 
 ```typescript
-interface CreateDAOParams {
+interface CreateParentDAOParams {
   // Token configuration
   tokenMint: PublicKey;           // The token this DAO governs
 
-  // Token project's wallet (becomes 3rd member of treasury multisig)
+  // Owner wallet (becomes treasury co-signer and can create child DAOs)
+  ownerWallet: PublicKey;
+
+  // Spot liquidity
+  poolAddress: PublicKey;         // DAMM/DLMM pool address
+  poolType: 'damm' | 'dlmm';
+
+  // Optional metadata
+  tokenSymbol?: string;
+  tokenName?: string;
+}
+
+interface CreateParentDAOResult {
+  daoId: number;
+
+  // Multisigs
+  treasuryVault: PublicKey;
+  mintAuthVault: PublicKey;
+
+  // Moderator (created automatically, 1:1)
+  moderatorId: number;
+  moderatorPda: PublicKey;
+}
+
+async function createParentDAO(params: CreateParentDAOParams): Promise<CreateParentDAOResult>
+```
+
+**What happens**:
+1. Create 2/3 treasury multisig (owner is co-signer)
+2. Create 1/1 mint authority multisig
+3. Create moderator on-chain (1:1 with this DAO)
+4. Store parent DAO in database
+5. Return DAO details
+
+### 2.2 `createChildDAO`
+
+Creates a child DAO under a parent. Caller must be the owner of the parent DAO.
+
+```typescript
+interface CreateChildDAOParams {
+  // Parent relationship
+  parentDaoId: number;            // Must be a parent DAO
+
+  // Token configuration
+  tokenMint: PublicKey;           // The client's token
+
+  // Client wallet (becomes treasury co-signer)
   clientWallet: PublicKey;
 
-  // Master relationship (optional)
-  master?: PublicKey;             // Master token mint (if child DAO)
+  // Optional metadata
+  tokenSymbol?: string;
+  tokenName?: string;
 }
 
-interface CreateDAOResult {
-  // Squads multisigs
-  treasuryMultisig: PublicKey;    // 2/3 multisig address
-  treasuryVault: PublicKey;       // Optional - client can send funds here
-  mintAuthMultisig: PublicKey;    // 1/1 multisig address
-  mintAuthVault: PublicKey;       // Optional - for mint authority transfer
-
-  // DAO metadata
+interface CreateChildDAOResult {
   daoId: number;
-  moderatorId: number;
+  parentDaoId: number;
 
-  // Child relationship (if applicable)
-  isChild: boolean;
-  masterDaoId?: number;
+  // Multisigs
+  treasuryVault: PublicKey;
+  mintAuthVault: PublicKey;
+
+  // Note: No moderator - proposals proxy to parent
 }
 
-async function createDAO(params: CreateDAOParams): Promise<CreateDAOResult>
+async function createChildDAO(params: CreateChildDAOParams): Promise<CreateChildDAOResult>
 ```
 
-### 1.2 Squads Multisig Configuration
+**What happens**:
+1. Verify caller owns the parent DAO
+2. Verify parentDaoId is actually a parent (not a child)
+3. Create 2/3 treasury multisig (client is co-signer)
+4. Create 1/1 mint authority multisig
+5. Store child DAO in database with parent reference
+6. Return DAO details
 
-**Treasury Multisig (2/3)**:
-| Field | Value |
-|-------|-------|
-| Config Authority | `HHroB8P1q3kijtyML9WPvfTXG8JicfmUoGZjVzam64PX` |
-| Threshold | 2 of 3 |
-| Member 1 | `HHroB8P1q3kijtyML9WPvfTXG8JicfmUoGZjVzam64PX` |
-| Member 2 | `3ogXyF6ovq5SqsneuGY6gHLG27NK6gw13SqfXMwRBYai` |
-| Member 3 | Token project's wallet |
+### 2.3 `createProposal`
 
-**Mint Authority Multisig (1/1)**:
-| Field | Value |
-|-------|-------|
-| Config Authority | `Dobm8QnaCPQoc6koxC3wqBQqPTfDwspATb2u6EcWC9Aw` |
-| Threshold | 1 of 1 |
-| Member 1 | `Dobm8QnaCPQoc6koxC3wqBQqPTfDwspATb2u6EcWC9Aw` |
+Creates a proposal. Works for both parent and child DAOs.
 
-### 1.3 DAO Creation Flow
+```typescript
+interface CreateProposalParams {
+  daoId: number;                  // Parent or child DAO
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      DAO CREATION FLOW                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. Client calls createDAO(tokenMint, clientWallet, master?)    │
-│                           │                                      │
-│                           ▼                                      │
-│  2. SDK creates Treasury multisig (2/3)                         │
-│     └── Returns treasuryVault address                           │
-│                           │                                      │
-│                           ▼                                      │
-│  3. SDK creates Mint Authority multisig (1/1)                   │
-│     └── Returns mintAuthVault address                           │
-│                           │                                      │
-│                           ▼                                      │
-│  4. SDK creates Moderator                                       │
-│     └── If child: uses master's baseMint/quoteMint              │
-│     └── If master: uses DAO's tokenMint                         │
-│                           │                                      │
-│                           ▼                                      │
-│  5. DAO is immediately active                                   │
-│     └── Ready for proposals                                     │
-│     └── Treasury/mint auth funding is optional                  │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+  // Proposal configuration
+  length: number;                 // Duration in seconds
+  fee: number;                    // Fee in basis points
+  twapConfig: TWAPConfig;
+  numOptions: number;             // 2-6
+
+  // Optional metadata
+  title?: string;
+  description?: string;
+  optionLabels?: string[];
+}
+
+interface CreateProposalResult {
+  proposalId: number;
+
+  // Which DAO initiated vs which DAO's liquidity is used
+  initiatingDaoId: number;        // The DAO that initiated (could be child)
+  parentDaoId: number;            // The parent DAO (liquidity source)
+
+  // On-chain addresses
+  proposalPda: PublicKey;
+  vaultPda: PublicKey;
+  pools: PublicKey[];
+  condBaseMints: PublicKey[];
+  condQuoteMints: PublicKey[];
+}
+
+async function createProposal(params: CreateProposalParams): Promise<CreateProposalResult>
 ```
 
-DAOs are immediately `active` upon creation. Treasury and mint authority multisigs are created but funding is optional.
+**What happens**:
+1. Load DAO from database
+2. **If child DAO**:
+   - Resolve parent DAO
+   - Check parent has no active proposal (direct or via any child)
+   - Use parent's moderator for on-chain creation
+   - Withdraw liquidity from parent's spot pool
+3. **If parent DAO**:
+   - Check no active proposal (direct or via any child)
+   - Use own moderator
+   - Withdraw from own spot pool
+4. Create proposal on-chain
+5. Store proposal with `initiating_dao_id` and `parent_dao_id`
+6. Return proposal details
 
 ---
 
-## 2. Data Model
-
-### 2.1 DAO Database Schema
-
-New table `qm_daos`:
+## 3. Database Schema
 
 ```sql
+-- DAOs can be parent or child
 CREATE TABLE qm_daos (
   id SERIAL PRIMARY KEY,
 
@@ -116,157 +175,110 @@ CREATE TABLE qm_daos (
   token_symbol TEXT,
   token_name TEXT,
 
-  -- Client
-  client_wallet TEXT NOT NULL,
+  -- Owner (for parent) or Client (for child)
+  owner_wallet TEXT NOT NULL,
 
-  -- Squads multisigs
+  -- Multisigs
   treasury_multisig TEXT NOT NULL,
   treasury_vault TEXT NOT NULL,
   mint_auth_multisig TEXT NOT NULL,
   mint_auth_vault TEXT NOT NULL,
 
-  -- Master/child relationship
-  master_mint TEXT,                    -- NULL if master DAO
-  master_dao_id INTEGER REFERENCES qm_daos(id),
+  -- Parent/child relationship
+  parent_dao_id INTEGER REFERENCES qm_daos(id),  -- NULL if parent
 
-  -- Linked moderator (created immediately)
-  moderator_id INTEGER NOT NULL REFERENCES qm_moderators(id),
+  -- Only parent DAOs have these
+  moderator_id INTEGER REFERENCES qm_moderators(id),  -- NULL if child
+  pool_address TEXT,                                   -- NULL if child
+  pool_type TEXT,                                      -- NULL if child
 
   -- Timestamps
+  created_at TIMESTAMP DEFAULT NOW(),
+
+  -- Constraints
+  CONSTRAINT parent_has_moderator CHECK (
+    (parent_dao_id IS NULL AND moderator_id IS NOT NULL) OR
+    (parent_dao_id IS NOT NULL AND moderator_id IS NULL)
+  )
+);
+
+CREATE UNIQUE INDEX idx_daos_token_mint ON qm_daos(token_mint);
+CREATE INDEX idx_daos_parent ON qm_daos(parent_dao_id);
+
+-- Moderators are 1:1 with parent DAOs
+CREATE TABLE qm_moderators (
+  id SERIAL PRIMARY KEY,
+  dao_id INTEGER NOT NULL UNIQUE REFERENCES qm_daos(id),
+  base_mint TEXT NOT NULL,
+  quote_mint TEXT NOT NULL,
+  moderator_pda TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_daos_master ON qm_daos(master_dao_id);
-CREATE UNIQUE INDEX idx_daos_token_mint ON qm_daos(token_mint);
+-- Proposals track initiating DAO and parent DAO
+CREATE TABLE qm_proposals (
+  id SERIAL PRIMARY KEY,
+
+  -- Which DAO initiated (child or parent)
+  initiating_dao_id INTEGER NOT NULL REFERENCES qm_daos(id),
+
+  -- Which parent DAO's liquidity is used (always a parent)
+  parent_dao_id INTEGER NOT NULL REFERENCES qm_daos(id),
+
+  -- On-chain data
+  proposal_pda TEXT NOT NULL,
+  vault_pda TEXT NOT NULL,
+
+  -- Status
+  status TEXT NOT NULL DEFAULT 'active',
+
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP NOT NULL,
+  finalized_at TIMESTAMP
+);
+
+CREATE INDEX idx_proposals_initiating ON qm_proposals(initiating_dao_id);
+CREATE INDEX idx_proposals_parent ON qm_proposals(parent_dao_id);
 ```
-
-### 2.2 Moderator Extension
-
-Add optional `master` field to moderator configuration:
-
-```typescript
-interface ModeratorConfig {
-  // Existing fields
-  baseMint: PublicKey;
-  quoteMint: PublicKey;
-  // ... other existing fields
-
-  // New field
-  master?: PublicKey;  // Mint address of the master token
-}
-```
-
-**Child moderator characteristics**:
-- Has `master` set to a mint address
-- Has **no spot pool** (no `poolAddress`)
-- Uses master's spot pool for liquidity
-- Whitelist keyed by moderator ID (not pool address)
-
-**Constraints**:
-- `master` must be different from `baseMint` and `quoteMint`
-- `master` must match the `baseMint` or `quoteMint` of an existing moderator
-- No nested children: if moderator A has `master` set, moderator A cannot be another moderator's master
-
-### 2.3 Moderator Database Schema Extension
-
-Extend `qm_moderators` table:
-
-```sql
-ALTER TABLE qm_moderators
-ADD COLUMN master_mint TEXT DEFAULT NULL,
-ADD COLUMN master_moderator_id INTEGER DEFAULT NULL REFERENCES qm_moderators(id);
-```
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `master_mint` | TEXT | Mint address that links to master (nullable) |
-| `master_moderator_id` | INTEGER | Resolved master moderator ID (nullable, FK) |
-
-**Resolution**: When `master_mint` is set, resolve `master_moderator_id` by finding the moderator whose `baseMint` or `quoteMint` matches `master_mint`.
 
 ---
 
-## 3. SDK Functions
+## 4. Squads Multisig Configuration
 
-### 3.1 `createDAO`
+**Treasury Multisig (2/3)** - Same for parent and child:
+| Field | Value |
+|-------|-------|
+| Config Authority | `HHroB8P1q3kijtyML9WPvfTXG8JicfmUoGZjVzam64PX` |
+| Threshold | 2 of 3 |
+| Member 1 | `HHroB8P1q3kijtyML9WPvfTXG8JicfmUoGZjVzam64PX` |
+| Member 2 | `3ogXyF6ovq5SqsneuGY6gHLG27NK6gw13SqfXMwRBYai` |
+| Member 3 | Owner wallet (parent) or Client wallet (child) |
 
-See Section 1.1 for interface definition.
-
-**Implementation**:
-1. Create Treasury multisig (2/3) using `@sqds/multisig`
-2. Create Mint Authority multisig (1/1) using `@sqds/multisig`
-3. Persist DAO to database with `status: 'pending_setup'`
-4. Return vault addresses for client deposits
-
-### 3.2 `createProposal`
-
-Unified function that handles both master and child moderators:
-
-```typescript
-interface CreateProposalParams {
-  daoId: number;                  // The DAO to create proposal for
-  creator: PublicKey;             // Wallet creating the proposal
-
-  // Proposal configuration
-  length: number;                 // Duration in seconds
-  fee: number;                    // Fee in basis points
-  twapConfig: TWAPConfig;
-  baseAmount: BN;                 // Liquidity to seed
-  quoteAmount: BN;
-
-  // Optional metadata
-  title?: string;
-  description?: string;
-}
-
-interface CreateProposalResult {
-  proposalId: number;
-  proposalPda: PublicKey;
-  vaultPda: PublicKey;
-  pools: PublicKey[];
-  condBaseMints: PublicKey[];
-  condQuoteMints: PublicKey[];
-
-  // If child DAO, these reference the master
-  actualModeratorId: number;      // Master's ID if child, own ID if master
-  childDaoId?: number;            // Set if created via child DAO
-}
-
-async function createProposal(params: CreateProposalParams): Promise<CreateProposalResult>
-```
-
-**Behavior**:
-1. Load DAO from database
-2. Verify API key (caller authentication)
-3. **If child DAO**:
-   - Resolve master DAO
-   - Check master has no live proposal (direct or via any child)
-   - Use master's moderator for on-chain proposal
-   - Withdraw liquidity from master's spot pool
-4. **If master DAO**:
-   - Use own moderator
-   - Withdraw liquidity from own spot pool
-5. Create proposal on-chain via `FutarchyClient.initializeProposal`
-6. Launch proposal via `FutarchyClient.launchProposal`
-7. Store proposal with `child_dao_id` if applicable
-8. Return proposal details
+**Mint Authority Multisig (1/1)**:
+| Field | Value |
+|-------|-------|
+| Config Authority | `Dobm8QnaCPQoc6koxC3wqBQqPTfDwspATb2u6EcWC9Aw` |
+| Threshold | 1 of 1 |
+| Member 1 | `Dobm8QnaCPQoc6koxC3wqBQqPTfDwspATb2u6EcWC9Aw` |
 
 ---
 
-## 4. Backend Integration (os-percent)
+## 5. API Endpoints
 
-### 4.1 DAO Creation Endpoint
+### 5.1 Create Parent DAO
 
 ```
-POST /api/daos
+POST /api/daos/parent
 ```
 
 **Request**:
 ```typescript
 {
   tokenMint: string;
-  clientWallet: string;
-  master?: string;              // Master token mint (if child DAO)
+  ownerWallet: string;
+  poolAddress: string;
+  poolType: 'damm' | 'dlmm';
   tokenSymbol?: string;
   tokenName?: string;
 }
@@ -276,23 +288,86 @@ POST /api/daos
 ```typescript
 {
   daoId: number;
+  treasuryVault: string;
+  mintAuthVault: string;
   moderatorId: number;
-  treasuryVault: string;        // Optional - client can send funds here
-  mintAuthVault: string;        // Optional - for mint authority transfer
-  isChild: boolean;
-  masterDaoId?: number;
 }
 ```
 
-### 4.2 Get DAO Endpoint
+### 5.2 Create Child DAO
+
+```
+POST /api/daos/child
+```
+
+**Request**:
+```typescript
+{
+  parentDaoId: number;
+  tokenMint: string;
+  clientWallet: string;
+  tokenSymbol?: string;
+  tokenName?: string;
+}
+```
+
+**Response**:
+```typescript
+{
+  daoId: number;
+  parentDaoId: number;
+  treasuryVault: string;
+  mintAuthVault: string;
+}
+```
+
+### 5.3 Get DAO
 
 ```
 GET /api/daos/:id
 ```
 
-Returns DAO details including treasury balance (informational).
+**Response**:
+```typescript
+{
+  daoId: number;
+  tokenMint: string;
+  tokenSymbol?: string;
 
-### 4.3 Proposal Creation Endpoint (Modified)
+  isParent: boolean;
+  parentDaoId?: number;        // If child
+  childDaoIds?: number[];      // If parent
+
+  treasuryVault: string;
+  mintAuthVault: string;
+
+  // Only for parent
+  poolAddress?: string;
+
+  activeProposalId?: number;
+}
+```
+
+### 5.4 List Children
+
+```
+GET /api/daos/:id/children
+```
+
+**Response**:
+```typescript
+{
+  parentDaoId: number;
+  children: {
+    daoId: number;
+    tokenMint: string;
+    tokenSymbol?: string;
+    activeProposalId?: number;
+  }[];
+}
+```
+
+### 5.5 Create Proposal
 
 ```
 POST /api/proposals
@@ -301,165 +376,135 @@ POST /api/proposals
 **Request**:
 ```typescript
 {
-  daoId: number;
-  creator: string;
+  daoId: number;              // Parent or child
   length: number;
-  fee: number;
-  twapConfig: TWAPConfig;
-  baseAmount: string;           // BN as string
-  quoteAmount: string;          // BN as string
+  numOptions: number;
   title?: string;
   description?: string;
+  optionLabels?: string[];
 }
 ```
 
-**Flow**:
-```
-1. Load DAO
-2. Verify API key
-3. If child DAO:
-   a. Resolve master DAO
-   b. Check master has no live proposal (direct or via any child)
-   c. Build withdrawal from MASTER's spot pool
-   d. Create proposal on MASTER's moderator
-4. If master DAO:
-   a. Build withdrawal from own spot pool
-   b. Create proposal on own moderator
-5. Store proposal with child_dao_id if applicable
-6. Return proposal details
+**Response**:
+```typescript
+{
+  proposalId: number;
+  initiatingDaoId: number;
+  parentDaoId: number;
+  proposalAddress: string;
+  vaultAddress: string;
+  pools: string[];
+  status: "active";
+  expiresAt: number;
+}
 ```
 
-### 4.4 Proposal Query Mapping
+### 5.6 Get Proposal
 
-Extend `qm_proposals`:
-
-```sql
-ALTER TABLE qm_proposals
-ADD COLUMN child_dao_id INTEGER DEFAULT NULL REFERENCES qm_daos(id);
 ```
-
-Proposals created via child DAO will have:
-- `moderator_id` = master's moderator ID (on-chain owner)
-- `child_dao_id` = child DAO ID (for UI routing)
+GET /api/proposals/:id
+```
 
 ---
 
-## 5. Liquidity Flow
+## 6. Validation Rules
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     PROPOSAL CREATION                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. User requests proposal on Child Moderator (Token X)         │
-│     └── Token X has NO spot pool (bootstrapping token)          │
-│                           │                                      │
-│                           ▼                                      │
-│  2. Whitelist check: POOL_WHITELIST[childModeratorId]           │
-│                           │                                      │
-│                           ▼                                      │
-│  3. Check master has no live proposal (direct or via child)     │
-│                           │                                      │
-│                           ▼                                      │
-│  4. Resolve Master Moderator (Token Y)                          │
-│                           │                                      │
-│                           ▼                                      │
-│  5. Withdraw liquidity from MASTER's spot pool (Token Y LP)     │
-│     └── Returns: Token Y base + quote amounts                   │
-│                           │                                      │
-│                           ▼                                      │
-│  6. Create proposal on Master Moderator (Token Y)               │
-│     └── Uses Token Y mints                                      │
-│     └── Creates Token Y conditional tokens                      │
-│     └── Seeds Token Y liquidity to AMM pools                    │
-│                           │                                      │
-│                           ▼                                      │
-│  7. Users trade Token Y conditional tokens directly             │
-│     └── UI URL shows "Token X" label                            │
-│     └── Actual trades are Token Y conditionals                  │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Key point**: Child token has no liquidity involvement. All on-chain activity uses master token infrastructure.
-
----
-
-## 6. UI Implications
-
-| Aspect | Behavior |
-|--------|----------|
-| URL | Shows child token identifier (e.g., `/markets/tokenX/proposal-123`) |
-| Trading | Users trade master's conditional tokens directly |
-| Balances | Show master conditional token balances |
-| Labels | No in-app label change - just URL routing |
-
----
-
-## 7. Validation Rules
-
-### 7.1 DAO Creation
+### 6.1 Parent DAO Creation
 
 | Rule | Error |
 |------|-------|
-| `master` equals `tokenMint` | `MASTER_CANNOT_BE_SELF` |
-| `master` doesn't match any existing master DAO's token | `MASTER_NOT_FOUND` |
-| Matched DAO is itself a child | `NESTED_CHILDREN_NOT_ALLOWED` |
+| `tokenMint` already has a DAO | `DAO_ALREADY_EXISTS` |
+| Invalid pool address | `INVALID_POOL` |
+
+### 6.2 Child DAO Creation
+
+| Rule | Error |
+|------|-------|
+| Caller doesn't own parent DAO | `NOT_PARENT_OWNER` |
+| `parentDaoId` is a child (not a parent) | `INVALID_PARENT` |
 | `tokenMint` already has a DAO | `DAO_ALREADY_EXISTS` |
 
-### 7.2 Proposal Creation
+### 6.3 Proposal Creation
 
 | Rule | Error |
 |------|-------|
 | DAO not found | `DAO_NOT_FOUND` |
 | Invalid API key | `INVALID_API_KEY` |
-| Child's master DAO not found | `MASTER_DAO_NOT_FOUND` |
-| Master DAO has a live proposal | `MASTER_HAS_ACTIVE_PROPOSAL` |
-| Another child of same master has live proposal | `MASTER_HAS_ACTIVE_CHILD_PROPOSAL` |
+| Parent has active proposal (direct or via child) | `PARENT_HAS_ACTIVE_PROPOSAL` |
 
 ---
 
-## 8. API Summary
+## 7. Proposal Flow Diagrams
 
-### SDK Functions
+### Parent DAO Proposal
 
-| Function | Description |
-|----------|-------------|
-| `createDAO(params)` | Create DAO with Squads multisigs, optionally as child |
-| `createProposal(params)` | Create proposal (handles child→master routing) |
-| `getDAO(id)` | Fetch DAO with master info |
-| `getChildDAOs(masterDaoId)` | List all children of a master DAO |
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PARENT DAO PROPOSAL                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Request: createProposal(parentDaoId)                        │
+│                           │                                      │
+│                           ▼                                      │
+│  2. Check no active proposal on parent (or any child)           │
+│                           │                                      │
+│                           ▼                                      │
+│  3. Withdraw from parent's spot pool                            │
+│                           │                                      │
+│                           ▼                                      │
+│  4. Parent's moderator creates proposal on-chain                │
+│                           │                                      │
+│                           ▼                                      │
+│  5. Store: initiating_dao_id = parent, parent_dao_id = parent   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### API Endpoints
+### Child DAO Proposal (Proxied)
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/daos` | POST | Create DAO (with optional master) |
-| `/api/daos` | GET | List all DAOs |
-| `/api/daos/:id` | GET | Get DAO details |
-| `/api/daos/:id/children` | GET | List child DAOs |
-| `/api/proposals` | POST | Create proposal (handles child→master routing) |
-| `/api/proposals/:id` | GET | Get proposal details |
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    CHILD DAO PROPOSAL                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Request: createProposal(childDaoId)                         │
+│                           │                                      │
+│                           ▼                                      │
+│  2. Resolve parent DAO                                          │
+│                           │                                      │
+│                           ▼                                      │
+│  3. Check no active proposal on parent (or any sibling)         │
+│                           │                                      │
+│                           ▼                                      │
+│  4. Withdraw from PARENT's spot pool                            │
+│                           │                                      │
+│                           ▼                                      │
+│  5. PARENT's moderator creates proposal on-chain                │
+│                           │                                      │
+│                           ▼                                      │
+│  6. Store: initiating_dao_id = child, parent_dao_id = parent    │
+│                           │                                      │
+│                           ▼                                      │
+│  7. URL shows child token, trades use parent's conditionals     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 9. Migration Path
+## 8. Migration Path
 
-1. **Database**: Create `qm_daos` table, extend `qm_moderators` and `qm_proposals`
-2. **SDK**: Add `@sqds/multisig` dependency, implement `createDAO` and `createProposal`
-3. **Backend**: Add DAO endpoints, modify proposal creation for child→master routing
-4. **Existing moderators**: Unaffected (can be linked to DAOs retroactively if needed)
+1. **Database**: Create new schema with parent/child structure
+2. **SDK**: Implement `createParentDAO`, `createChildDAO`, `createProposal`
+3. **Backend**: Add new endpoints, update proposal logic for proxying
+4. **Squads**: Add `@sqds/multisig` dependency for multisig creation
 
 ---
 
-## 10. Resolved Design Decisions
+## 9. Key Invariants
 
-1. **Liquidity source**: Child token has no spot pool. All liquidity comes from master's spot pool.
-
-2. **Finalization**: No special handling needed. Users hold and redeem master's conditional tokens directly.
-
-3. **One proposal per master at a time**: A master's liquidity can only support one live proposal. Fails if:
-   - Master itself has a live proposal (`MASTER_HAS_ACTIVE_PROPOSAL`)
-   - Another child of the same master has a live proposal (`MASTER_HAS_ACTIVE_CHILD_PROPOSAL`)
-
-4. **Nesting**: Not allowed. A child cannot be another moderator's master.
+1. **Parent DAOs always have a moderator** (1:1 relationship)
+2. **Child DAOs never have a moderator** (proxy to parent)
+3. **Only one active proposal per parent** at any time (including via children)
+4. **Children cannot have children** (only one level of hierarchy)
+5. **A DAO's token mint is unique** (no duplicate DAOs for same token)
