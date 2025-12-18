@@ -1,30 +1,44 @@
-# DAO SDK - Client Integration Spec
+# DAO SDK - Platform Integration Spec
 
 ## Overview
 
-This SDK enables you to create DAOs for tokens that don't have spot liquidity yet. Your tokens can run decision markets by borrowing liquidity from an established "master" token.
+This SDK enables your platform to create and manage DAOs for your clients' tokens. Your platform's master token provides the liquidity infrastructure, and your clients' tokens (child DAOs) borrow from it to run decision markets.
 
-**Your flow**:
-1. Store user balances for your tokens (your system)
-2. Create a DAO for each token via our SDK
-3. Fund the DAO treasury
-4. When a user wants to create a proposal, verify their balance → call our SDK
+**Your platform's role**:
+- Own and operate the master token with spot liquidity
+- Onboard client tokens by creating child DAOs for them
+- Store user balances for client tokens
+- Verify user eligibility and create proposals on their behalf
+
+---
+
+## Concepts
+
+| Term | Definition |
+|------|------------|
+| **Master Token** | Your platform's token - has spot liquidity, provides infrastructure |
+| **Client Token** | A token belonging to one of your clients (no spot liquidity) |
+| **Child DAO** | A DAO for a client token, linked to your master |
+| **User** | Someone holding a client token who wants to create a proposal |
 
 ---
 
 ## 1. Create a DAO
 
-Creates a new DAO for your token. This sets up the governance infrastructure including a treasury multisig.
+Create a child DAO for one of your client's tokens. This sets up governance infrastructure including a treasury multisig.
 
 ### Request
 
 ```typescript
 POST /api/daos
 
+Headers:
+  X-API-Key: your-api-key
+
 {
-  tokenMint: string;          // Your token's mint address
-  clientWallet: string;       // Your wallet (becomes treasury co-signer)
-  master: string;             // Master token mint (required for tokens without liquidity)
+  tokenMint: string;          // Your client's token mint address
+  clientWallet: string;       // Your client's wallet (becomes treasury co-signer)
+  master: string;             // Your master token mint
   tokenSymbol?: string;       // e.g., "MYTOKEN"
   tokenName?: string;         // e.g., "My Token"
 }
@@ -37,13 +51,13 @@ POST /api/daos
   daoId: number;
   tokenMint: string;
 
-  // Treasury - you can send funds here (optional)
+  // Treasury - your client can send funds here (optional)
   treasuryVault: string;
 
   // Mint authority (optional)
   mintAuthVault: string;
 
-  // Status - immediately active
+  // Immediately active
   status: "active";
 
   // Master relationship
@@ -55,24 +69,27 @@ POST /api/daos
 
 ### What happens
 
-1. We create a 2/3 treasury multisig where you're a co-signer
+1. We create a 2/3 treasury multisig where your client is a co-signer
 2. We create a 1/1 mint authority multisig (optional - for future token minting governance)
 3. DAO is immediately `active` and ready for proposals
 
 ### Optional
 
-Send funds to `treasuryVault` if you want a dedicated treasury for this token. Send mint authority to `mintAuthVault` if you want a dedicated mint authority for this token.  The treasury and mint authority multisigs are available for your use but not required for proposal creation.
+Your client can send funds to `treasuryVault` or transfer mint authority to `mintAuthVault`. These multisigs are available but not required for proposal creation.
 
 ---
 
 ## 2. Get DAO Details
 
-Get details about your DAO.
+Retrieve details about a DAO.
 
 ### Request
 
 ```typescript
 GET /api/daos/:daoId
+
+Headers:
+  X-API-Key: your-api-key
 ```
 
 ### Response
@@ -98,16 +115,17 @@ GET /api/daos/:daoId
   // Current proposal (if any)
   activeProposalId?: number;
 }
+```
 
 ---
 
 ## 3. Create a Proposal
 
-Create a decision market proposal for your token.
+Create a decision market proposal for a client token.
 
-### Your responsibility
+### Your platform's responsibility
 
-Before calling this endpoint, verify in your system that the user has sufficient token balance to create proposals.
+Before calling this endpoint, verify that the user has sufficient balance of your client's token in your system. You handle user authentication and balance verification; we handle proposal creation.
 
 ### Request
 
@@ -118,7 +136,7 @@ Headers:
   X-API-Key: your-api-key
 
 {
-  daoId: number;              // Your DAO ID
+  daoId: number;              // The DAO to create proposal for
 
   // Proposal config
   length: number;             // Duration in seconds (e.g., 604800 = 7 days)
@@ -157,9 +175,9 @@ Headers:
 ### What happens
 
 1. We verify your API key
-2. We pull liquidity from the master token's spot pool
+2. We pull liquidity from your master token's spot pool
 3. We create the proposal with conditional token markets
-4. Users trade master token conditionals (your token appears in URL only)
+4. Users trade your master token's conditionals (your client's token appears in URL for branding)
 
 ### Errors
 
@@ -179,6 +197,9 @@ Check the status of a proposal.
 
 ```typescript
 GET /api/proposals/:proposalId
+
+Headers:
+  X-API-Key: your-api-key
 ```
 
 ### Response
@@ -212,12 +233,15 @@ GET /api/proposals/:proposalId
 
 ## 5. List DAOs
 
-Get all your DAOs.
+Get all DAOs created by your platform.
 
 ### Request
 
 ```typescript
 GET /api/daos
+
+Headers:
+  X-API-Key: your-api-key
 ```
 
 ### Response
@@ -242,27 +266,28 @@ GET /api/daos
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    YOUR SYSTEM                                   │
+│                    YOUR PLATFORM                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  1. User deposits Token X                                       │
-│     └── You store balance in your database                      │
+│  1. New client onboards to your platform                        │
+│     └── You store user balances for their token                 │
 │                                                                  │
-│  2. You create DAO for Token X (one-time setup)                 │
+│  2. You create a child DAO for your client's token (one-time)   │
 │     └── POST /api/daos { tokenMint, master, clientWallet }      │
 │     └── DAO is immediately active                               │
 │                                                                  │
-│  3. User wants to create proposal                               │
-│     └── You check user's balance in your database               │
-│     └── If sufficient: POST /api/proposals { daoId, ... }       │
+│  3. User wants to create a proposal                             │
+│     └── User authenticates with your platform                   │
+│     └── You verify user's token balance in your system          │
+│     └── If eligible: POST /api/proposals { daoId, ... }         │
 │                                                                  │
 │  4. Users trade on the proposal                                 │
-│     └── They trade master token conditionals directly           │
-│     └── Your token appears in URL for branding                  │
+│     └── They trade your master token's conditionals directly    │
+│     └── Your client's token appears in URL for branding         │
 │                                                                  │
 │  5. Proposal finalizes                                          │
 │     └── Winner determined by highest TWAP                       │
-│     └── Liquidity returns to master's spot pool                 │
+│     └── Liquidity returns to your master's spot pool            │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -271,32 +296,32 @@ GET /api/daos
 
 ## Authentication
 
-All write endpoints require an API key:
+All endpoints require your platform's API key:
 
 ```
 X-API-Key: your-api-key
 ```
 
-You verify your users internally (balance checks, etc.). We verify you via API key. This keeps auth simple:
+**Auth responsibilities**:
 
 | Step | Who | What |
 |------|-----|------|
-| 1 | You | Verify user has balance |
-| 2 | You | Call our API with your API key |
-| 3 | Us | Verify your API key |
-| 4 | Us | Create proposal using our infrastructure |
+| 1 | Your platform | Authenticate the user |
+| 2 | Your platform | Verify user has sufficient token balance |
+| 3 | Your platform | Call our API with your API key |
+| 4 | Us | Verify your API key |
+| 5 | Us | Create proposal using protocol infrastructure |
 
-No complex multi-sig or attestation required from your users.
+Your platform handles user-level auth and eligibility. We handle platform-level auth and on-chain execution.
 
 ---
 
 ## Configuration
 
-When you onboard, we'll set up:
+When your platform onboards, we set up:
 
-1. **API Key** - For authenticating your requests
-2. **Client Wallet** - Your wallet that becomes treasury co-signer
-3. **Master Token** - The established token your DAOs will borrow liquidity from
+1. **API Key** - For authenticating your platform's requests
+2. **Master DAO** - A DAO for your platform's master token (must have spot liquidity)
 
 ---
 
@@ -306,8 +331,9 @@ When you onboard, we'll set up:
 |------------|-------|
 | Options per proposal | 2-6 |
 | Proposal duration | Configurable (e.g., 1-30 days) |
-| Concurrent proposals | 1 per master token at a time |
-| Treasury minimum | Configurable per DAO |
+| Concurrent proposals per master | 1 at a time |
+
+**Important**: Only one proposal can be active on your master token at a time. If a client tries to create a proposal while another client (or your master itself) has an active proposal, it will fail with `MASTER_HAS_ACTIVE_PROPOSAL`.
 
 ---
 

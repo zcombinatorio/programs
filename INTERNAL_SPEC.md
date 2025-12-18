@@ -23,7 +23,7 @@ interface CreateDAOParams {
   // Token configuration
   tokenMint: PublicKey;           // The token this DAO governs
 
-  // Client's wallet (becomes 3rd member of treasury multisig)
+  // Token project's wallet (becomes 3rd member of treasury multisig)
   clientWallet: PublicKey;
 
   // Master relationship (optional)
@@ -58,7 +58,7 @@ async function createDAO(params: CreateDAOParams): Promise<CreateDAOResult>
 | Threshold | 2 of 3 |
 | Member 1 | `HHroB8P1q3kijtyML9WPvfTXG8JicfmUoGZjVzam64PX` |
 | Member 2 | `3ogXyF6ovq5SqsneuGY6gHLG27NK6gw13SqfXMwRBYai` |
-| Member 3 | Client-provided wallet |
+| Member 3 | Token project's wallet |
 
 **Mint Authority Multisig (1/1)**:
 | Field | Value |
