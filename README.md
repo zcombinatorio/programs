@@ -2,6 +2,7 @@
 
 | Program | Address | Version | Deprecated |
 |---------|---------|---------|------------|
+| dao | DAoYBfZNCCih5i85nvpB3Xkw1YTdJCJ7TDN2o6UVBEZC | 0.1.0 | |
 | futarchy | FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC | 0.1.0 | |
 | amm | AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC | 0.1.0 | |
 | vault | VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC | 0.1.0 | |
