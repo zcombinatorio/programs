@@ -18,6 +18,7 @@ pub struct ProposalFinalized {
 
 #[derive(Accounts)]
 pub struct FinalizeProposal<'info> {
+    // Permissionless
     pub signer: Signer<'info>,
 
     #[account(

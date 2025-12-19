@@ -21,8 +21,11 @@ pub struct LiquidityRedeemed {
 
 #[derive(Accounts)]
 pub struct RedeemLiquidity<'info> {
-    #[account(mut)]
-    pub signer: Signer<'info>,
+    #[account(
+        mut,
+        address = proposal.creator @ FutarchyError::Unauthorized
+    )]
+    pub creator: Signer<'info>,
 
     #[account(
         seeds = [
@@ -31,7 +34,6 @@ pub struct RedeemLiquidity<'info> {
             &proposal.id.to_le_bytes()
         ],
         bump = proposal.bump,
-        constraint = proposal.creator == signer.key() @ FutarchyError::Unauthorized,
         constraint = proposal.version != 0 @FutarchyError::InvalidVersion // Don't allow historical proposals
     )]
     pub proposal: Box<Account<'info, ProposalAccount>>,
@@ -114,7 +116,7 @@ pub fn redeem_liquidity_handler<'info>(
     let remove_liq_ctx = CpiContext::new(
         ctx.accounts.amm_program.to_account_info(),
         RemoveLiquidity {
-            depositor: ctx.accounts.signer.to_account_info(),
+            depositor: ctx.accounts.creator.to_account_info(),
             pool: ctx.accounts.pool.to_account_info(),
             reserve_a: ctx.remaining_accounts[0].to_account_info(),
             reserve_b: ctx.remaining_accounts[1].to_account_info(),
@@ -139,7 +141,7 @@ pub fn redeem_liquidity_handler<'info>(
     let redeem_base_ctx = CpiContext::new(
         ctx.accounts.vault_program.to_account_info(),
         UserVaultAction {
-            signer: ctx.accounts.signer.to_account_info(),
+            signer: ctx.accounts.creator.to_account_info(),
             vault: ctx.accounts.vault.to_account_info(),
             mint: ctx.remaining_accounts[4].to_account_info(),     // base_mint
             vault_ata: ctx.remaining_accounts[5].to_account_info(), // vault_base_ata
@@ -168,7 +170,7 @@ pub fn redeem_liquidity_handler<'info>(
     let redeem_quote_ctx = CpiContext::new(
         ctx.accounts.vault_program.to_account_info(),
         UserVaultAction {
-            signer: ctx.accounts.signer.to_account_info(),
+            signer: ctx.accounts.creator.to_account_info(),
             vault: ctx.accounts.vault.to_account_info(),
             mint: ctx.remaining_accounts[quote_fixed_start].to_account_info(),     // quote_mint
             vault_ata: ctx.remaining_accounts[quote_fixed_start + 1].to_account_info(), // vault_quote_ata
@@ -185,7 +187,7 @@ pub fn redeem_liquidity_handler<'info>(
     emit!(LiquidityRedeemed {
         proposal_id: proposal.id,
         proposal: proposal.key(),
-        redeemer: ctx.accounts.signer.key(),
+        redeemer: ctx.accounts.creator.key(),
         winning_idx,
     });
 

@@ -27,7 +27,7 @@ pub struct InitializeProposal<'info> {
         mut,
         address = moderator.admin
     )]
-    pub signer: Signer<'info>,
+    pub creator: Signer<'info>,
 
     #[account(
         mut,
@@ -41,7 +41,7 @@ pub struct InitializeProposal<'info> {
 
     #[account(
         init,
-        payer = signer,
+        payer = creator,
         space = 8 + ProposalAccount::INIT_SPACE,
         seeds = [
             PROPOSAL_SEED,
@@ -111,7 +111,7 @@ pub fn initialize_proposal_handler<'info>(
         .ok_or(FutarchyError::CounterOverflow)?;
     proposal.version = PROPOSAL_VERSION;
     proposal.id = proposal_id;
-    proposal.creator = ctx.accounts.signer.key();
+    proposal.creator = ctx.accounts.creator.key();
     proposal.moderator = moderator.key();
     proposal.base_mint = moderator.base_mint;
     proposal.quote_mint = moderator.quote_mint;
@@ -139,7 +139,7 @@ pub fn initialize_proposal_handler<'info>(
     let init_vault_ctx = CpiContext::new_with_signer(
         ctx.accounts.vault_program.to_account_info(),
         InitializeVault {
-            payer: ctx.accounts.signer.to_account_info(),
+            payer: ctx.accounts.creator.to_account_info(),
             owner: proposal.to_account_info(),
             base_mint: ctx.remaining_accounts[0].to_account_info(),
             quote_mint: ctx.remaining_accounts[1].to_account_info(),
@@ -163,7 +163,7 @@ pub fn initialize_proposal_handler<'info>(
     let create_pool_0_ctx = CpiContext::new(
         ctx.accounts.amm_program.to_account_info(),
         CreatePool {
-            payer: ctx.accounts.signer.to_account_info(),
+            payer: ctx.accounts.creator.to_account_info(),
             admin: proposal.to_account_info(),
             mint_a: ctx.remaining_accounts[7].to_account_info(), // cond_quote_mint_0
             mint_b: ctx.remaining_accounts[5].to_account_info(), // cond_base_mint_0
@@ -183,14 +183,14 @@ pub fn initialize_proposal_handler<'info>(
         twap_config.starting_observation,
         twap_config.max_observation_delta,
         twap_config.warmup_duration,
-        Some(ctx.accounts.signer.key())
+        Some(ctx.accounts.creator.key())
     )?;
 
     // Create pool 1
     let create_pool_1_ctx = CpiContext::new(
         ctx.accounts.amm_program.to_account_info(),
         CreatePool {
-            payer: ctx.accounts.signer.to_account_info(),
+            payer: ctx.accounts.creator.to_account_info(),
             admin: proposal.to_account_info(),
             mint_a: ctx.remaining_accounts[8].to_account_info(), // cond_quote_mint_1
             mint_b: ctx.remaining_accounts[6].to_account_info(), // cond_base_mint_1
@@ -210,7 +210,7 @@ pub fn initialize_proposal_handler<'info>(
         twap_config.starting_observation,
         twap_config.max_observation_delta,
         twap_config.warmup_duration,
-        Some(ctx.accounts.signer.key())
+        Some(ctx.accounts.creator.key())
     )?;
 
     emit!(ProposalInitialized {

@@ -19,11 +19,11 @@ pub struct ModeratorInitialized {
 #[derive(Accounts)]
 pub struct InitializeModerator<'info> {
     #[account(mut)]
-    pub signer: Signer<'info>,
+    pub admin: Signer<'info>,
 
     #[account(
         init_if_needed,
-        payer = signer,
+        payer = admin,
         space = 8 + GlobalConfig::INIT_SPACE,
         seeds = [GLOBAL_CONFIG_SEED],
         bump
@@ -35,7 +35,7 @@ pub struct InitializeModerator<'info> {
 
     #[account(
         init,
-        payer = signer,
+        payer = admin,
         space = 8 + ModeratorAccount::INIT_SPACE,
         seeds = [
             MODERATOR_SEED,
@@ -68,7 +68,7 @@ pub fn initialize_moderator_handler(ctx: Context<InitializeModerator>) -> Result
     moderator.set_inner(ModeratorAccount {
         version: MODERATOR_VERSION,
         id: id,
-        admin: ctx.accounts.signer.key(),
+        admin: ctx.accounts.admin.key(),
         quote_mint: ctx.accounts.quote_mint.key(),
         base_mint: ctx.accounts.base_mint.key(),
         proposal_id_counter: 0,

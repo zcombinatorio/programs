@@ -23,7 +23,7 @@ pub struct AddOption<'info> {
         mut,
         address = proposal.creator @ FutarchyError::Unauthorized
     )]
-    pub signer: Signer<'info>,
+    pub creator: Signer<'info>,
 
     #[account(
         mut,
@@ -44,38 +44,26 @@ pub struct AddOption<'info> {
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 
-    // Remaining accounts (in order):
+    // Remaining accounts (in order), all validated in CPI calls:
     // 0: vault
-    // 1: base_mint
-    // 2: quote_mint
-    // 3: cond_base_mint
-    // 4: cond_quote_mint
-    // 5: pool
-    // 6: reserve_a
-    // 7: reserve_b
-    // 8: fee_authority
-    // 9: fee_vault
+    // 1: cond_base_mint
+    // 2: cond_quote_mint
+    // 3: pool
+    // 4: reserve_a
+    // 5: reserve_b
+    // 6: fee_authority
+    // 7: fee_vault
 }
 
 pub fn add_option_handler<'info>(
     ctx: Context<'_, '_, 'info, 'info, AddOption<'info>>,
 ) -> Result<()> {
     require!(
-        ctx.remaining_accounts.len() >= 10,
+        ctx.remaining_accounts.len() == 8,
         FutarchyError::InvalidRemainingAccounts
     );
 
     let proposal = &mut ctx.accounts.proposal;
-
-    // Validate mints
-    require!(
-        ctx.remaining_accounts[1].key() == proposal.base_mint,
-        FutarchyError::InvalidMint
-    );
-    require!(
-        ctx.remaining_accounts[2].key() == proposal.quote_mint,
-        FutarchyError::InvalidMint
-    );
 
     let curr_options = proposal.num_options;
 
@@ -98,13 +86,11 @@ pub fn add_option_handler<'info>(
     let add_option_ctx = CpiContext::new_with_signer(
         ctx.accounts.vault_program.to_account_info(),
         AddVaultOption {
-            payer: ctx.accounts.signer.to_account_info(),
+            payer: ctx.accounts.creator.to_account_info(),
             owner: proposal.to_account_info(),
-            base_mint: ctx.remaining_accounts[1].to_account_info(),
-            quote_mint: ctx.remaining_accounts[2].to_account_info(),
             vault: ctx.remaining_accounts[0].to_account_info(),
-            cond_base_mint: ctx.remaining_accounts[3].to_account_info(),
-            cond_quote_mint: ctx.remaining_accounts[4].to_account_info(),
+            cond_base_mint: ctx.remaining_accounts[1].to_account_info(),
+            cond_quote_mint: ctx.remaining_accounts[2].to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
             token_program: ctx.accounts.token_program.to_account_info(),
             associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
@@ -118,15 +104,15 @@ pub fn add_option_handler<'info>(
     let create_pool_ctx = CpiContext::new(
         ctx.accounts.amm_program.to_account_info(),
         CreatePool {
-            payer: ctx.accounts.signer.to_account_info(),
+            payer: ctx.accounts.creator.to_account_info(),
             admin: proposal.to_account_info(),
-            mint_a: ctx.remaining_accounts[4].to_account_info(), // cond_quote_mint
-            mint_b: ctx.remaining_accounts[3].to_account_info(), // cond_base_mint
-            pool: ctx.remaining_accounts[5].to_account_info(),   // pool
-            reserve_a: ctx.remaining_accounts[6].to_account_info(), // reserve_a
-            reserve_b: ctx.remaining_accounts[7].to_account_info(), // reserve_b
-            fee_authority: ctx.remaining_accounts[8].to_account_info(), // fee_authority
-            fee_vault: ctx.remaining_accounts[9].to_account_info(), // fee_vault
+            mint_a: ctx.remaining_accounts[2].to_account_info(), // cond_quote_mint
+            mint_b: ctx.remaining_accounts[1].to_account_info(), // cond_base_mint
+            pool: ctx.remaining_accounts[3].to_account_info(),   // pool
+            reserve_a: ctx.remaining_accounts[4].to_account_info(), // reserve_a
+            reserve_b: ctx.remaining_accounts[5].to_account_info(), // reserve_b
+            fee_authority: ctx.remaining_accounts[6].to_account_info(), // fee_authority
+            fee_vault: ctx.remaining_accounts[7].to_account_info(), // fee_vault
             system_program: ctx.accounts.system_program.to_account_info(),
             token_program: ctx.accounts.token_program.to_account_info(),
         },
@@ -138,7 +124,7 @@ pub fn add_option_handler<'info>(
         proposal.twap_config.starting_observation,
         proposal.twap_config.max_observation_delta,
         proposal.twap_config.warmup_duration,
-        Some(ctx.accounts.signer.key()),
+        Some(ctx.accounts.creator.key()),
     )?;
 
     emit!(OptionAdded {

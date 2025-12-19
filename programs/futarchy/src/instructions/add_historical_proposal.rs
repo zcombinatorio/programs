@@ -10,7 +10,7 @@ pub struct AddHistoricalProposal<'info> {
         mut,
         address = moderator.admin
     )]
-    pub signer: Signer<'info>,
+    pub admin: Signer<'info>,
 
     #[account(
         mut,
@@ -24,7 +24,7 @@ pub struct AddHistoricalProposal<'info> {
 
     #[account(
         init,
-        payer = signer,
+        payer = admin,
         space = 8 + ProposalAccount::INIT_SPACE,
         seeds = [
             PROPOSAL_SEED,
@@ -65,7 +65,7 @@ pub fn add_historical_proposal_handler<'info>(
     proposal.moderator = moderator.key();
     proposal.base_mint = moderator.base_mint;
     proposal.quote_mint = moderator.quote_mint;
-    proposal.creator = ctx.accounts.signer.key();
+    proposal.creator = ctx.accounts.admin.key();
     proposal.length = length;
     proposal.created_at = created_at;
     proposal.bump = ctx.bumps.proposal;

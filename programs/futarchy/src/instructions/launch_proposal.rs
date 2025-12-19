@@ -23,8 +23,11 @@ pub struct ProposalLaunched {
 
 #[derive(Accounts)]
 pub struct LaunchProposal<'info> {
-    #[account(mut)]
-    pub signer: Signer<'info>,
+    #[account(
+        mut,
+        address = proposal.creator @ FutarchyError::Unauthorized
+    )]
+    pub creator: Signer<'info>,
 
     #[account(
         mut,
@@ -35,7 +38,6 @@ pub struct LaunchProposal<'info> {
         ],
         bump = proposal.bump,
         constraint = proposal.state == ProposalState::Setup @ FutarchyError::InvalidState,
-        constraint = proposal.creator == signer.key() @ FutarchyError::Unauthorized,
     )]
     pub proposal: Box<Account<'info, ProposalAccount>>,
 
@@ -109,7 +111,7 @@ pub fn launch_proposal_handler<'info>(
     let activate_ctx = CpiContext::new_with_signer(
         ctx.accounts.vault_program.to_account_info(),
         ActivateVault {
-            payer: ctx.accounts.signer.to_account_info(),
+            payer: ctx.accounts.creator.to_account_info(),
             owner: ctx.accounts.proposal.to_account_info(),
             vault: ctx.accounts.vault.to_account_info(),
         },
@@ -128,7 +130,7 @@ pub fn launch_proposal_handler<'info>(
     let deposit_base_ctx = CpiContext::new(
         ctx.accounts.vault_program.to_account_info(),
         UserVaultAction {
-            signer: ctx.accounts.signer.to_account_info(),
+            signer: ctx.accounts.creator.to_account_info(),
             vault: ctx.accounts.vault.to_account_info(),
             mint: ctx.remaining_accounts[0].to_account_info(), // base_mint
             vault_ata: ctx.remaining_accounts[2].to_account_info(), // vault_base_ata
@@ -153,7 +155,7 @@ pub fn launch_proposal_handler<'info>(
     let deposit_quote_ctx = CpiContext::new(
         ctx.accounts.vault_program.to_account_info(),
         UserVaultAction {
-            signer: ctx.accounts.signer.to_account_info(),
+            signer: ctx.accounts.creator.to_account_info(),
             vault: ctx.accounts.vault.to_account_info(),
             mint: ctx.remaining_accounts[1].to_account_info(), // quote_mint
             vault_ata: ctx.remaining_accounts[3].to_account_info(), // vault_quote_ata
@@ -180,7 +182,7 @@ pub fn launch_proposal_handler<'info>(
         let add_liq_ctx = CpiContext::new(
             ctx.accounts.amm_program.to_account_info(),
             AddLiquidity {
-                depositor: ctx.accounts.signer.to_account_info(),
+                depositor: ctx.accounts.creator.to_account_info(),
                 pool: ctx.remaining_accounts[6 + 4 * num_options + i].to_account_info(), // pool[i]
                 reserve_a: ctx.remaining_accounts[6 + 5 * num_options + i].to_account_info(), // reserve_a[i]
                 reserve_b: ctx.remaining_accounts[6 + 6 * num_options + i].to_account_info(), // reserve_b[i]
