@@ -8,14 +8,14 @@ import { Futarchy, TWAPConfig } from "./types";
 
 export function initializeModerator(
   program: Program<Futarchy>,
-  payer: PublicKey,
+  signer: PublicKey,
   globalConfig: PublicKey,
   baseMint: PublicKey,
   quoteMint: PublicKey,
   moderator: PublicKey
 ) {
   return program.methods.initializeModerator().accountsPartial({
-    payer,
+    signer,
     globalConfig,
     baseMint,
     quoteMint,
@@ -114,4 +114,24 @@ export function redeemLiquidity(
       pool,
     })
     .remainingAccounts(remainingAccounts);
+}
+
+export function addHistoricalProposal(
+  program: Program<Futarchy>,
+  signer: PublicKey,
+  moderator: PublicKey,
+  proposal: PublicKey,
+  numOptions: number,
+  winningIdx: number,
+  length: number,
+  createdAt: BN | number
+) {
+  const createdAtBN = typeof createdAt === "number" ? new BN(createdAt) : createdAt;
+  return program.methods
+    .addHistoricalProposal(numOptions, winningIdx, length, createdAtBN)
+    .accountsPartial({
+      signer,
+      moderator,
+      proposal,
+    });
 }

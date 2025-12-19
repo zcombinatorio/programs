@@ -4,6 +4,8 @@ import {
   createMint,
   mintTo,
   getOrCreateAssociatedTokenAccount,
+  getAccount,
+  getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 
 import { FutarchyClient } from "../../../sdk/src";
@@ -151,4 +153,32 @@ export function createUserClient(
     provider.opts
   );
   return new FutarchyClient(userProvider);
+}
+
+/**
+ * Get token balance for an ATA (returns 0 if account doesn't exist)
+ */
+export async function getTokenBalance(
+  provider: anchor.AnchorProvider,
+  ata: PublicKey
+): Promise<number> {
+  try {
+    const account = await getAccount(provider.connection, ata);
+    return Number(account.amount);
+  } catch {
+    return 0; // Account doesn't exist
+  }
+}
+
+/**
+ * Get token balance for a mint and owner (derives ATA automatically)
+ */
+export async function getTokenBalanceFor(
+  provider: anchor.AnchorProvider,
+  mint: PublicKey,
+  owner: PublicKey,
+  allowOwnerOffCurve: boolean = false
+): Promise<number> {
+  const ata = getAssociatedTokenAddressSync(mint, owner, allowOwnerOffCurve);
+  return getTokenBalance(provider, ata);
 }

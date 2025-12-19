@@ -321,7 +321,8 @@ export type Amm = {
           "signer": true
         },
         {
-          "name": "admin"
+          "name": "admin",
+          "signer": true
         },
         {
           "name": "mintA"
@@ -863,46 +864,56 @@ export type Amm = {
     },
     {
       "code": 6001,
+      "name": "invalidDepositor",
+      "msg": "Invalid depositor"
+    },
+    {
+      "code": 6002,
       "name": "invalidState",
       "msg": "Invalid state"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "invalidAmount",
       "msg": "Invalid amount"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "slippageExceeded",
       "msg": "Slippage exceeded"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "invariantViolated",
       "msg": "Invariant violated"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "emptyPool",
       "msg": "Pool is empty"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "mathOverflow",
       "msg": "Math overflow"
     },
     {
-      "code": 6007,
+      "code": 6008,
+      "name": "mathUnderflow",
+      "msg": "Math underflow"
+    },
+    {
+      "code": 6009,
       "name": "outputTooSmall",
       "msg": "Output too small"
     },
     {
-      "code": 6008,
+      "code": 6010,
       "name": "insufficientReserve",
       "msg": "Insufficient reserve balance"
     },
     {
-      "code": 6009,
+      "code": 6011,
       "name": "invalidFee",
       "msg": "Fee exceeds maximum"
     }
@@ -986,12 +997,24 @@ export type Amm = {
         "kind": "struct",
         "fields": [
           {
-            "name": "admin",
-            "type": "pubkey"
+            "name": "version",
+            "type": "u8"
           },
           {
-            "name": "liquidityProvider",
-            "type": "pubkey"
+            "name": "bumps",
+            "type": {
+              "defined": {
+                "name": "poolBumps"
+              }
+            }
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "poolState"
+              }
+            }
           },
           {
             "name": "mintA",
@@ -1006,26 +1029,18 @@ export type Amm = {
             "type": "u16"
           },
           {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "liquidityProvider",
+            "type": "pubkey"
+          },
+          {
             "name": "oracle",
             "type": {
               "defined": {
                 "name": "twapOracle"
-              }
-            }
-          },
-          {
-            "name": "state",
-            "type": {
-              "defined": {
-                "name": "poolState"
-              }
-            }
-          },
-          {
-            "name": "bumps",
-            "type": {
-              "defined": {
-                "name": "poolBumps"
               }
             }
           }
@@ -1062,11 +1077,11 @@ export type Amm = {
         "kind": "struct",
         "fields": [
           {
-            "name": "pool",
-            "type": "pubkey"
+            "name": "version",
+            "type": "u8"
           },
           {
-            "name": "admin",
+            "name": "pool",
             "type": "pubkey"
           },
           {
@@ -1080,6 +1095,10 @@ export type Amm = {
           {
             "name": "fee",
             "type": "u16"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
           }
         ]
       }
@@ -1194,12 +1213,24 @@ export type Amm = {
               "Seconds after creation before TWAP accumulation begins"
             ],
             "type": "u32"
+          },
+          {
+            "name": "minRecordingInterval",
+            "docs": [
+              "Minimum time in-between TWAP recordings"
+            ],
+            "type": "i64"
           }
         ]
       }
     }
   ],
   "constants": [
+    {
+      "name": "ammVersion",
+      "type": "u8",
+      "value": "1"
+    },
     {
       "name": "feeAuthority",
       "type": "pubkey",

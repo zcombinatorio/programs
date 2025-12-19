@@ -8,6 +8,106 @@
   },
   "instructions": [
     {
+      "name": "add_historical_proposal",
+      "discriminator": [
+        125,
+        119,
+        66,
+        65,
+        159,
+        52,
+        65,
+        160
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "moderator.id",
+                "account": "ModeratorAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "moderator"
+              },
+              {
+                "kind": "account",
+                "path": "moderator.proposal_id_counter",
+                "account": "ModeratorAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "num_options",
+          "type": "u8"
+        },
+        {
+          "name": "winning_idx",
+          "type": "u8"
+        },
+        {
+          "name": "length",
+          "type": "u16"
+        },
+        {
+          "name": "created_at",
+          "type": "i64"
+        }
+      ],
+      "returns": "u16"
+    },
+    {
       "name": "add_option",
       "discriminator": [
         229,
@@ -27,7 +127,34 @@
         },
         {
           "name": "proposal",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal.moderator",
+                "account": "ProposalAccount"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.id",
+                "account": "ProposalAccount"
+              }
+            ]
+          }
         },
         {
           "name": "system_program",
@@ -35,7 +162,7 @@
         },
         {
           "name": "vault_program",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "amm_program",
@@ -71,7 +198,34 @@
         },
         {
           "name": "proposal",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal.moderator",
+                "account": "ProposalAccount"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.id",
+                "account": "ProposalAccount"
+              }
+            ]
+          }
         },
         {
           "name": "vault",
@@ -79,7 +233,7 @@
         },
         {
           "name": "vault_program",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "amm_program",
@@ -102,7 +256,7 @@
       ],
       "accounts": [
         {
-          "name": "payer",
+          "name": "signer",
           "writable": true,
           "signer": true
         },
@@ -220,7 +374,33 @@
         },
         {
           "name": "proposal",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "moderator"
+              },
+              {
+                "kind": "account",
+                "path": "moderator.proposal_id_counter",
+                "account": "ModeratorAccount"
+              }
+            ]
+          }
         },
         {
           "name": "system_program",
@@ -228,7 +408,7 @@
         },
         {
           "name": "vault_program",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "amm_program",
@@ -260,7 +440,8 @@
             }
           }
         }
-      ]
+      ],
+      "returns": "u16"
     },
     {
       "name": "launch_proposal",
@@ -282,7 +463,34 @@
         },
         {
           "name": "proposal",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal.moderator",
+                "account": "ProposalAccount"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.id",
+                "account": "ProposalAccount"
+              }
+            ]
+          }
         },
         {
           "name": "vault",
@@ -294,7 +502,7 @@
         },
         {
           "name": "vault_program",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "amm_program",
@@ -339,7 +547,34 @@
           "signer": true
         },
         {
-          "name": "proposal"
+          "name": "proposal",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal.moderator",
+                "account": "ProposalAccount"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.id",
+                "account": "ProposalAccount"
+              }
+            ]
+          }
         },
         {
           "name": "vault",
@@ -351,7 +586,7 @@
         },
         {
           "name": "vault_program",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "amm_program",
@@ -554,6 +789,16 @@
       "code": 6011,
       "name": "CounterOverflow",
       "msg": "Counter overflow"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidWinningIndex",
+      "msg": "Winning index exceeds number of options"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidVersion",
+      "msg": "Invalid account version"
     }
   ],
   "types": [
@@ -562,6 +807,10 @@
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
           {
             "name": "moderator_id_counter",
             "type": "u32"
@@ -576,7 +825,7 @@
         "fields": [
           {
             "name": "proposal_id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -599,6 +848,14 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
             "name": "id",
             "type": "u32"
           },
@@ -612,11 +869,11 @@
           },
           {
             "name": "proposal_id_counter",
-            "type": "u8"
+            "type": "u16"
           },
           {
-            "name": "bump",
-            "type": "u8"
+            "name": "admin",
+            "type": "pubkey"
           }
         ]
       }
@@ -626,6 +883,10 @@
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
           {
             "name": "id",
             "type": "u32"
@@ -641,6 +902,10 @@
           {
             "name": "quote_mint",
             "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
           }
         ]
       }
@@ -652,7 +917,7 @@
         "fields": [
           {
             "name": "proposal_id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -661,10 +926,6 @@
           {
             "name": "option_index",
             "type": "u8"
-          },
-          {
-            "name": "pool",
-            "type": "pubkey"
           }
         ]
       }
@@ -675,8 +936,12 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "creator",
-            "type": "pubkey"
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           },
           {
             "name": "moderator",
@@ -684,7 +949,7 @@
           },
           {
             "name": "id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "num_options",
@@ -728,6 +993,10 @@
             }
           },
           {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
             "name": "fee",
             "type": "u16"
           },
@@ -738,10 +1007,6 @@
                 "name": "TWAPConfig"
               }
             }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
           }
         ]
       }
@@ -753,7 +1018,7 @@
         "fields": [
           {
             "name": "proposal_id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -772,8 +1037,12 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "proposal_id",
+            "name": "version",
             "type": "u8"
+          },
+          {
+            "name": "proposal_id",
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -784,24 +1053,12 @@
             "type": "pubkey"
           },
           {
-            "name": "creator",
-            "type": "pubkey"
-          },
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "base_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "quote_mint",
-            "type": "pubkey"
-          },
-          {
             "name": "length",
             "type": "u16"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
           }
         ]
       }
@@ -813,7 +1070,7 @@
         "fields": [
           {
             "name": "proposal_id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -886,6 +1143,11 @@
       "value": "[103, 108, 111, 98, 97, 108, 95, 99, 111, 110, 102, 105, 103]"
     },
     {
+      "name": "GLOBAL_CONFIG_VERSION",
+      "type": "u8",
+      "value": "1"
+    },
+    {
       "name": "MAX_OPTIONS",
       "type": "u8",
       "value": "6"
@@ -901,9 +1163,19 @@
       "value": "[109, 111, 100, 101, 114, 97, 116, 111, 114]"
     },
     {
+      "name": "MODERATOR_VERSION",
+      "type": "u8",
+      "value": "1"
+    },
+    {
       "name": "PROPOSAL_SEED",
       "type": "bytes",
       "value": "[112, 114, 111, 112, 111, 115, 97, 108]"
+    },
+    {
+      "name": "PROPOSAL_VERSION",
+      "type": "u8",
+      "value": "1"
     }
   ]
 }

@@ -28,8 +28,10 @@ export function deriveProposalPDA(
   proposalId: number,
   programId: PublicKey = PROGRAM_ID
 ): [PublicKey, number] {
+  const proposalIdBuffer = Buffer.alloc(2);
+  proposalIdBuffer.writeUInt16LE(proposalId);
   return PublicKey.findProgramAddressSync(
-    [PROPOSAL_SEED, moderator.toBuffer(), Buffer.from([proposalId])],
+    [PROPOSAL_SEED, moderator.toBuffer(), proposalIdBuffer],
     programId
   );
 }

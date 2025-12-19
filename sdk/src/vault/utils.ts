@@ -12,11 +12,13 @@ export function deriveVaultPDA(
   nonce: number,
   programId: PublicKey = PROGRAM_ID
 ): [PublicKey, number] {
+  const nonceBuffer = Buffer.alloc(2);
+  nonceBuffer.writeUInt16LE(nonce);
   return PublicKey.findProgramAddressSync(
     [
       VAULT_SEED,
       owner.toBuffer(),
-      Buffer.from([nonce]),
+      nonceBuffer,
     ],
     programId
   );

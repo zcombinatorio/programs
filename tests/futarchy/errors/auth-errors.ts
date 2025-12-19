@@ -2,6 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 
 import {
   INITIAL_LIQUIDITY,
+  DEFAULT_TWAP_CONFIG,
   getTestContext,
   createTestMint,
   fundOwnerWallet,
@@ -39,6 +40,21 @@ describe("Futarchy - Authorization Errors", () => {
   });
 
   describe("Proposal Operations", () => {
+    it("non-admin cannot create proposal", async () => {
+      // moderatorCtx was created by wallet, nonOwner is not the admin
+      const nonOwnerClient = createUserClient(provider, nonOwner.keypair);
+
+      const { builder } = await nonOwnerClient.initializeProposal(
+        nonOwner.keypair.publicKey,
+        moderatorCtx.moderatorPda,
+        60, // length
+        30, // fee
+        DEFAULT_TWAP_CONFIG
+      );
+
+      await expectAnchorError(builder.rpc(), "ConstraintAddress");
+    });
+
     it("non-creator cannot add options", async () => {
       const ctx = await createProposalInSetupState(
         client,

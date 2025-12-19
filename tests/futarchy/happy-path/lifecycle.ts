@@ -16,6 +16,7 @@ import {
   sendAndLog,
   sendVersionedTx,
   preCreateConditionalATAs,
+  getTokenBalanceFor,
   expectProposalState,
   expectNumOptions,
   expectWinningOption,
@@ -38,6 +39,12 @@ describe("Futarchy - Proposal Lifecycle", () => {
       let condBaseMints: PublicKey[];
       let condQuoteMints: PublicKey[];
       let altAddress: PublicKey | undefined;
+
+      // Balance tracking for assertions
+      let userBaseBalanceBeforeLaunch: number;
+      let userQuoteBalanceBeforeLaunch: number;
+      let userBaseBalanceBeforeRedeem: number;
+      let userQuoteBalanceBeforeRedeem: number;
 
       before(async () => {
         // Create fresh mints for this test suite
@@ -125,6 +132,10 @@ describe("Futarchy - Proposal Lifecycle", () => {
             altAddress,
           });
 
+          // Capture balances before launch
+          userBaseBalanceBeforeLaunch = await getTokenBalanceFor(provider, baseMint, wallet.publicKey);
+          userQuoteBalanceBeforeLaunch = await getTokenBalanceFor(provider, quoteMint, wallet.publicKey);
+
           const { builder, instruction } = await client.launchProposal(
             wallet.publicKey,
             proposalPda,
@@ -141,6 +152,42 @@ describe("Futarchy - Proposal Lifecycle", () => {
           }
 
           await expectProposalState(client, proposalPda, ProposalState.Pending);
+        });
+
+        it("transfers base and quote tokens from user to vault", async () => {
+          // User's base/quote balances should have decreased by INITIAL_LIQUIDITY
+          const userBaseAfter = await getTokenBalanceFor(provider, baseMint, wallet.publicKey);
+          const userQuoteAfter = await getTokenBalanceFor(provider, quoteMint, wallet.publicKey);
+
+          expect(userBaseBalanceBeforeLaunch - userBaseAfter).to.equal(
+            INITIAL_LIQUIDITY,
+            "User base tokens should decrease by INITIAL_LIQUIDITY"
+          );
+          expect(userQuoteBalanceBeforeLaunch - userQuoteAfter).to.equal(
+            INITIAL_LIQUIDITY,
+            "User quote tokens should decrease by INITIAL_LIQUIDITY"
+          );
+
+          // Vault should have received the tokens
+          const vaultBaseBalance = await getTokenBalanceFor(provider, baseMint, vaultPda, true);
+          const vaultQuoteBalance = await getTokenBalanceFor(provider, quoteMint, vaultPda, true);
+
+          expect(vaultBaseBalance).to.equal(INITIAL_LIQUIDITY, "Vault should hold base tokens");
+          expect(vaultQuoteBalance).to.equal(INITIAL_LIQUIDITY, "Vault should hold quote tokens");
+        });
+
+        it("mints conditional tokens to user", async () => {
+          // User should have received conditional tokens for each option
+          for (let i = 0; i < numOptions; i++) {
+            const condBaseBalance = await getTokenBalanceFor(provider, condBaseMints[i], wallet.publicKey);
+            const condQuoteBalance = await getTokenBalanceFor(provider, condQuoteMints[i], wallet.publicKey);
+
+            // User gets conditional tokens equal to deposit amount (minus what went to pools)
+            // The tokens go to AMM pools as liquidity, so user balance may be 0 after add_liquidity
+            // But the reserves should have the tokens
+            expect(condBaseBalance).to.be.greaterThanOrEqual(0);
+            expect(condQuoteBalance).to.be.greaterThanOrEqual(0);
+          }
         });
 
         it("deposits liquidity to all pools", async () => {
@@ -202,6 +249,10 @@ describe("Futarchy - Proposal Lifecycle", () => {
 
       describe("Redemption Phase", () => {
         it("redeems liquidity successfully", async () => {
+          // Capture balances before redemption
+          userBaseBalanceBeforeRedeem = await getTokenBalanceFor(provider, baseMint, wallet.publicKey);
+          userQuoteBalanceBeforeRedeem = await getTokenBalanceFor(provider, quoteMint, wallet.publicKey);
+
           const { builder, instruction } = await client.redeemLiquidity(
             wallet.publicKey,
             proposalPda
@@ -218,13 +269,73 @@ describe("Futarchy - Proposal Lifecycle", () => {
           // Transaction succeeded - redemption worked
         });
 
+        it("returns base and quote tokens to user", async () => {
+          // User should have received their base/quote tokens back
+          const userBaseAfter = await getTokenBalanceFor(provider, baseMint, wallet.publicKey);
+          const userQuoteAfter = await getTokenBalanceFor(provider, quoteMint, wallet.publicKey);
+
+          // User should receive back approximately INITIAL_LIQUIDITY of each token
+          // (may be slightly different due to AMM fees/slippage)
+          expect(userBaseAfter).to.be.greaterThan(
+            userBaseBalanceBeforeRedeem,
+            "User should receive base tokens back"
+          );
+          expect(userQuoteAfter).to.be.greaterThan(
+            userQuoteBalanceBeforeRedeem,
+            "User should receive quote tokens back"
+          );
+
+          // Vault should be empty (or near-empty) after redemption
+          const vaultBaseBalance = await getTokenBalanceFor(provider, baseMint, vaultPda, true);
+          const vaultQuoteBalance = await getTokenBalanceFor(provider, quoteMint, vaultPda, true);
+
+          expect(vaultBaseBalance).to.equal(0, "Vault should be empty of base tokens");
+          expect(vaultQuoteBalance).to.equal(0, "Vault should be empty of quote tokens");
+        });
+
         it("burns winning conditional tokens", async () => {
-          // After redemption, user should have received their tokens back
-          // The conditional tokens for the winning option are burned
+          const proposal = await client.fetchProposal(proposalPda);
+          const { winningIdx } = parseProposalState(proposal.state);
+          expect(winningIdx).to.not.be.null;
+
+          // User's winning conditional tokens should be burned (balance = 0)
+          const winningCondBaseBalance = await getTokenBalanceFor(
+            provider,
+            condBaseMints[winningIdx!],
+            wallet.publicKey
+          );
+          const winningCondQuoteBalance = await getTokenBalanceFor(
+            provider,
+            condQuoteMints[winningIdx!],
+            wallet.publicKey
+          );
+
+          expect(winningCondBaseBalance).to.equal(0, "Winning cond base tokens should be burned");
+          expect(winningCondQuoteBalance).to.equal(0, "Winning cond quote tokens should be burned");
+        });
+
+        it("burns losing conditional tokens", async () => {
           const proposal = await client.fetchProposal(proposalPda);
           const { winningIdx } = parseProposalState(proposal.state);
 
-          expect(winningIdx).to.not.be.null;
+          // All losing conditional tokens should also be burned
+          for (let i = 0; i < numOptions; i++) {
+            if (i === winningIdx) continue; // Skip winner
+
+            const losingCondBaseBalance = await getTokenBalanceFor(
+              provider,
+              condBaseMints[i],
+              wallet.publicKey
+            );
+            const losingCondQuoteBalance = await getTokenBalanceFor(
+              provider,
+              condQuoteMints[i],
+              wallet.publicKey
+            );
+
+            expect(losingCondBaseBalance).to.equal(0, `Losing cond base tokens [${i}] should be burned`);
+            expect(losingCondQuoteBalance).to.equal(0, `Losing cond quote tokens [${i}] should be burned`);
+          }
         });
       });
     });

@@ -43,7 +43,31 @@ export type Vault = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "vaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "vaultAccount"
+              }
+            ]
+          }
         }
       ],
       "args": []
@@ -78,7 +102,31 @@ export type Vault = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "vaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "vaultAccount"
+              }
+            ]
+          }
         },
         {
           "name": "baseMint"
@@ -129,7 +177,31 @@ export type Vault = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "vaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "vaultAccount"
+              }
+            ]
+          }
         },
         {
           "name": "mint"
@@ -306,7 +378,31 @@ export type Vault = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "vaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "vaultAccount"
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -346,7 +442,29 @@ export type Vault = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "nonce"
+              }
+            ]
+          }
         },
         {
           "name": "baseMint"
@@ -499,8 +617,8 @@ export type Vault = {
       ],
       "args": [
         {
-          "name": "proposalId",
-          "type": "u8"
+          "name": "nonce",
+          "type": "u16"
         }
       ]
     },
@@ -524,7 +642,31 @@ export type Vault = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "vaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "vaultAccount"
+              }
+            ]
+          }
         },
         {
           "name": "mint"
@@ -687,7 +829,31 @@ export type Vault = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "vaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "vaultAccount"
+              }
+            ]
+          }
         },
         {
           "name": "mint"
@@ -1046,6 +1212,14 @@ export type Vault = {
         "kind": "struct",
         "fields": [
           {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
             "name": "owner",
             "type": "pubkey"
           },
@@ -1059,11 +1233,11 @@ export type Vault = {
           },
           {
             "name": "nonce",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposalId",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "state",
@@ -1094,10 +1268,6 @@ export type Vault = {
                 8
               ]
             }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
           }
         ]
       }
@@ -1176,6 +1346,10 @@ export type Vault = {
         "kind": "struct",
         "fields": [
           {
+            "name": "version",
+            "type": "u8"
+          },
+          {
             "name": "vault",
             "type": "pubkey"
           },
@@ -1193,7 +1367,7 @@ export type Vault = {
           },
           {
             "name": "nonce",
-            "type": "u8"
+            "type": "u16"
           }
         ]
       }
@@ -1291,6 +1465,11 @@ export type Vault = {
   ],
   "constants": [
     {
+      "name": "conditionalMintSeed",
+      "type": "bytes",
+      "value": "[99, 109, 105, 110, 116]"
+    },
+    {
       "name": "maxOptions",
       "type": "u8",
       "value": "8"
@@ -1304,6 +1483,11 @@ export type Vault = {
       "name": "vaultSeed",
       "type": "bytes",
       "value": "[118, 97, 117, 108, 116]"
+    },
+    {
+      "name": "vaultVersion",
+      "type": "u8",
+      "value": "1"
     }
   ]
 };

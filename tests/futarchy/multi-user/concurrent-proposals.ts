@@ -53,20 +53,51 @@ describe("Futarchy - Multi-User", () => {
   });
 
   describe("Concurrent Proposals", () => {
-    it("multiple users create proposals under same moderator", async () => {
-      // Alice creates a proposal
+    let aliceModerator: ModeratorTestContext;
+    let bobModerator: ModeratorTestContext;
+
+    before(async () => {
+      // Each user creates their own moderator (only admin can create proposals)
+      // Note: mints are created by main wallet which has mint authority
+      const aliceBaseMint = await createTestMint(provider, wallet);
+      const aliceQuoteMint = await createTestMint(provider, wallet);
+
+      // Fund Alice using createFundedUser pattern (main wallet mints to Alice)
+      alice = await createFundedUser(provider, wallet, aliceBaseMint, aliceQuoteMint);
+      aliceClient = createUserClient(provider, alice.keypair);
+
+      aliceModerator = await createModerator(aliceClient, alice.wallet, {
+        baseMint: aliceBaseMint,
+        quoteMint: aliceQuoteMint,
+      });
+
+      const bobBaseMint = await createTestMint(provider, wallet);
+      const bobQuoteMint = await createTestMint(provider, wallet);
+
+      // Fund Bob using createFundedUser pattern (main wallet mints to Bob)
+      bob = await createFundedUser(provider, wallet, bobBaseMint, bobQuoteMint);
+      bobClient = createUserClient(provider, bob.keypair);
+
+      bobModerator = await createModerator(bobClient, bob.wallet, {
+        baseMint: bobBaseMint,
+        quoteMint: bobQuoteMint,
+      });
+    });
+
+    it("multiple users create proposals under their own moderators", async () => {
+      // Alice creates a proposal under her moderator
       const aliceProposal = await createProposalInSetupState(
         aliceClient,
         alice.wallet,
-        moderatorCtx,
+        aliceModerator,
         { numOptions: 2 }
       );
 
-      // Bob creates a proposal
+      // Bob creates a proposal under his moderator
       const bobProposal = await createProposalInSetupState(
         bobClient,
         bob.wallet,
-        moderatorCtx,
+        bobModerator,
         { numOptions: 3 }
       );
 
@@ -87,20 +118,20 @@ describe("Futarchy - Multi-User", () => {
     });
 
     it("proposals maintain separate state", async () => {
-      // Alice creates and launches a proposal
+      // Alice creates and launches a proposal under her moderator
       const aliceProposal = await createProposalInPendingState(
         aliceClient,
         alice.wallet,
-        moderatorCtx,
+        aliceModerator,
         INITIAL_LIQUIDITY,
         INITIAL_LIQUIDITY
       );
 
-      // Bob creates a proposal but doesn't launch
+      // Bob creates a proposal but doesn't launch under his moderator
       const bobProposal = await createProposalInSetupState(
         bobClient,
         bob.wallet,
-        moderatorCtx
+        bobModerator
       );
 
       // Alice's is Pending, Bob's is Setup
@@ -186,33 +217,51 @@ describe("Futarchy - Multi-User", () => {
   });
 
   describe("Finalization and Redemption", () => {
+    let redemptionModerator: ModeratorTestContext;
+    let redemptionUser: FundedUser;
+    let redemptionClient: FutarchyClient;
+
+    before(async () => {
+      // Create a dedicated user and moderator for redemption test
+      const testBaseMint = await createTestMint(provider, wallet);
+      const testQuoteMint = await createTestMint(provider, wallet);
+
+      redemptionUser = await createFundedUser(provider, wallet, testBaseMint, testQuoteMint);
+      redemptionClient = createUserClient(provider, redemptionUser.keypair);
+
+      redemptionModerator = await createModerator(redemptionClient, redemptionUser.wallet, {
+        baseMint: testBaseMint,
+        quoteMint: testQuoteMint,
+      });
+    });
+
     it("only proposal creator can redeem their liquidity", async () => {
-      // Alice creates, launches, and finalizes a proposal
-      const aliceProposal = await createProposalInPendingState(
-        aliceClient,
-        alice.wallet,
-        moderatorCtx,
+      // User creates, launches, and finalizes a proposal under their own moderator
+      const proposal = await createProposalInPendingState(
+        redemptionClient,
+        redemptionUser.wallet,
+        redemptionModerator,
         INITIAL_LIQUIDITY,
         INITIAL_LIQUIDITY,
         { length: 1 }
       );
 
-      await waitForProposalExpiration(aliceClient, aliceProposal.proposalPda);
+      await waitForProposalExpiration(redemptionClient, proposal.proposalPda);
 
-      const { builder: finalizeBuilder } = await aliceClient.finalizeProposal(
-        alice.keypair.publicKey,
-        aliceProposal.proposalPda
+      const { builder: finalizeBuilder } = await redemptionClient.finalizeProposal(
+        redemptionUser.keypair.publicKey,
+        proposal.proposalPda
       );
       await finalizeBuilder.rpc();
 
-      // Alice redeems her liquidity
-      const { builder: redeemBuilder } = await aliceClient.redeemLiquidity(
-        alice.keypair.publicKey,
-        aliceProposal.proposalPda
+      // User redeems their liquidity
+      const { builder: redeemBuilder } = await redemptionClient.redeemLiquidity(
+        redemptionUser.keypair.publicKey,
+        proposal.proposalPda
       );
       await redeemBuilder.rpc();
 
-      // Success - Alice redeemed
+      // Success - user redeemed
     });
   });
 });

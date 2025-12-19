@@ -37,6 +37,7 @@ import {
   launchProposal,
   finalizeProposal,
   redeemLiquidity,
+  addHistoricalProposal,
 } from "./instructions";
 
 import { VaultClient, deriveVaultPDA, deriveConditionalMint, VaultType } from "../vault";
@@ -103,7 +104,7 @@ export class FutarchyClient {
   // High-level Instruction Builders
   // ===========================================================================
 
-  async initializeModerator(payer: PublicKey, baseMint: PublicKey, quoteMint: PublicKey) {
+  async initializeModerator(signer: PublicKey, baseMint: PublicKey, quoteMint: PublicKey) {
     const [globalConfig] = this.deriveGlobalConfigPDA();
 
     // Fetch current counter to derive moderator PDA
@@ -120,7 +121,7 @@ export class FutarchyClient {
 
     const builder = initializeModerator(
       this.program,
-      payer,
+      signer,
       globalConfig,
       baseMint,
       quoteMint,
@@ -132,6 +133,39 @@ export class FutarchyClient {
       globalConfig,
       moderatorPda,
       moderatorId,
+    };
+  }
+
+  async addHistoricalProposal(
+    signer: PublicKey,
+    moderatorPda: PublicKey,
+    numOptions: number,
+    winningIdx: number,
+    length: number,
+    createdAt: BN | number
+  ) {
+    const moderator = await this.fetchModerator(moderatorPda);
+    const proposalId = moderator.proposalIdCounter;
+    const [proposalPda] = this.deriveProposalPDA(moderatorPda, proposalId);
+
+    const builder = addHistoricalProposal(
+      this.program,
+      signer,
+      moderatorPda,
+      proposalPda,
+      numOptions,
+      winningIdx,
+      length,
+      createdAt
+    );
+
+    const instruction = await builder.instruction();
+
+    return {
+      builder,
+      instruction,
+      proposalPda,
+      proposalId,
     };
   }
 

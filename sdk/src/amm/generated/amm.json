@@ -315,7 +315,8 @@
           "signer": true
         },
         {
-          "name": "admin"
+          "name": "admin",
+          "signer": true
         },
         {
           "name": "mint_a"
@@ -857,46 +858,56 @@
     },
     {
       "code": 6001,
+      "name": "InvalidDepositor",
+      "msg": "Invalid depositor"
+    },
+    {
+      "code": 6002,
       "name": "InvalidState",
       "msg": "Invalid state"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "InvalidAmount",
       "msg": "Invalid amount"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "SlippageExceeded",
       "msg": "Slippage exceeded"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "InvariantViolated",
       "msg": "Invariant violated"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "EmptyPool",
       "msg": "Pool is empty"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "MathOverflow",
       "msg": "Math overflow"
     },
     {
-      "code": 6007,
+      "code": 6008,
+      "name": "MathUnderflow",
+      "msg": "Math underflow"
+    },
+    {
+      "code": 6009,
       "name": "OutputTooSmall",
       "msg": "Output too small"
     },
     {
-      "code": 6008,
+      "code": 6010,
       "name": "InsufficientReserve",
       "msg": "Insufficient reserve balance"
     },
     {
-      "code": 6009,
+      "code": 6011,
       "name": "InvalidFee",
       "msg": "Fee exceeds maximum"
     }
@@ -980,12 +991,24 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "admin",
-            "type": "pubkey"
+            "name": "version",
+            "type": "u8"
           },
           {
-            "name": "liquidity_provider",
-            "type": "pubkey"
+            "name": "bumps",
+            "type": {
+              "defined": {
+                "name": "PoolBumps"
+              }
+            }
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "PoolState"
+              }
+            }
           },
           {
             "name": "mint_a",
@@ -1000,26 +1023,18 @@
             "type": "u16"
           },
           {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "liquidity_provider",
+            "type": "pubkey"
+          },
+          {
             "name": "oracle",
             "type": {
               "defined": {
                 "name": "TwapOracle"
-              }
-            }
-          },
-          {
-            "name": "state",
-            "type": {
-              "defined": {
-                "name": "PoolState"
-              }
-            }
-          },
-          {
-            "name": "bumps",
-            "type": {
-              "defined": {
-                "name": "PoolBumps"
               }
             }
           }
@@ -1056,11 +1071,11 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "pool",
-            "type": "pubkey"
+            "name": "version",
+            "type": "u8"
           },
           {
-            "name": "admin",
+            "name": "pool",
             "type": "pubkey"
           },
           {
@@ -1074,6 +1089,10 @@
           {
             "name": "fee",
             "type": "u16"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
           }
         ]
       }
@@ -1188,12 +1207,24 @@
               "Seconds after creation before TWAP accumulation begins"
             ],
             "type": "u32"
+          },
+          {
+            "name": "min_recording_interval",
+            "docs": [
+              "Minimum time in-between TWAP recordings"
+            ],
+            "type": "i64"
           }
         ]
       }
     }
   ],
   "constants": [
+    {
+      "name": "AMM_VERSION",
+      "type": "u8",
+      "value": "1"
+    },
     {
       "name": "FEE_AUTHORITY",
       "type": "pubkey",

@@ -37,7 +37,31 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "VaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "VaultAccount"
+              }
+            ]
+          }
         }
       ],
       "args": []
@@ -72,7 +96,31 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "VaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "VaultAccount"
+              }
+            ]
+          }
         },
         {
           "name": "base_mint"
@@ -123,7 +171,31 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "VaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "VaultAccount"
+              }
+            ]
+          }
         },
         {
           "name": "mint"
@@ -300,7 +372,31 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "VaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "VaultAccount"
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -340,7 +436,29 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "nonce"
+              }
+            ]
+          }
         },
         {
           "name": "base_mint"
@@ -493,8 +611,8 @@
       ],
       "args": [
         {
-          "name": "proposal_id",
-          "type": "u8"
+          "name": "nonce",
+          "type": "u16"
         }
       ]
     },
@@ -518,7 +636,31 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "VaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "VaultAccount"
+              }
+            ]
+          }
         },
         {
           "name": "mint"
@@ -681,7 +823,31 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "VaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "VaultAccount"
+              }
+            ]
+          }
         },
         {
           "name": "mint"
@@ -1040,6 +1206,14 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
             "name": "owner",
             "type": "pubkey"
           },
@@ -1053,11 +1227,11 @@
           },
           {
             "name": "nonce",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposal_id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "state",
@@ -1088,10 +1262,6 @@
                 8
               ]
             }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
           }
         ]
       }
@@ -1170,6 +1340,10 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "version",
+            "type": "u8"
+          },
+          {
             "name": "vault",
             "type": "pubkey"
           },
@@ -1187,7 +1361,7 @@
           },
           {
             "name": "nonce",
-            "type": "u8"
+            "type": "u16"
           }
         ]
       }
@@ -1285,6 +1459,11 @@
   ],
   "constants": [
     {
+      "name": "CONDITIONAL_MINT_SEED",
+      "type": "bytes",
+      "value": "[99, 109, 105, 110, 116]"
+    },
+    {
       "name": "MAX_OPTIONS",
       "type": "u8",
       "value": "8"
@@ -1298,6 +1477,11 @@
       "name": "VAULT_SEED",
       "type": "bytes",
       "value": "[118, 97, 117, 108, 116]"
+    },
+    {
+      "name": "VAULT_VERSION",
+      "type": "u8",
+      "value": "1"
     }
   ]
 }

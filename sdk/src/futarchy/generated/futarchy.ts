@@ -14,6 +14,106 @@ export type Futarchy = {
   },
   "instructions": [
     {
+      "name": "addHistoricalProposal",
+      "discriminator": [
+        125,
+        119,
+        66,
+        65,
+        159,
+        52,
+        65,
+        160
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "moderator.id",
+                "account": "moderatorAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "moderator"
+              },
+              {
+                "kind": "account",
+                "path": "moderator.proposal_id_counter",
+                "account": "moderatorAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "numOptions",
+          "type": "u8"
+        },
+        {
+          "name": "winningIdx",
+          "type": "u8"
+        },
+        {
+          "name": "length",
+          "type": "u16"
+        },
+        {
+          "name": "createdAt",
+          "type": "i64"
+        }
+      ],
+      "returns": "u16"
+    },
+    {
       "name": "addOption",
       "discriminator": [
         229,
@@ -33,7 +133,34 @@ export type Futarchy = {
         },
         {
           "name": "proposal",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal.moderator",
+                "account": "proposalAccount"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.id",
+                "account": "proposalAccount"
+              }
+            ]
+          }
         },
         {
           "name": "systemProgram",
@@ -41,7 +168,7 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "ammProgram",
@@ -77,7 +204,34 @@ export type Futarchy = {
         },
         {
           "name": "proposal",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal.moderator",
+                "account": "proposalAccount"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.id",
+                "account": "proposalAccount"
+              }
+            ]
+          }
         },
         {
           "name": "vault",
@@ -85,7 +239,7 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "ammProgram",
@@ -108,7 +262,7 @@ export type Futarchy = {
       ],
       "accounts": [
         {
-          "name": "payer",
+          "name": "signer",
           "writable": true,
           "signer": true
         },
@@ -226,7 +380,33 @@ export type Futarchy = {
         },
         {
           "name": "proposal",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "moderator"
+              },
+              {
+                "kind": "account",
+                "path": "moderator.proposal_id_counter",
+                "account": "moderatorAccount"
+              }
+            ]
+          }
         },
         {
           "name": "systemProgram",
@@ -234,7 +414,7 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "ammProgram",
@@ -266,7 +446,8 @@ export type Futarchy = {
             }
           }
         }
-      ]
+      ],
+      "returns": "u16"
     },
     {
       "name": "launchProposal",
@@ -288,7 +469,34 @@ export type Futarchy = {
         },
         {
           "name": "proposal",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal.moderator",
+                "account": "proposalAccount"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.id",
+                "account": "proposalAccount"
+              }
+            ]
+          }
         },
         {
           "name": "vault",
@@ -300,7 +508,7 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "ammProgram",
@@ -345,7 +553,34 @@ export type Futarchy = {
           "signer": true
         },
         {
-          "name": "proposal"
+          "name": "proposal",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal.moderator",
+                "account": "proposalAccount"
+              },
+              {
+                "kind": "account",
+                "path": "proposal.id",
+                "account": "proposalAccount"
+              }
+            ]
+          }
         },
         {
           "name": "vault",
@@ -357,7 +592,7 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc"
+          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
         },
         {
           "name": "ammProgram",
@@ -560,6 +795,16 @@ export type Futarchy = {
       "code": 6011,
       "name": "counterOverflow",
       "msg": "Counter overflow"
+    },
+    {
+      "code": 6012,
+      "name": "invalidWinningIndex",
+      "msg": "Winning index exceeds number of options"
+    },
+    {
+      "code": 6013,
+      "name": "invalidVersion",
+      "msg": "Invalid account version"
     }
   ],
   "types": [
@@ -568,6 +813,10 @@ export type Futarchy = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
           {
             "name": "moderatorIdCounter",
             "type": "u32"
@@ -582,7 +831,7 @@ export type Futarchy = {
         "fields": [
           {
             "name": "proposalId",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -605,6 +854,14 @@ export type Futarchy = {
         "kind": "struct",
         "fields": [
           {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
             "name": "id",
             "type": "u32"
           },
@@ -618,11 +875,11 @@ export type Futarchy = {
           },
           {
             "name": "proposalIdCounter",
-            "type": "u8"
+            "type": "u16"
           },
           {
-            "name": "bump",
-            "type": "u8"
+            "name": "admin",
+            "type": "pubkey"
           }
         ]
       }
@@ -632,6 +889,10 @@ export type Futarchy = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
           {
             "name": "id",
             "type": "u32"
@@ -647,6 +908,10 @@ export type Futarchy = {
           {
             "name": "quoteMint",
             "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
           }
         ]
       }
@@ -658,7 +923,7 @@ export type Futarchy = {
         "fields": [
           {
             "name": "proposalId",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -667,10 +932,6 @@ export type Futarchy = {
           {
             "name": "optionIndex",
             "type": "u8"
-          },
-          {
-            "name": "pool",
-            "type": "pubkey"
           }
         ]
       }
@@ -681,8 +942,12 @@ export type Futarchy = {
         "kind": "struct",
         "fields": [
           {
-            "name": "creator",
-            "type": "pubkey"
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           },
           {
             "name": "moderator",
@@ -690,7 +955,7 @@ export type Futarchy = {
           },
           {
             "name": "id",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "numOptions",
@@ -734,6 +999,10 @@ export type Futarchy = {
             }
           },
           {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
             "name": "fee",
             "type": "u16"
           },
@@ -744,10 +1013,6 @@ export type Futarchy = {
                 "name": "twapConfig"
               }
             }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
           }
         ]
       }
@@ -759,7 +1024,7 @@ export type Futarchy = {
         "fields": [
           {
             "name": "proposalId",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -778,8 +1043,12 @@ export type Futarchy = {
         "kind": "struct",
         "fields": [
           {
-            "name": "proposalId",
+            "name": "version",
             "type": "u8"
+          },
+          {
+            "name": "proposalId",
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -790,24 +1059,12 @@ export type Futarchy = {
             "type": "pubkey"
           },
           {
-            "name": "creator",
-            "type": "pubkey"
-          },
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "baseMint",
-            "type": "pubkey"
-          },
-          {
-            "name": "quoteMint",
-            "type": "pubkey"
-          },
-          {
             "name": "length",
             "type": "u16"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
           }
         ]
       }
@@ -819,7 +1076,7 @@ export type Futarchy = {
         "fields": [
           {
             "name": "proposalId",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "proposal",
@@ -892,6 +1149,11 @@ export type Futarchy = {
       "value": "[103, 108, 111, 98, 97, 108, 95, 99, 111, 110, 102, 105, 103]"
     },
     {
+      "name": "globalConfigVersion",
+      "type": "u8",
+      "value": "1"
+    },
+    {
       "name": "maxOptions",
       "type": "u8",
       "value": "6"
@@ -907,9 +1169,19 @@ export type Futarchy = {
       "value": "[109, 111, 100, 101, 114, 97, 116, 111, 114]"
     },
     {
+      "name": "moderatorVersion",
+      "type": "u8",
+      "value": "1"
+    },
+    {
       "name": "proposalSeed",
       "type": "bytes",
       "value": "[112, 114, 111, 112, 111, 115, 97, 108]"
+    },
+    {
+      "name": "proposalVersion",
+      "type": "u8",
+      "value": "1"
     }
   ]
 };
