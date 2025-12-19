@@ -37,16 +37,21 @@ pub enum VaultState {
     Finalized(u8), // winning index
 }
 
+#[derive(Copy, Clone, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
+pub struct TokenMint {
+    pub address: Pubkey,
+    pub decimals: u8
+}
+
 #[derive(InitSpace)]
 #[account]
 pub struct VaultAccount {
     pub version: u8,
     pub bump: u8,
     pub owner: Pubkey,      // Vault creator
-    pub base_mint: Pubkey,  // Base mint
-    pub quote_mint: Pubkey, // Quote mint
+    pub base_mint: TokenMint,
+    pub quote_mint: TokenMint,
     pub nonce: u16,         // Unique identifier (e.g. proposal_id)
-    pub proposal_id: u16,
     pub state: VaultState,
 
     // Number of markets (2 <= n <= MAX_OPTIONS)

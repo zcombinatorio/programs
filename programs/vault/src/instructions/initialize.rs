@@ -156,8 +156,14 @@ pub fn initialize_handler(ctx: Context<InitializeVault>, nonce: u16) -> Result<(
 
     vault.version = VAULT_VERSION;
     vault.owner = ctx.accounts.owner.key();
-    vault.base_mint = ctx.accounts.base_mint.key();
-    vault.quote_mint = ctx.accounts.quote_mint.key();
+    vault.base_mint = TokenMint {
+        address: ctx.accounts.base_mint.key(),
+        decimals: ctx.accounts.base_mint.decimals,
+    };
+    vault.quote_mint = TokenMint {
+        address: ctx.accounts.quote_mint.key(),
+        decimals: ctx.accounts.quote_mint.decimals,
+    };
     vault.nonce = nonce;
     vault.num_options = 2; // First 2 options generated atomically
 
@@ -176,8 +182,8 @@ pub fn initialize_handler(ctx: Context<InitializeVault>, nonce: u16) -> Result<(
         version: VAULT_VERSION,
         vault: vault.key(),
         owner: vault.owner,
-        base_mint: vault.base_mint,
-        quote_mint: vault.quote_mint,
+        base_mint: vault.base_mint.address,
+        quote_mint: vault.quote_mint.address,
         nonce,
     });
 

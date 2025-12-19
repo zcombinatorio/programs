@@ -54,19 +54,11 @@ pub struct AddOption<'info> {
     )]
     pub vault: Box<Account<'info, VaultAccount>>,
 
-    // Base mint
-    #[account(address = vault.base_mint)]
-    pub base_mint: Account<'info, Mint>,
-
-    // Quote mint
-    #[account(address = vault.quote_mint)]
-    pub quote_mint: Account<'info, Mint>,
-
     // Conditional base mint
     #[account(
         init,
         payer = payer,
-        mint::decimals = base_mint.decimals,
+        mint::decimals = vault.base_mint.decimals,
         mint::authority = vault,
         seeds = [
             CONDITIONAL_MINT_SEED,
@@ -82,7 +74,7 @@ pub struct AddOption<'info> {
     #[account(
         init,
         payer = payer,
-        mint::decimals = quote_mint.decimals,
+        mint::decimals = vault.quote_mint.decimals,
         mint::authority = vault,
         seeds = [
             CONDITIONAL_MINT_SEED,

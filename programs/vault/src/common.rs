@@ -45,9 +45,9 @@ pub struct UserVaultAction<'info> {
     // Regular Mint (base or quote depending on vault_type)
     #[account(
         constraint = mint.key() == if vault_type == VaultType::Base {
-            vault.base_mint
+            vault.base_mint.address
         } else {
-            vault.quote_mint
+            vault.quote_mint.address
         } @ VaultError::InvalidMint
     )]
     pub mint: Account<'info, Mint>,
