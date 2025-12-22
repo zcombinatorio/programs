@@ -7,7 +7,6 @@ skip-lint = false
 
 [programs.localnet]
 amm = "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
-dao = "DAoYBfZNCCih5i85nvpB3Xkw1YTdJCJ7TDN2o6UVBEZC"
 futarchy = "FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC"
 vault = "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
 
