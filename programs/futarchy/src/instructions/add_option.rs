@@ -4,7 +4,7 @@ use vault::cpi::accounts::AddOption as AddVaultOption;
 
 use crate::constants::*;
 use crate::errors::FutarchyError;
-use crate::state::{ProposalAccount, ProposalState};
+use crate::state::proposal::*;
 use amm::program::Amm;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;

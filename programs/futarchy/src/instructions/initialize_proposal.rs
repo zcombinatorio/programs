@@ -3,9 +3,9 @@ use anchor_lang::prelude::*;
 use vault::VAULT_VERSION;
 use vault::cpi::accounts::InitializeVault;
 
-use crate::constants::*;
+use crate::state::moderator::{ModeratorAccount, MODERATOR_SEED};
+use crate::state::proposal::*;
 use crate::errors::FutarchyError;
-use crate::state::{ModeratorAccount, ProposalAccount, ProposalState, TWAPConfig};
 use amm::program::Amm;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
@@ -30,10 +30,9 @@ pub struct InitializeProposal<'info> {
     pub creator: Signer<'info>,
 
     #[account(
-        mut,
         seeds = [
             MODERATOR_SEED,
-            &moderator.id.to_le_bytes()
+            moderator.name.as_bytes()
         ],
         bump = moderator.bump
     )]
@@ -87,7 +86,7 @@ pub fn initialize_proposal_handler<'info>(
     twap_config: TWAPConfig,
 ) -> Result<u16> {
     require!(
-        ctx.remaining_accounts.len() >= 18,
+        ctx.remaining_accounts.len() == 18,
         FutarchyError::InvalidRemainingAccounts
     );
 

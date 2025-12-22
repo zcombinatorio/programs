@@ -4,6 +4,7 @@ pub mod constants;
 pub mod errors;
 pub mod instructions;
 pub mod state;
+pub mod squads;
 
 pub use constants::*;
 pub use errors::*;
@@ -16,8 +17,8 @@ declare_id!("FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC");
 pub mod futarchy {
     use super::*;
 
-    pub fn initialize_moderator(ctx: Context<InitializeModerator>) -> Result<u32> {
-        instructions::initialize_moderator::initialize_moderator_handler(ctx)
+    pub fn initialize_moderator(ctx: Context<InitializeModerator>, name: String) -> Result<()> {
+        instructions::initialize_moderator::initialize_moderator_handler(ctx, name)
     }
 
     pub fn initialize_proposal<'info>(

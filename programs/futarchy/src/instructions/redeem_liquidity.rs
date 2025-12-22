@@ -7,9 +7,8 @@ use vault::cpi::accounts::UserVaultAction;
 use vault::program::Vault;
 use vault::VaultType;
 
-use crate::constants::*;
 use crate::errors::FutarchyError;
-use crate::state::{ProposalAccount, ProposalState};
+use crate::state::proposal::*;
 
 #[event]
 pub struct LiquidityRedeemed {

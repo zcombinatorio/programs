@@ -43,4 +43,10 @@ pub enum FutarchyError {
 
     #[msg("Invalid account version")]
     InvalidVersion,
+
+    #[msg("Name exceeds 32 bytes")]
+    NameTooLong,
+
+    #[msg("Invalid DAO account")]
+    InvalidDAO,
 }

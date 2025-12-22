@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::constants::*;
-use crate::state::{ModeratorAccount, ProposalAccount, ProposalState};
+use crate::state::proposal::*;
+use crate::state::moderator::*;
 use crate::errors::FutarchyError;
 
 #[derive(Accounts)]
@@ -16,7 +17,7 @@ pub struct AddHistoricalProposal<'info> {
         mut,
         seeds = [
             MODERATOR_SEED,
-            &moderator.id.to_le_bytes()
+            moderator.name.as_bytes()
         ],
         bump = moderator.bump
     )]

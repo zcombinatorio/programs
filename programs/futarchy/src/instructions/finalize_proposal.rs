@@ -5,7 +5,7 @@ use anchor_lang::solana_program::program::get_return_data;
 use vault::cpi::accounts::FinalizeVault;
 use vault::program::Vault;
 
-use crate::constants::*;
+use crate::state::proposal::*;
 use crate::errors::FutarchyError;
 use crate::state::{ProposalAccount, ProposalState};
 
@@ -58,7 +58,7 @@ pub fn finalize_proposal_handler<'info>(
 
     // Validate remaining accounts length (3 accounts per pool: pool, reserve_a, reserve_b)
     require!(
-        ctx.remaining_accounts.len() >= num_options * 3,
+        ctx.remaining_accounts.len() == num_options * 3,
         FutarchyError::InvalidRemainingAccounts
     );
 
