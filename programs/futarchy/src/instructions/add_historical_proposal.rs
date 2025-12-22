@@ -67,7 +67,7 @@ pub fn add_historical_proposal_handler<'info>(
     proposal.base_mint = moderator.base_mint;
     proposal.quote_mint = moderator.quote_mint;
     proposal.creator = ctx.accounts.admin.key();
-    proposal.length = length;
+    proposal.config.length = length;
     proposal.created_at = created_at;
     proposal.bump = ctx.bumps.proposal;
     proposal.num_options = num_options;

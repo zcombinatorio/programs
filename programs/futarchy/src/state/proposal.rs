@@ -1,5 +1,6 @@
 use crate::constants::MAX_OPTIONS;
 use anchor_lang::prelude::*;
+use crate::errors::*;
 
 pub const PROPOSAL_VERSION: u8 = 1;
 
@@ -14,10 +15,30 @@ pub enum ProposalState {
 }
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, Copy)]
-pub struct TWAPConfig {
+pub struct ProposalParams {
+    pub length: u16,                 // In seconds
     pub starting_observation: u128,  // Initial TWAP value
     pub max_observation_delta: u128, // Max change per update
     pub warmup_duration: u32,        // Seconds before TWAP is valid
+    pub market_bias: u16, // "pass-fail" gap. bips required for an option to win over index 0
+    pub fee: u16,                    // AMM protocol fee in bips
+}
+
+impl ProposalParams {
+    pub fn validate(&self) -> Result<()> {
+        // Cap maximum gap at 100%
+        require!(self.market_bias <= 10000, FutarchyError::InvalidProposalParams);
+
+        // Warm-up shouldn't last longer than proposal
+        require!(self.warmup_duration <= self.length as u32, FutarchyError::InvalidProposalParams);
+
+        // Ensure updates can occur
+        require!(self.max_observation_delta > 0, FutarchyError::InvalidProposalParams);
+
+        // Proposals of length 0 are nonsensical
+        require!(self.length > 0, FutarchyError::InvalidProposalParams);
+        Ok(())
+    }
 }
 
 #[account]
@@ -32,7 +53,6 @@ pub struct ProposalAccount {
     pub state: ProposalState,
 
     pub created_at: i64,
-    pub length: u16,     // In seconds
     pub creator: Pubkey, // Should match moderator admin
 
     // References for validation
@@ -41,7 +61,6 @@ pub struct ProposalAccount {
     pub vault: Pubkey,
     pub pools: [Pubkey; MAX_OPTIONS as usize],
 
-    // AMM configuration
-    pub fee: u16,
-    pub twap_config: TWAPConfig,
+    // Configuration
+    pub config: ProposalParams,
 }

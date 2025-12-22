@@ -23,15 +23,11 @@ pub mod futarchy {
 
     pub fn initialize_proposal<'info>(
         ctx: Context<'_, '_, 'info, 'info, InitializeProposal<'info>>,
-        length: u16,
-        fee: u16,
-        twap_config: TWAPConfig,
+        proposal_params: ProposalParams
     ) -> Result<u16> {
         instructions::initialize_proposal::initialize_proposal_handler(
             ctx,
-            length,
-            fee,
-            twap_config,
+            proposal_params
         )
     }
 

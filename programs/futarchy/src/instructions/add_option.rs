@@ -120,10 +120,10 @@ pub fn add_option_handler<'info>(
 
     amm::cpi::create_pool(
         create_pool_ctx,
-        proposal.fee,
-        proposal.twap_config.starting_observation,
-        proposal.twap_config.max_observation_delta,
-        proposal.twap_config.warmup_duration,
+        proposal.config.fee,
+        proposal.config.starting_observation,
+        proposal.config.max_observation_delta,
+        proposal.config.warmup_duration,
         Some(ctx.accounts.creator.key()),
     )?;
 

@@ -64,7 +64,7 @@ pub fn finalize_proposal_handler<'info>(
 
     // Check that proposal time has elapsed
     let clock = Clock::get()?;
-    let end_time = proposal.created_at + proposal.length as i64;
+    let end_time = proposal.created_at + proposal.config.length as i64;
     require!(
         clock.unix_timestamp >= end_time,
         FutarchyError::ProposalNotExpired
@@ -104,12 +104,23 @@ pub fn finalize_proposal_handler<'info>(
     }
 
     // Find index with highest TWAP
-    let winning_idx = twaps
+    let max_twap_idx = twaps
         .iter()
         .enumerate()
         .max_by_key(|(_, &twap)| twap)
         .map(|(idx, _)| idx as u8)
         .unwrap_or(0);
+
+    // Decide winning index based on market bias (in bips)
+    // To win, max_twap * 10000 must be > twaps[0] * (10000 + market_bias)
+    let basis_points: u128 = 10000;
+    let threshold = twaps[0]
+        .checked_mul(basis_points + proposal.config.market_bias as u128)
+        .ok_or(FutarchyError::MathOverflow)?;
+    let max_twap_scaled = twaps[max_twap_idx as usize]
+        .checked_mul(basis_points)
+        .ok_or(FutarchyError::MathOverflow)?;
+    let winning_idx = if max_twap_scaled > threshold { max_twap_idx } else { 0 };
 
     // Build proposal PDA signer seeds
     let moderator_key = proposal.moderator;

@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use vault::VAULT_VERSION;
 use vault::cpi::accounts::InitializeVault;
 
+use crate::proposal;
 use crate::state::moderator::{ModeratorAccount, MODERATOR_SEED};
 use crate::state::proposal::*;
 use crate::errors::FutarchyError;
@@ -81,14 +82,14 @@ pub struct InitializeProposal<'info> {
 
 pub fn initialize_proposal_handler<'info>(
     ctx: Context<'_, '_, 'info, 'info, InitializeProposal<'info>>,
-    length: u16,
-    fee: u16, // AMM Fee
-    twap_config: TWAPConfig,
+    proposal_params: ProposalParams
 ) -> Result<u16> {
     require!(
         ctx.remaining_accounts.len() == 18,
         FutarchyError::InvalidRemainingAccounts
     );
+
+    proposal_params.validate()?;
 
     // Validate mints match moderator
     let moderator = &mut ctx.accounts.moderator;
@@ -114,10 +115,8 @@ pub fn initialize_proposal_handler<'info>(
     proposal.moderator = moderator.key();
     proposal.base_mint = moderator.base_mint;
     proposal.quote_mint = moderator.quote_mint;
-    proposal.length = length;
     proposal.bump = ctx.bumps.proposal;
-    proposal.fee = fee;
-    proposal.twap_config = twap_config;
+    proposal.config = proposal_params;
     proposal.num_options = 2;
     proposal.state = ProposalState::Setup;
     proposal.pools[0] = ctx.remaining_accounts[9].key();
@@ -178,10 +177,10 @@ pub fn initialize_proposal_handler<'info>(
 
     amm::cpi::create_pool(
         create_pool_0_ctx,
-        fee,
-        twap_config.starting_observation,
-        twap_config.max_observation_delta,
-        twap_config.warmup_duration,
+        proposal.config.fee,
+        proposal.config.starting_observation,
+        proposal.config.max_observation_delta,
+        proposal.config.warmup_duration,
         Some(ctx.accounts.creator.key())
     )?;
 
@@ -205,10 +204,10 @@ pub fn initialize_proposal_handler<'info>(
 
     amm::cpi::create_pool(
         create_pool_1_ctx,
-        fee,
-        twap_config.starting_observation,
-        twap_config.max_observation_delta,
-        twap_config.warmup_duration,
+        proposal.config.fee,
+        proposal.config.starting_observation,
+        proposal.config.max_observation_delta,
+        proposal.config.warmup_duration,
         Some(ctx.accounts.creator.key())
     )?;
 
@@ -218,7 +217,7 @@ pub fn initialize_proposal_handler<'info>(
         proposal: proposal.key(),
         moderator: moderator.key(),
         creator: proposal.creator,
-        length
+        length: proposal.config.length
     });
 
     Ok(proposal_id)

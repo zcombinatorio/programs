@@ -49,4 +49,10 @@ pub enum FutarchyError {
 
     #[msg("Invalid DAO account")]
     InvalidDAO,
+
+    #[msg("Math overflow")]
+    MathOverflow,
+
+    #[msg("Invalid proposal parameters")]
+    InvalidProposalParams,
 }
