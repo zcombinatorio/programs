@@ -56,7 +56,7 @@ pub struct InitializeChildDAO<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn initialize_parent_dao_handler(
+pub fn initialize_child_dao_handler(
     ctx: Context<InitializeChildDAO>,
     name: String,
     treasury_cosigner: Pubkey,

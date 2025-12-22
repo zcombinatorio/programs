@@ -74,4 +74,40 @@ pub mod futarchy {
             created_at,
         )
     }
+
+    pub fn initialize_parent_dao(
+        ctx: Context<InitializeParentDAO>,
+        name: String,
+        treasury_cosigner: Pubkey,
+        pool: Pubkey,
+        pool_type: PoolType,
+    ) -> Result<()> {
+        instructions::initialize_parent_dao::initialize_parent_dao_handler(
+            ctx,
+            name,
+            treasury_cosigner,
+            pool,
+            pool_type,
+        )
+    }
+
+    pub fn initialize_child_dao(
+        ctx: Context<InitializeChildDAO>,
+        name: String,
+        treasury_cosigner: Pubkey,
+    ) -> Result<()> {
+        instructions::initialize_child_dao::initialize_child_dao_handler(
+            ctx,
+            name,
+            treasury_cosigner,
+        )
+    }
+
+    pub fn upgrade_dao(
+        ctx: Context<UpgradeDAO>,
+        pool: Pubkey,
+        pool_type: PoolType,
+    ) -> Result<()> {
+        instructions::upgrade_dao::upgrade_dao_handler(ctx, pool, pool_type)
+    }
 }
