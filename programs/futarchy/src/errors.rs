@@ -47,6 +47,9 @@ pub enum FutarchyError {
     #[msg("Name exceeds 32 bytes")]
     NameTooLong,
 
+    #[msg("Metadata CID exceeds 64 bytes")]
+    MetadataTooLong,
+
     #[msg("Invalid DAO account")]
     InvalidDAO,
 

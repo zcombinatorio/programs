@@ -81,12 +81,17 @@ pub struct InitializeProposal<'info> {
 
 pub fn initialize_proposal_handler<'info>(
     ctx: Context<'_, '_, 'info, 'info, InitializeProposal<'info>>,
-    proposal_params: ProposalParams
+    proposal_params: ProposalParams,
+    metadata: Option<String>,
 ) -> Result<u16> {
     require!(
         ctx.remaining_accounts.len() == 18,
         FutarchyError::InvalidRemainingAccounts
     );
+
+    if let Some(m) = &metadata {
+        require!(m.len() <= 64, FutarchyError::MetadataTooLong);
+    }
 
     proposal_params.validate()?;
 
@@ -122,6 +127,7 @@ pub fn initialize_proposal_handler<'info>(
     proposal.pools[1] = ctx.remaining_accounts[14].key();
     // pools[2..] already default/zeroed
     proposal.vault = ctx.remaining_accounts[2].key();
+    proposal.metadata = metadata;
 
     // Build proposal PDA signer seeds
     let proposal_seeds = &[

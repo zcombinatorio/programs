@@ -63,4 +63,7 @@ pub struct ProposalAccount {
 
     // Configuration
     pub config: ProposalParams,
+
+    #[max_len(64)] // Should cover v0 & most of v1
+    pub metadata: Option<String>, // IPFS CID
 }

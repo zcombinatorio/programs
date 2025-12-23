@@ -23,11 +23,13 @@ pub mod futarchy {
 
     pub fn initialize_proposal<'info>(
         ctx: Context<'_, '_, 'info, 'info, InitializeProposal<'info>>,
-        proposal_params: ProposalParams
+        proposal_params: ProposalParams,
+        metadata: Option<String>,
     ) -> Result<u16> {
         instructions::initialize_proposal::initialize_proposal_handler(
             ctx,
-            proposal_params
+            proposal_params,
+            metadata
         )
     }
 
