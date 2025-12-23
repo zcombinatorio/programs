@@ -41,9 +41,6 @@ pub struct DAOAccount {
     pub treasury_multisig: Pubkey,
     pub mint_auth_multisig: Pubkey,
     pub dao_type: DAOType,
-
-    #[max_len(32)] // Initially just admin
-    pub white_list: Vec<Pubkey>
 }
 
 impl DAOAccount {

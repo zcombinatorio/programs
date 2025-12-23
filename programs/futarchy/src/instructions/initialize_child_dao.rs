@@ -106,8 +106,7 @@ pub fn initialize_child_dao_handler(
         cosigner: treasury_cosigner,
         treasury_multisig: ctx.accounts.treasury_multisig.key(),
         mint_auth_multisig: ctx.accounts.mint_multisig.key(),
-        dao_type,
-        white_list: vec![ctx.accounts.admin.key()]
+        dao_type
     });
 
     emit!(DAOInitialized {
