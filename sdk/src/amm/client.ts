@@ -1,5 +1,16 @@
+/*
+ * High-level client for the AMM program.
+ * Provides ergonomic methods for pool operations with automatic PDA derivation,
+ * native SOL wrapping/unwrapping, and compute budget management.
+ */
+
 import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
-import { PublicKey, ComputeBudgetProgram, SystemProgram } from "@solana/web3.js";
+import {
+  PublicKey,
+  ComputeBudgetProgram,
+  SystemProgram,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import {
   getAccount,
   getAssociatedTokenAddressSync,
@@ -9,8 +20,8 @@ import {
   createCloseAccountInstruction,
   createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
-import { PROGRAM_ID, FEE_AUTHORITY } from "./constants";
-import { Amm, PoolAccount, SwapQuote } from "./types";
+import { PROGRAM_ID } from "./constants";
+import { Amm, PoolAccount, SwapQuote, AmmActionOptions } from "./types";
 import {
   derivePoolPDA,
   deriveReservePDA,
@@ -21,30 +32,34 @@ import {
   calculateTwap,
 } from "./utils";
 import {
-  createPool,
-  addLiquidity,
-  removeLiquidity,
-  swap,
-  crankTwap,
-  ceaseTrading,
+  createPool as createPoolIx,
+  addLiquidity as addLiquidityIx,
+  removeLiquidity as removeLiquidityIx,
+  swap as swapIx,
+  crankTwap as crankTwapIx,
+  ceaseTrading as ceaseTradingIx,
 } from "./instructions";
 
 import { AmmIDL } from "../generated/idls";
 
-const MAX_COMPUTE_UNITS = 300_000;
+const DEFAULT_COMPUTE_UNITS = 300_000;
 
 export class AMMClient {
   public program: Program<Amm>;
   public programId: PublicKey;
+  public computeUnits: number;
 
-  constructor(provider: AnchorProvider, programId?: PublicKey) {
+  constructor(
+    provider: AnchorProvider,
+    programId?: PublicKey,
+    computeUnits?: number
+  ) {
     this.programId = programId ?? PROGRAM_ID;
+    this.computeUnits = computeUnits ?? DEFAULT_COMPUTE_UNITS;
     this.program = new Program(AmmIDL as Amm, provider);
   }
 
-  // ===========================================================================
-  // PDA Helpers
-  // ===========================================================================
+  /* PDA Helpers */
 
   derivePoolPDA(
     admin: PublicKey,
@@ -62,9 +77,7 @@ export class AMMClient {
     return deriveFeeVaultPDA(pool, this.programId);
   }
 
-  // ===========================================================================
-  // Fetch Methods
-  // ===========================================================================
+  /* State Fetching */
 
   async fetchPool(poolPda: PublicKey): Promise<PoolAccount> {
     return fetchPoolAccount(this.program, poolPda);
@@ -109,9 +122,7 @@ export class AMMClient {
     return calculateTwap(pool.oracle);
   }
 
-  // ===========================================================================
-  // Quote
-  // ===========================================================================
+  /* Quote */
 
   async quote(
     poolPda: PublicKey,
@@ -138,13 +149,12 @@ export class AMMClient {
       pool.fee,
       decimalsIn,
       decimalsOut,
+      swapAToB,
       slippagePercent,
     );
   }
 
-  // ===========================================================================
-  // Instruction Builders
-  // ===========================================================================
+  /* Instruction Builders */
 
   createPool(
     payer: PublicKey,
@@ -162,7 +172,7 @@ export class AMMClient {
     const [reserveB] = this.deriveReservePDA(poolPda, mintB);
     const [feeVault] = this.deriveFeeVaultPDA(poolPda);
 
-    const builder = createPool(
+    const builder = createPoolIx(
       this.program,
       payer,
       admin,
@@ -192,15 +202,64 @@ export class AMMClient {
     depositor: PublicKey,
     poolPda: PublicKey,
     amountA: BN | number,
-    amountB: BN | number
+    amountB: BN | number,
+    options?: AmmActionOptions
   ) {
+    const { autoWrapUnwrap = true, includeCuBudget = true, computeUnits } = options ?? {};
+
     const pool = await this.fetchPool(poolPda);
     const [reserveA] = this.deriveReservePDA(poolPda, pool.mintA);
     const [reserveB] = this.deriveReservePDA(poolPda, pool.mintB);
     const depositorTokenAccA = getAssociatedTokenAddressSync(pool.mintA, depositor);
     const depositorTokenAccB = getAssociatedTokenAddressSync(pool.mintB, depositor);
 
-    return addLiquidity(
+    const preIxs: TransactionInstruction[] = [];
+
+    if (includeCuBudget) {
+      preIxs.push(
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: computeUnits ?? this.computeUnits,
+        })
+      );
+    }
+
+    if (autoWrapUnwrap && pool.mintA.equals(NATIVE_MINT)) {
+      const amountABN = typeof amountA === "number" ? new BN(amountA) : amountA;
+      preIxs.push(
+        createAssociatedTokenAccountIdempotentInstruction(
+          depositor,
+          depositorTokenAccA,
+          depositor,
+          pool.mintA
+        ),
+        SystemProgram.transfer({
+          fromPubkey: depositor,
+          toPubkey: depositorTokenAccA,
+          lamports: BigInt(amountABN.toString()),
+        }),
+        createSyncNativeInstruction(depositorTokenAccA)
+      );
+    }
+
+    if (autoWrapUnwrap && pool.mintB.equals(NATIVE_MINT)) {
+      const amountBBN = typeof amountB === "number" ? new BN(amountB) : amountB;
+      preIxs.push(
+        createAssociatedTokenAccountIdempotentInstruction(
+          depositor,
+          depositorTokenAccB,
+          depositor,
+          pool.mintB
+        ),
+        SystemProgram.transfer({
+          fromPubkey: depositor,
+          toPubkey: depositorTokenAccB,
+          lamports: BigInt(amountBBN.toString()),
+        }),
+        createSyncNativeInstruction(depositorTokenAccB)
+      );
+    }
+
+    let builder = addLiquidityIx(
       this.program,
       depositor,
       poolPda,
@@ -211,21 +270,26 @@ export class AMMClient {
       amountA,
       amountB
     );
+
+    return preIxs.length > 0 ? builder.preInstructions(preIxs) : builder;
   }
 
   async removeLiquidity(
     depositor: PublicKey,
     poolPda: PublicKey,
     amountA: BN | number,
-    amountB: BN | number
+    amountB: BN | number,
+    options?: AmmActionOptions
   ) {
+    const { autoWrapUnwrap = true, includeCuBudget = true, computeUnits } = options ?? {};
+
     const pool = await this.fetchPool(poolPda);
     const [reserveA] = this.deriveReservePDA(poolPda, pool.mintA);
     const [reserveB] = this.deriveReservePDA(poolPda, pool.mintB);
     const depositorTokenAccA = getAssociatedTokenAddressSync(pool.mintA, depositor);
     const depositorTokenAccB = getAssociatedTokenAddressSync(pool.mintB, depositor);
 
-    return removeLiquidity(
+    let builder = removeLiquidityIx(
       this.program,
       depositor,
       poolPda,
@@ -236,6 +300,26 @@ export class AMMClient {
       amountA,
       amountB
     );
+
+    if (includeCuBudget) {
+      builder = builder.preInstructions([
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: computeUnits ?? this.computeUnits,
+        }),
+      ]);
+    }
+
+    const postIxs: TransactionInstruction[] = [];
+
+    if (autoWrapUnwrap && pool.mintA.equals(NATIVE_MINT)) {
+      postIxs.push(createCloseAccountInstruction(depositorTokenAccA, depositor, depositor));
+    }
+
+    if (autoWrapUnwrap && pool.mintB.equals(NATIVE_MINT)) {
+      postIxs.push(createCloseAccountInstruction(depositorTokenAccB, depositor, depositor));
+    }
+
+    return postIxs.length > 0 ? builder.postInstructions(postIxs) : builder;
   }
 
   async swap(
@@ -243,8 +327,11 @@ export class AMMClient {
     poolPda: PublicKey,
     swapAToB: boolean,
     inputAmount: BN | number,
-    minOutputAmount: BN | number
+    minOutputAmount: BN | number,
+    options?: AmmActionOptions
   ) {
+    const { autoWrapUnwrap = true, includeCuBudget = true, computeUnits } = options ?? {};
+
     const pool = await this.fetchPool(poolPda);
     const [reserveA] = this.deriveReservePDA(poolPda, pool.mintA);
     const [reserveB] = this.deriveReservePDA(poolPda, pool.mintB);
@@ -252,7 +339,59 @@ export class AMMClient {
     const traderAccountA = getAssociatedTokenAddressSync(pool.mintA, trader);
     const traderAccountB = getAssociatedTokenAddressSync(pool.mintB, trader);
 
-    return swap(
+    const preIxs: TransactionInstruction[] = [];
+    const postIxs: TransactionInstruction[] = [];
+
+    if (includeCuBudget) {
+      preIxs.push(
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: computeUnits ?? this.computeUnits,
+        })
+      );
+    }
+
+    const inputMint = swapAToB ? pool.mintA : pool.mintB;
+    const outputMint = swapAToB ? pool.mintB : pool.mintA;
+    const inputAta = swapAToB ? traderAccountA : traderAccountB;
+    const outputAta = swapAToB ? traderAccountB : traderAccountA;
+
+    if (autoWrapUnwrap) {
+      // Create ATAs idempotently
+      preIxs.push(
+        createAssociatedTokenAccountIdempotentInstruction(
+          trader,
+          traderAccountA,
+          trader,
+          pool.mintA
+        ),
+        createAssociatedTokenAccountIdempotentInstruction(
+          trader,
+          traderAccountB,
+          trader,
+          pool.mintB
+        )
+      );
+
+      // Wrap input SOL if needed
+      if (inputMint.equals(NATIVE_MINT)) {
+        const input = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
+        preIxs.push(
+          SystemProgram.transfer({
+            fromPubkey: trader,
+            toPubkey: inputAta,
+            lamports: BigInt(input.toString()),
+          }),
+          createSyncNativeInstruction(inputAta)
+        );
+      }
+
+      // Unwrap output SOL if needed
+      if (outputMint.equals(NATIVE_MINT)) {
+        postIxs.push(createCloseAccountInstruction(outputAta, trader, trader));
+      }
+    }
+
+    let builder = swapIx(
       this.program,
       trader,
       poolPda,
@@ -265,6 +404,15 @@ export class AMMClient {
       inputAmount,
       minOutputAmount
     );
+
+    if (preIxs.length > 0) {
+      builder = builder.preInstructions(preIxs);
+    }
+    if (postIxs.length > 0) {
+      builder = builder.postInstructions(postIxs);
+    }
+
+    return builder;
   }
 
   async crankTwap(poolPda: PublicKey) {
@@ -272,32 +420,33 @@ export class AMMClient {
     const [reserveA] = this.deriveReservePDA(poolPda, pool.mintA);
     const [reserveB] = this.deriveReservePDA(poolPda, pool.mintB);
 
-    return crankTwap(this.program, poolPda, reserveA, reserveB);
+    return crankTwapIx(this.program, poolPda, reserveA, reserveB);
   }
 
   ceaseTrading(admin: PublicKey, poolPda: PublicKey) {
-    return ceaseTrading(this.program, admin, poolPda);
+    return ceaseTradingIx(this.program, admin, poolPda);
   }
 
-  // ===========================================================================
-  // High-Level Swap with Slippage
-  // ===========================================================================
+  /* High-Level Swap with Slippage */
 
   /**
    * High-level swap function that:
    * - Fetches current reserves and computes quote
    * - Calculates minOutput based on slippage tolerance
-   * - Adds compute budget instruction
-   * - Creates token accounts if they don't exist
-   * - Handles WSOL wrapping/unwrapping if needed
+   * - Adds compute budget instruction (if includeCuBudget is true)
+   * - Creates token accounts if they don't exist (if autoWrapUnwrap is true)
+   * - Handles WSOL wrapping/unwrapping if needed (if autoWrapUnwrap is true)
    */
   async swapWithSlippage(
     trader: PublicKey,
     poolPda: PublicKey,
     swapAToB: boolean,
     inputAmount: BN | number,
-    slippagePercent: number = 0.5
+    slippagePercent: number = 0.5,
+    options?: AmmActionOptions
   ) {
+    const { autoWrapUnwrap = true, includeCuBudget = true, computeUnits } = options ?? {};
+
     const pool = await this.fetchPool(poolPda);
     const input = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
 
@@ -312,7 +461,7 @@ export class AMMClient {
     const traderAccountB = getAssociatedTokenAddressSync(pool.mintB, trader);
 
     // Build base swap instruction
-    const builder = swap(
+    let builder = swapIx(
       this.program,
       trader,
       poolPda,
@@ -326,24 +475,33 @@ export class AMMClient {
       quoteResult.minOutputAmount
     );
 
-    // Pre-instructions: compute budget + token account creation
-    const preIxs = [
-      ComputeBudgetProgram.setComputeUnitLimit({ units: MAX_COMPUTE_UNITS }),
-      createAssociatedTokenAccountIdempotentInstruction(
-        trader,
-        traderAccountA,
-        trader,
-        pool.mintA
-      ),
-      createAssociatedTokenAccountIdempotentInstruction(
-        trader,
-        traderAccountB,
-        trader,
-        pool.mintB
-      ),
-    ];
+    const preIxs: TransactionInstruction[] = [];
+    const postIxs: TransactionInstruction[] = [];
 
-    const postIxs: any[] = [];
+    if (includeCuBudget) {
+      preIxs.push(
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: computeUnits ?? this.computeUnits,
+        })
+      );
+    }
+
+    if (autoWrapUnwrap) {
+      preIxs.push(
+        createAssociatedTokenAccountIdempotentInstruction(
+          trader,
+          traderAccountA,
+          trader,
+          pool.mintA
+        ),
+        createAssociatedTokenAccountIdempotentInstruction(
+          trader,
+          traderAccountB,
+          trader,
+          pool.mintB
+        )
+      );
+    }
 
     // Handle WSOL for input/output tokens
     const inputMint = swapAToB ? pool.mintA : pool.mintB;
@@ -351,7 +509,7 @@ export class AMMClient {
     const inputAta = swapAToB ? traderAccountA : traderAccountB;
     const outputAta = swapAToB ? traderAccountB : traderAccountA;
 
-    if (inputMint.equals(NATIVE_MINT)) {
+    if (autoWrapUnwrap && inputMint.equals(NATIVE_MINT)) {
       // Wrap SOL before swap
       preIxs.push(
         SystemProgram.transfer({
@@ -363,18 +521,20 @@ export class AMMClient {
       );
     }
 
-    if (outputMint.equals(NATIVE_MINT)) {
+    if (autoWrapUnwrap && outputMint.equals(NATIVE_MINT)) {
       // Unwrap SOL after swap
       postIxs.push(createCloseAccountInstruction(outputAta, trader, trader));
     }
 
-    let result = builder.preInstructions(preIxs);
+    if (preIxs.length > 0) {
+      builder = builder.preInstructions(preIxs);
+    }
     if (postIxs.length > 0) {
-      result = result.postInstructions(postIxs);
+      builder = builder.postInstructions(postIxs);
     }
 
     return {
-      builder: result,
+      builder,
       quote: quoteResult,
     };
   }

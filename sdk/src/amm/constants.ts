@@ -1,11 +1,31 @@
+/*
+ * Constants for the AMM program.
+ * Parsed from the generated IDL to stay in sync with the Rust program.
+ */
+
 import { PublicKey } from "@solana/web3.js";
+import { AmmIDL } from "../generated/idls";
+import { parseIdlBytes, getIdlConstant } from "../utils";
 
-export const PROGRAM_ID = new PublicKey("AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC");
-export const FEE_AUTHORITY = new PublicKey("FEEnkcCNE2623LYCPtLf63LFzXpCFigBLTu4qZovRGZC");
+/* Program ID */
 
-export const POOL_SEED = Buffer.from("pool");
-export const RESERVE_SEED = Buffer.from("reserve");
-export const FEE_VAULT_SEED = Buffer.from("fee_vault");
+export const PROGRAM_ID = new PublicKey(AmmIDL.address);
 
-export const MAX_FEE = 5000; // 50% in basis points
-export const PRICE_SCALE = 1_000_000_000_000n; // 1e12
+/* Authorities */
+
+export const FEE_AUTHORITY = new PublicKey(getIdlConstant(AmmIDL, "FEE_AUTHORITY"));
+
+/* PDA Seeds */
+
+export const POOL_SEED = parseIdlBytes(getIdlConstant(AmmIDL, "POOL_SEED"));
+export const RESERVE_SEED = parseIdlBytes(getIdlConstant(AmmIDL, "RESERVE_SEED"));
+export const FEE_VAULT_SEED = parseIdlBytes(getIdlConstant(AmmIDL, "FEE_VAULT_SEED"));
+
+/* Numeric Constants */
+
+export const MAX_FEE = Number(getIdlConstant(AmmIDL, "MAX_FEE"));
+export const AMM_VERSION = Number(getIdlConstant(AmmIDL, "AMM_VERSION"));
+
+/* Price Constants (not in IDL - internal to Rust) */
+
+export const PRICE_SCALE = 1_000_000_000_000n;

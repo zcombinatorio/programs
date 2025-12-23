@@ -7,8 +7,16 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "prepublish": "npm run build"
+    "prepublishOnly": "npm run clean && npm run build"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zcombinatorio/programs.git",
+    "directory": "programs/sdk"
+  },
+  "keywords": ["solana", "sdk", "anchor", "vault", "amm", "futarchy"],
+  "files": ["dist", "src", "README.md"],
+  "license": "AGPL-3.0",
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/spl-token": "^0.4.14",
@@ -16,10 +24,5 @@
   },
   "devDependencies": {
     "typescript": "^5.0.0"
-  },
-  "files": [
-    "dist",
-    "src"
-  ],
-  "license": "AGPL-3.0"
+  }
 }

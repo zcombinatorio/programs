@@ -1,11 +1,14 @@
+/*
+ * Utility functions for the AMM program.
+ * PDA derivation, state parsing, price calculations, and account fetching.
+ */
+
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { POOL_SEED, RESERVE_SEED, FEE_VAULT_SEED, PROGRAM_ID, PRICE_SCALE } from "./constants";
 import { Amm, PoolState, PoolAccount, TwapOracle, SwapQuote } from "./types";
 
-// =============================================================================
-// PDA Derivation
-// =============================================================================
+/* PDA Derivation */
 
 export function derivePoolPDA(
   admin: PublicKey,
@@ -40,9 +43,7 @@ export function deriveFeeVaultPDA(
   );
 }
 
-// =============================================================================
-// Parsers
-// =============================================================================
+/* Parsers */
 
 export function parsePoolState(state: any): PoolState {
   if ("trading" in state) return PoolState.Trading;
@@ -50,9 +51,7 @@ export function parsePoolState(state: any): PoolState {
   throw new Error("Unknown pool state");
 }
 
-// =============================================================================
-// Fetch
-// =============================================================================
+/* Fetch */
 
 export async function fetchPoolAccount(
   program: Program<Amm>,
@@ -61,9 +60,7 @@ export async function fetchPoolAccount(
   return program.account.poolAccount.fetch(poolPda);
 }
 
-// =============================================================================
-// Math Utilities
-// =============================================================================
+/* Math Utilities */
 
 const PRICE_SCALE_BN = new BN(PRICE_SCALE.toString());
 
@@ -87,13 +84,17 @@ export function calculateSpotPrice(
 }
 
 /**
- * Compute swap output using constant product formula with fees
+ * Compute swap output using constant product formula.
+ * Fee is ALWAYS collected in token A:
+ * - A -> B: fee on input (before swap)
+ * - B -> A: fee on output (after swap)
  */
 export function computeSwapOutput(
   inputAmount: BN | number,
   reserveIn: BN,
   reserveOut: BN,
-  feeBps: number
+  feeBps: number,
+  swapAToB: boolean
 ): { outputAmount: BN; feeAmount: BN } {
   const input = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
 
@@ -101,27 +102,44 @@ export function computeSwapOutput(
     return { outputAmount: new BN(0), feeAmount: new BN(0) };
   }
 
-  // Fee is collected from input token
-  const feeAmount = input.mul(new BN(feeBps)).div(new BN(10000));
-  const inputAfterFee = input.sub(feeAmount);
+  if (swapAToB) {
+    // A -> B: fee on input (token A)
+    const feeAmount = input.mul(new BN(feeBps)).div(new BN(10000));
+    const inputAfterFee = input.sub(feeAmount);
 
-  // Constant product: (reserveIn + inputAfterFee) * (reserveOut - output) = reserveIn * reserveOut
-  // output = reserveOut * inputAfterFee / (reserveIn + inputAfterFee)
-  const numerator = reserveOut.mul(inputAfterFee);
-  const denominator = reserveIn.add(inputAfterFee);
-  const outputAmount = numerator.div(denominator);
+    // Constant product: output = reserveOut * inputAfterFee / (reserveIn + inputAfterFee)
+    const numerator = reserveOut.mul(inputAfterFee);
+    const denominator = reserveIn.add(inputAfterFee);
+    const outputAmount = numerator.div(denominator);
 
-  return { outputAmount, feeAmount };
+    return { outputAmount, feeAmount };
+  } else {
+    // B -> A: fee on output (token A)
+    // First compute gross output without fee
+    const numerator = reserveOut.mul(input);
+    const denominator = reserveIn.add(input);
+    const grossOutput = numerator.div(denominator);
+
+    // Then deduct fee from output
+    const feeAmount = grossOutput.mul(new BN(feeBps)).div(new BN(10000));
+    const outputAmount = grossOutput.sub(feeAmount);
+
+    return { outputAmount, feeAmount };
+  }
 }
 
 /**
- * Compute swap input needed to get a specific output
+ * Compute swap input needed to get a specific output.
+ * Fee is ALWAYS collected in token A:
+ * - A -> B: fee on input
+ * - B -> A: fee on output
  */
 export function computeSwapInput(
   outputAmount: BN | number,
   reserveIn: BN,
   reserveOut: BN,
-  feeBps: number
+  feeBps: number,
+  swapAToB: boolean
 ): { inputAmount: BN; feeAmount: BN } {
   const output = typeof outputAmount === "number" ? new BN(outputAmount) : outputAmount;
 
@@ -129,16 +147,39 @@ export function computeSwapInput(
     return { inputAmount: new BN(0), feeAmount: new BN(0) };
   }
 
-  // inputAfterFee = reserveIn * output / (reserveOut - output)
-  const numerator = reserveIn.mul(output);
-  const denominator = reserveOut.sub(output);
-  const inputAfterFee = numerator.div(denominator).add(new BN(1)); // Round up
+  if (swapAToB) {
+    // A -> B: fee on input
+    // We need: output = (reserveOut * inputAfterFee) / (reserveIn + inputAfterFee)
+    // Solve for inputAfterFee: inputAfterFee = (reserveIn * output) / (reserveOut - output)
+    const numerator = reserveIn.mul(output);
+    const denominator = reserveOut.sub(output);
+    const inputAfterFee = numerator.div(denominator).add(new BN(1)); // Round up
 
-  // inputAmount = inputAfterFee * 10000 / (10000 - feeBps)
-  const inputAmount = inputAfterFee.mul(new BN(10000)).div(new BN(10000 - feeBps)).add(new BN(1));
-  const feeAmount = inputAmount.mul(new BN(feeBps)).div(new BN(10000));
+    // inputAmount = inputAfterFee * 10000 / (10000 - feeBps)
+    const inputAmount = inputAfterFee.mul(new BN(10000)).div(new BN(10000 - feeBps)).add(new BN(1));
+    const feeAmount = inputAmount.sub(inputAfterFee);
 
-  return { inputAmount, feeAmount };
+    return { inputAmount, feeAmount };
+  } else {
+    // B -> A: fee on output
+    // User wants `output` after fee, so grossOutput = output * 10000 / (10000 - feeBps)
+    const grossOutput = output.mul(new BN(10000)).div(new BN(10000 - feeBps)).add(new BN(1));
+    const feeAmount = grossOutput.sub(output);
+
+    // Now compute input needed for grossOutput
+    // grossOutput = (reserveOut * input) / (reserveIn + input)
+    // input = (reserveIn * grossOutput) / (reserveOut - grossOutput)
+    const numerator = reserveIn.mul(grossOutput);
+    const denominator = reserveOut.sub(grossOutput);
+
+    if (denominator.lte(new BN(0))) {
+      return { inputAmount: new BN(0), feeAmount: new BN(0) };
+    }
+
+    const inputAmount = numerator.div(denominator).add(new BN(1)); // Round up
+
+    return { inputAmount, feeAmount };
+  }
 }
 
 export function calculatePriceImpact(
@@ -169,11 +210,12 @@ export function createSwapQuote(
   feeBps: number,
   decimalsIn: number,
   decimalsOut: number,
+  swapAToB: boolean,
   slippagePercent: number = 0.5,
 ): SwapQuote {
   const input = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
 
-  const { outputAmount, feeAmount } = computeSwapOutput(input, reserveIn, reserveOut, feeBps);
+  const { outputAmount, feeAmount } = computeSwapOutput(input, reserveIn, reserveOut, feeBps, swapAToB);
 
   const slippageBps = Math.floor(slippagePercent * 100);
   const minOutputAmount = outputAmount.mul(new BN(10000 - slippageBps)).div(new BN(10000));
@@ -196,9 +238,7 @@ export function createSwapQuote(
   };
 }
 
-// =============================================================================
-// TWAP Utilities
-// =============================================================================
+/* TWAP Utilities */
 
 export function calculateTwap(oracle: TwapOracle): BN | null {
   const warmupEnd = oracle.createdAtUnixTime.add(new BN(oracle.warmupDuration));

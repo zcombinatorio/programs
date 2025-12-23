@@ -1,10 +1,13 @@
+/*
+ * Low-level instruction builders for the AMM program.
+ * These are thin wrappers around the program methods - use AMMClient for higher-level operations.
+ */
+
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { Amm } from "./types";
 
-// =============================================================================
-// Instruction Builders
-// =============================================================================
+/* Instruction Builders */
 
 export function createPool(
   program: Program<Amm>,
