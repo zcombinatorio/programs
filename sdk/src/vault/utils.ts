@@ -1,11 +1,14 @@
+/*
+ * Utility functions for the Vault program.
+ * PDA derivation, state parsing, and account fetching.
+ */
+
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { VAULT_SEED, CONDITIONAL_MINT_SEED, PROGRAM_ID } from "./constants";
 import { Vault, VaultType, VaultState, VaultAccount } from "./types";
 
-// =============================================================================
-// PDA Derivation
-// =============================================================================
+/* PDA Derivation */
 
 export function deriveVaultPDA(
   owner: PublicKey,
@@ -41,9 +44,7 @@ export function deriveConditionalMint(
   );
 }
 
-// =============================================================================
-// Parsers
-// =============================================================================
+/* Parsers */
 
 export function parseVaultState(state: any): { state: VaultState; winningIdx: number | null } {
   if ("setup" in state) {
@@ -59,9 +60,7 @@ export function parseVaultState(state: any): { state: VaultState; winningIdx: nu
   throw new Error("Unknown vault state");
 }
 
-// =============================================================================
-// Fetch
-// =============================================================================
+/* Fetch */
 
 export async function fetchVaultAccount(
   program: Program<Vault>,

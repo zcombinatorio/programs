@@ -1,11 +1,12 @@
+/*
+ * Low-level instruction builders for the Vault program.
+ * These are thin wrappers around the program methods - use VaultClient for higher-level operations.
+ */
+
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { Vault, VaultType } from "./types";
-
-// =============================================================================
-// Instruction Builders
-// =============================================================================
 
 export function initialize(
   program: Program<Vault>,

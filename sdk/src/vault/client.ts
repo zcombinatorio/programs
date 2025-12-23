@@ -1,3 +1,9 @@
+/*
+ * High-level client for the Vault program.
+ * Provides ergonomic methods for vault operations with automatic PDA derivation,
+ * native SOL wrapping/unwrapping, and compute budget management.
+ */
+
 import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, ComputeBudgetProgram, SystemProgram } from "@solana/web3.js";
 import {
@@ -10,7 +16,7 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
 import { PROGRAM_ID } from "./constants";
-import { Vault, VaultType, VaultAccount } from "./types";
+import { Vault, VaultType, VaultAccount, VaultActionOptions } from "./types";
 import {
   deriveVaultPDA,
   deriveConditionalMint,
@@ -28,20 +34,24 @@ import {
 
 import { VaultIDL } from "../generated/idls";
 
-const MAX_COMPUTE_UNITS = 450_000;
+const DEFAULT_COMPUTE_UNITS = 450_000;
 
 export class VaultClient {
   public program: Program<Vault>;
   public programId: PublicKey;
+  public computeUnits: number;
 
-  constructor(provider: AnchorProvider, programId?: PublicKey) {
+  constructor(
+    provider: AnchorProvider,
+    programId?: PublicKey,
+    computeUnits?: number
+  ) {
     this.programId = programId ?? PROGRAM_ID;
+    this.computeUnits = computeUnits ?? DEFAULT_COMPUTE_UNITS;
     this.program = new Program(VaultIDL as Vault, provider);
   }
 
-  // ===========================================================================
-  // PDA Helpers
-  // ===========================================================================
+  /* PDA Helpers */
 
   deriveVaultPDA(
     owner: PublicKey,
@@ -58,9 +68,7 @@ export class VaultClient {
     return deriveConditionalMint(vaultPda, vaultType, index, this.programId);
   }
 
-  // ===========================================================================
-  // Fetch
-  // ===========================================================================
+  /* State Fetching */
 
   async fetchVault(vaultPda: PublicKey): Promise<VaultAccount> {
     return fetchVaultAccount(this.program, vaultPda);
@@ -120,16 +128,14 @@ export class VaultClient {
     }
   }
 
-  // ===========================================================================
-  // High-level Instruction Builders
-  // ===========================================================================
+  /* Instruction Builders */
 
   initialize(
     payer: PublicKey,
     baseMint: PublicKey,
     quoteMint: PublicKey,
     nonce: number,
-    owner?: PublicKey // Optional owner, defaults to payer
+    owner?: PublicKey
   ) {
     const vaultOwner = owner ?? payer;
     const [vaultPda] = this.deriveVaultPDA(vaultOwner, nonce);
@@ -187,8 +193,11 @@ export class VaultClient {
     signer: PublicKey,
     vaultPda: PublicKey,
     vaultType: VaultType,
-    amount: BN | number
+    amount: BN | number,
+    options?: VaultActionOptions
   ) {
+    const { autoWrapUnwrap = true, includeCuBudget = true, computeUnits } = options ?? {};
+
     const vault = await this.fetchVault(vaultPda);
     const mint = vaultType === VaultType.Base ? vault.baseMint.address : vault.quoteMint.address;
     const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
@@ -204,15 +213,20 @@ export class VaultClient {
       amount
     );
 
-    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
-      units: MAX_COMPUTE_UNITS,
-    });
+    const preIxs: ReturnType<typeof ComputeBudgetProgram.setComputeUnitLimit>[] = [];
 
-    if (mint.equals(NATIVE_MINT)) {
+    if (includeCuBudget) {
+      preIxs.push(
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: computeUnits ?? this.computeUnits,
+        })
+      );
+    }
+
+    if (autoWrapUnwrap && mint.equals(NATIVE_MINT)) {
       const amountBN = typeof amount === "number" ? new BN(amount) : amount;
       const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
-      const wrapIxs = [
-        computeBudgetIx,
+      preIxs.push(
         createAssociatedTokenAccountIdempotentInstruction(
           signer,
           wsolAta,
@@ -224,26 +238,28 @@ export class VaultClient {
           toPubkey: wsolAta,
           lamports: BigInt(amountBN.toString()),
         }),
-        createSyncNativeInstruction(wsolAta),
-      ];
-      return builder.preInstructions(wrapIxs);
+        createSyncNativeInstruction(wsolAta)
+      );
     }
 
-    return builder.preInstructions([computeBudgetIx]);
+    return preIxs.length > 0 ? builder.preInstructions(preIxs) : builder;
   }
 
   async withdraw(
     signer: PublicKey,
     vaultPda: PublicKey,
     vaultType: VaultType,
-    amount: BN | number
+    amount: BN | number,
+    options?: VaultActionOptions
   ) {
+    const { autoWrapUnwrap = true, includeCuBudget = true, computeUnits } = options ?? {};
+
     const vault = await this.fetchVault(vaultPda);
     const mint = vaultType === VaultType.Base ? vault.baseMint.address : vault.quoteMint.address;
     const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
       .slice(0, vault.numOptions);
 
-    const builder = withdraw(
+    let builder = withdraw(
       this.program,
       signer,
       vaultPda,
@@ -253,32 +269,42 @@ export class VaultClient {
       amount
     );
 
-    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
-      units: MAX_COMPUTE_UNITS,
-    });
-
-    if (mint.equals(NATIVE_MINT)) {
-      const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
-      const unwrapIx = createCloseAccountInstruction(wsolAta, signer, signer);
-      return builder
-        .preInstructions([computeBudgetIx])
-        .postInstructions([unwrapIx]);
+    if (includeCuBudget) {
+      builder = builder.preInstructions([
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: computeUnits ?? this.computeUnits,
+        }),
+      ]);
     }
 
-    return builder.preInstructions([computeBudgetIx]);
+    if (autoWrapUnwrap && mint.equals(NATIVE_MINT)) {
+      const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
+      builder = builder.postInstructions([
+        createCloseAccountInstruction(wsolAta, signer, signer),
+      ]);
+    }
+
+    return builder;
   }
 
   finalize(payer: PublicKey, owner: PublicKey, vaultPda: PublicKey, winningIdx: number) {
     return finalize(this.program, payer, owner, vaultPda, winningIdx);
   }
 
-  async redeemWinnings(signer: PublicKey, vaultPda: PublicKey, vaultType: VaultType) {
+  async redeemWinnings(
+    signer: PublicKey,
+    vaultPda: PublicKey,
+    vaultType: VaultType,
+    options?: VaultActionOptions
+  ) {
+    const { autoWrapUnwrap = true, includeCuBudget = true, computeUnits } = options ?? {};
+
     const vault = await this.fetchVault(vaultPda);
     const mint = vaultType === VaultType.Base ? vault.baseMint.address : vault.quoteMint.address;
     const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
       .slice(0, vault.numOptions);
 
-    const builder = redeemWinnings(
+    let builder = redeemWinnings(
       this.program,
       signer,
       vaultPda,
@@ -287,18 +313,21 @@ export class VaultClient {
       vaultType
     );
 
-    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
-      units: MAX_COMPUTE_UNITS,
-    });
-
-    if (mint.equals(NATIVE_MINT)) {
-      const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
-      const unwrapIx = createCloseAccountInstruction(wsolAta, signer, signer);
-      return builder
-        .preInstructions([computeBudgetIx])
-        .postInstructions([unwrapIx]);
+    if (includeCuBudget) {
+      builder = builder.preInstructions([
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: computeUnits ?? this.computeUnits,
+        }),
+      ]);
     }
 
-    return builder.preInstructions([computeBudgetIx]);
+    if (autoWrapUnwrap && mint.equals(NATIVE_MINT)) {
+      const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer);
+      builder = builder.postInstructions([
+        createCloseAccountInstruction(wsolAta, signer, signer),
+      ]);
+    }
+
+    return builder;
   }
 }

@@ -1,6 +1,9 @@
-// =============================================================================
-// Vault Sub-SDK
-// =============================================================================
+/* Shared Types */
+
+export { TxOptions } from "./utils";
+
+/* Vault Sub-SDK */
+
 export {
   // Client
   VaultClient,
@@ -16,6 +19,7 @@ export {
   OptionAddedEvent as VaultOptionAddedEvent,
   WinningsRedeemedEvent,
   VaultEvent,
+  VaultActionOptions,
   // Utils
   deriveVaultPDA,
   deriveConditionalMint,
@@ -29,9 +33,8 @@ export {
   MIN_OPTIONS as VAULT_MIN_OPTIONS,
 } from "./vault";
 
-// =============================================================================
-// AMM Sub-SDK
-// =============================================================================
+/* AMM Sub-SDK */
+
 export {
   // Client
   AMMClient,
@@ -68,9 +71,8 @@ export {
   PRICE_SCALE,
 } from "./amm";
 
-// =============================================================================
-// Futarchy SDK
-// =============================================================================
+/* Futarchy Sub-SDK */
+
 export {
   // Client
   FutarchyClient,
@@ -106,9 +108,8 @@ export {
   MIN_OPTIONS as FUTARCHY_MIN_OPTIONS,
 } from "./futarchy";
 
-// =============================================================================
-// Re-export sub-SDK namespaces for qualified access
-// =============================================================================
+/* Sub-SDK Namespaces */
+
 import * as vault from "./vault";
 import * as amm from "./amm";
 import * as futarchy from "./futarchy";

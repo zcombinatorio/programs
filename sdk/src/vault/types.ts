@@ -1,18 +1,20 @@
-import { IdlAccounts, IdlEvents, IdlTypes } from "@coral-xyz/anchor";
+/*
+ * Type definitions for the Vault program.
+ * Exports IDL-derived types and SDK-friendly enums.
+ */
 
-// Re-export the generated IDL type
+import { IdlAccounts, IdlEvents, IdlTypes } from "@coral-xyz/anchor";
+import { TxOptions } from "../utils";
+
 export { Vault } from "../generated/types";
 import type { Vault } from "../generated/types";
 
-// =============================================================================
-// IDL-derived Types (primary account/state types)
-// =============================================================================
+/* IDL-derived Types */
 
 export type VaultAccount = IdlAccounts<Vault>["vaultAccount"];
 export type VaultStateRaw = IdlTypes<Vault>["vaultState"];
 export type VaultTypeRaw = IdlTypes<Vault>["vaultType"];
 
-// Event types from IDL
 export type VaultInitializedEvent = IdlEvents<Vault>["vaultInitialized"];
 export type VaultActivatedEvent = IdlEvents<Vault>["vaultActivated"];
 export type VaultDepositEvent = IdlEvents<Vault>["vaultDeposit"];
@@ -21,9 +23,7 @@ export type VaultFinalizedEvent = IdlEvents<Vault>["vaultFinalized"];
 export type OptionAddedEvent = IdlEvents<Vault>["optionAdded"];
 export type WinningsRedeemedEvent = IdlEvents<Vault>["winningsRedeemed"];
 
-// =============================================================================
-// SDK Enums (user-friendly for parsing)
-// =============================================================================
+/* SDK Enums */
 
 export enum VaultType {
   Base = 0,
@@ -36,9 +36,7 @@ export enum VaultState {
   Finalized = "finalized",
 }
 
-// =============================================================================
-// Event Union Type
-// =============================================================================
+/* Event Union Type */
 
 export type VaultEvent =
   | { name: "VaultInitialized"; data: VaultInitializedEvent }
@@ -48,3 +46,9 @@ export type VaultEvent =
   | { name: "VaultFinalized"; data: VaultFinalizedEvent }
   | { name: "OptionAdded"; data: OptionAddedEvent }
   | { name: "WinningsRedeemed"; data: WinningsRedeemedEvent };
+
+/* Client Options */
+
+export interface VaultActionOptions extends TxOptions {
+  autoWrapUnwrap?: boolean;  // Auto wrap/unwrap native SOL (default: true)
+}
