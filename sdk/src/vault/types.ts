@@ -1,8 +1,8 @@
 import { IdlAccounts, IdlEvents, IdlTypes } from "@coral-xyz/anchor";
 
 // Re-export the generated IDL type
-export { Vault } from "./generated";
-import type { Vault } from "./generated";
+export { Vault } from "../programs/types";
+import type { Vault } from "../programs/types";
 
 // =============================================================================
 // IDL-derived Types (primary account/state types)

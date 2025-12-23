@@ -26,7 +26,7 @@ import {
   redeemWinnings,
 } from "./instructions";
 
-import { VaultIDL } from "./generated";
+import { VaultIDL } from "../programs/idls";
 
 const MAX_COMPUTE_UNITS = 450_000;
 
