@@ -28,16 +28,14 @@ pub struct FinalizeProposal<'info> {
             proposal.moderator.as_ref(),
             &proposal.id.to_le_bytes()
         ],
+        has_one = vault @ FutarchyError::InvalidVault,
         bump = proposal.bump,
         constraint = proposal.state == ProposalState::Pending @ FutarchyError::InvalidState,
     )]
     pub proposal: Box<Account<'info, ProposalAccount>>,
 
     /// CHECK: Validated via constraint and CPI
-    #[account(
-        mut,
-        constraint = vault.key() == proposal.vault @ FutarchyError::InvalidVault
-    )]
+    #[account(mut)]
     pub vault: UncheckedAccount<'info>,
 
     pub vault_program: Program<'info, Vault>,

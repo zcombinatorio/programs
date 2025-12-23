@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::FutarchyError;
 use crate::state::moderator::{MODERATOR_SEED, MODERATOR_VERSION};
 use crate::state::{ModeratorAccount, ModeratorInitialized};
-use anchor_spl::token::Mint;
+use anchor_spl::token;
 
 #[derive(Accounts)]
 #[instruction(name: String)]
@@ -11,8 +11,16 @@ pub struct InitializeModerator<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
 
-    pub base_mint: Account<'info, Mint>,
-    pub quote_mint: Account<'info, Mint>,
+    /// CHECK: checked via owner
+    #[account(
+        owner = token::ID @ FutarchyError::InvalidMint
+    )]
+    pub base_mint: UncheckedAccount<'info>,
+    /// CHECK: checked via owner
+    #[account(
+        owner = token::ID @ FutarchyError::InvalidMint
+    )]
+    pub quote_mint: UncheckedAccount<'info>,
 
     #[account(
         init,

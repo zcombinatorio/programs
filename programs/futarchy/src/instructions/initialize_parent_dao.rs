@@ -4,7 +4,7 @@ use crate::errors::FutarchyError;
 use crate::state::moderator::*;
 use crate::state::dao::*;
 use crate::squads::*;
-use anchor_spl::token::Mint;
+use anchor_spl::token;
 
 #[derive(Accounts)]
 #[instruction(name: String)]
@@ -38,8 +38,16 @@ pub struct InitializeParentDAO<'info> {
     )]
     pub moderator: Box<Account<'info, ModeratorAccount>>,
 
-    pub base_mint: Account<'info, Mint>,
-    pub quote_mint: Account<'info, Mint>,
+    /// CHECK: checked via owner
+    #[account(
+        owner = token::ID @ FutarchyError::InvalidMint
+    )]
+    pub base_mint: UncheckedAccount<'info>,
+    /// CHECK: checked via owner
+    #[account(
+        owner = token::ID @ FutarchyError::InvalidMint
+    )]
+    pub quote_mint: UncheckedAccount<'info>,
 
     // Squads
     /// CHECK: checked by squads CPI
@@ -53,10 +61,10 @@ pub struct InitializeParentDAO<'info> {
     /// CHECK: checked by squads CPI
     #[account(mut)]
     pub mint_multisig: UncheckedAccount<'info>,
-
-
     /// CHECK: checked by squads CPI
     pub squads_program: UncheckedAccount<'info>,
+
+    
     pub system_program: Program<'info, System>,
 }
 

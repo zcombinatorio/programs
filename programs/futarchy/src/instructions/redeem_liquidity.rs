@@ -33,15 +33,13 @@ pub struct RedeemLiquidity<'info> {
             &proposal.id.to_le_bytes()
         ],
         bump = proposal.bump,
-        constraint = proposal.version != 0 @FutarchyError::InvalidVersion // Don't allow historical proposals
+        constraint = proposal.version != 0 @FutarchyError::InvalidVersion, // Don't allow historical proposals
+        has_one = vault @ FutarchyError::InvalidVault,
     )]
     pub proposal: Box<Account<'info, ProposalAccount>>,
 
     /// CHECK: Validated via constraint and CPI
-    #[account(
-        mut,
-        constraint = vault.key() == proposal.vault @ FutarchyError::InvalidVault
-    )]
+    #[account(mut)]
     pub vault: UncheckedAccount<'info>,
 
     /// CHECK: Winning pool - validated in handler against proposal.pools[winning_idx]
@@ -53,7 +51,6 @@ pub struct RedeemLiquidity<'info> {
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
-
     // Remaining accounts layout (for N options):
     // remove_liquidity (4 accounts):
     //   0: reserve_a (pool's cond_quote reserve)
@@ -81,9 +78,7 @@ pub fn redeem_liquidity_handler<'info>(
     let num_options = proposal.num_options as usize;
 
     // Extract winning_idx from proposal state
-    let winning_idx = if let ProposalState::Resolved(idx) = proposal.state {
-        idx
-    } else {
+    let ProposalState::Resolved(winning_idx) = proposal.state else {
         return err!(FutarchyError::InvalidState);
     };
 
@@ -142,9 +137,9 @@ pub fn redeem_liquidity_handler<'info>(
         UserVaultAction {
             signer: ctx.accounts.creator.to_account_info(),
             vault: ctx.accounts.vault.to_account_info(),
-            mint: ctx.remaining_accounts[4].to_account_info(),     // base_mint
+            mint: ctx.remaining_accounts[4].to_account_info(), // base_mint
             vault_ata: ctx.remaining_accounts[5].to_account_info(), // vault_base_ata
-            user_ata: ctx.remaining_accounts[6].to_account_info(),  // user_base_ata
+            user_ata: ctx.remaining_accounts[6].to_account_info(), // user_base_ata
             token_program: ctx.accounts.token_program.to_account_info(),
             associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
@@ -171,9 +166,9 @@ pub fn redeem_liquidity_handler<'info>(
         UserVaultAction {
             signer: ctx.accounts.creator.to_account_info(),
             vault: ctx.accounts.vault.to_account_info(),
-            mint: ctx.remaining_accounts[quote_fixed_start].to_account_info(),     // quote_mint
+            mint: ctx.remaining_accounts[quote_fixed_start].to_account_info(), // quote_mint
             vault_ata: ctx.remaining_accounts[quote_fixed_start + 1].to_account_info(), // vault_quote_ata
-            user_ata: ctx.remaining_accounts[quote_fixed_start + 2].to_account_info(),  // user_quote_ata
+            user_ata: ctx.remaining_accounts[quote_fixed_start + 2].to_account_info(), // user_quote_ata
             token_program: ctx.accounts.token_program.to_account_info(),
             associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),

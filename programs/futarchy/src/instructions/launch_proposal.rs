@@ -37,14 +37,12 @@ pub struct LaunchProposal<'info> {
         ],
         bump = proposal.bump,
         constraint = proposal.state == ProposalState::Setup @ FutarchyError::InvalidState,
+        has_one = vault @ FutarchyError::InvalidVault,
     )]
     pub proposal: Box<Account<'info, ProposalAccount>>,
 
     /// CHECK: Validated via CPI to vault program
-    #[account(
-        mut,
-        constraint = vault.key() == proposal.vault @ FutarchyError::InvalidVault
-    )]
+    #[account(mut)]
     pub vault: UncheckedAccount<'info>,
 
     // Programs

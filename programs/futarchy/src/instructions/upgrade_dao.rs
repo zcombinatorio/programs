@@ -1,10 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token;
 
 use crate::errors::FutarchyError;
 use crate::state::moderator::*;
 use crate::state::dao::*;
-use anchor_spl::token::Mint;
+use anchor_spl::token;
 
 #[event]
 pub struct DAOUpgraded {
@@ -59,15 +58,22 @@ pub struct UpgradeDAO<'info> {
     )]
     pub moderator: Box<Account<'info, ModeratorAccount>>,
 
-    pub base_mint: Account<'info, Mint>,
-    pub quote_mint: Account<'info, Mint>,
+    /// CHECK: checked via owner
+    #[account(
+        owner = token::ID @ FutarchyError::InvalidMint
+    )]
+    pub base_mint: UncheckedAccount<'info>,
+    /// CHECK: checked via owner
+    #[account(
+        owner = token::ID @ FutarchyError::InvalidMint
+    )]
+    pub quote_mint: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
 
 pub fn upgrade_dao_handler(
     ctx: Context<UpgradeDAO>,
-    token_mint: Pubkey,
     pool: Pubkey,
     pool_type: PoolType
 ) -> Result<()> {
@@ -84,7 +90,7 @@ pub fn upgrade_dao_handler(
         proposal_id_counter: 0,
         admin: ctx.accounts.admin.key()
     });
-    dao.token_mint = token_mint;
+    dao.token_mint = moderator.base_mint;
     dao.dao_type = DAOType::Parent {
         moderator: moderator.key(),
         pool,
