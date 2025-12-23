@@ -43,7 +43,7 @@ import {
 import { VaultClient, deriveVaultPDA, deriveConditionalMint, VaultType } from "../vault";
 import { AMMClient, derivePoolPDA, deriveReservePDA, deriveFeeVaultPDA, FEE_AUTHORITY } from "../amm";
 
-import { FutarchyIDL } from "../programs/idls";
+import { FutarchyIDL } from "../generated/idls";
 
 const MAX_COMPUTE_UNITS = 500_000;
 

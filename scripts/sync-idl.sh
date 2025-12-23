@@ -10,8 +10,8 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 IDL_DIR="$ROOT_DIR/target/idl"
 TYPES_DIR="$ROOT_DIR/target/types"
-SDK_IDLS_DIR="$ROOT_DIR/sdk/src/programs/idls"
-SDK_TYPES_DIR="$ROOT_DIR/sdk/src/programs/types"
+SDK_IDLS_DIR="$ROOT_DIR/sdk/src/generated/idls"
+SDK_TYPES_DIR="$ROOT_DIR/sdk/src/generated/types"
 
 # Programs to sync
 PROGRAMS=("amm" "futarchy" "vault")

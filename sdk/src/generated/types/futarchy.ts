@@ -27,7 +27,7 @@ export type Futarchy = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "admin",
           "writable": true,
           "signer": true
         },
@@ -52,7 +52,7 @@ export type Futarchy = {
               },
               {
                 "kind": "account",
-                "path": "moderator.id",
+                "path": "moderator.name",
                 "account": "moderatorAccount"
               }
             ]
@@ -127,7 +127,7 @@ export type Futarchy = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "creator",
           "writable": true,
           "signer": true
         },
@@ -235,7 +235,10 @@ export type Futarchy = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "proposal"
+          ]
         },
         {
           "name": "vaultProgram",
@@ -247,6 +250,105 @@ export type Futarchy = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "initializeChildDao",
+      "discriminator": [
+        241,
+        144,
+        136,
+        34,
+        152,
+        26,
+        21,
+        190
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "parentAdmin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "parentDao",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "parent_dao.name",
+                "account": "daoAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenMint"
+        },
+        {
+          "name": "programConfig"
+        },
+        {
+          "name": "programConfigTreasury",
+          "writable": true
+        },
+        {
+          "name": "treasuryMultisig",
+          "writable": true
+        },
+        {
+          "name": "mintMultisig",
+          "writable": true
+        },
+        {
+          "name": "squadsProgram"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "treasuryCosigner",
+          "type": "pubkey"
+        }
+      ]
     },
     {
       "name": "initializeModerator",
@@ -262,35 +364,9 @@ export type Futarchy = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "admin",
           "writable": true,
           "signer": true
-        },
-        {
-          "name": "globalConfig",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  108,
-                  111,
-                  98,
-                  97,
-                  108,
-                  95,
-                  99,
-                  111,
-                  110,
-                  102,
-                  105,
-                  103
-                ]
-              }
-            ]
-          }
         },
         {
           "name": "baseMint"
@@ -318,9 +394,8 @@ export type Futarchy = {
                 ]
               },
               {
-                "kind": "account",
-                "path": "global_config.moderator_id_counter",
-                "account": "globalConfig"
+                "kind": "arg",
+                "path": "name"
               }
             ]
           }
@@ -330,26 +405,54 @@ export type Futarchy = {
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": [],
-      "returns": "u32"
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
     },
     {
-      "name": "initializeProposal",
+      "name": "initializeParentDao",
       "discriminator": [
-        50,
-        73,
-        156,
-        98,
-        129,
-        149,
-        21,
-        158
+        188,
+        86,
+        227,
+        249,
+        221,
+        148,
+        66,
+        241
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "admin",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "parentAdmin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
         },
         {
           "name": "moderator",
@@ -371,8 +474,103 @@ export type Futarchy = {
                 ]
               },
               {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "baseMint"
+        },
+        {
+          "name": "quoteMint"
+        },
+        {
+          "name": "programConfig"
+        },
+        {
+          "name": "programConfigTreasury",
+          "writable": true
+        },
+        {
+          "name": "treasuryMultisig",
+          "writable": true
+        },
+        {
+          "name": "mintMultisig",
+          "writable": true
+        },
+        {
+          "name": "squadsProgram"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "treasuryCosigner",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "poolType",
+          "type": {
+            "defined": {
+              "name": "poolType"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initializeProposal",
+      "discriminator": [
+        50,
+        73,
+        156,
+        98,
+        129,
+        149,
+        21,
+        158
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "moderator",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
                 "kind": "account",
-                "path": "moderator.id",
+                "path": "moderator.name",
                 "account": "moderatorAccount"
               }
             ]
@@ -431,19 +629,17 @@ export type Futarchy = {
       ],
       "args": [
         {
-          "name": "length",
-          "type": "u16"
-        },
-        {
-          "name": "fee",
-          "type": "u16"
-        },
-        {
-          "name": "twapConfig",
+          "name": "proposalParams",
           "type": {
             "defined": {
-              "name": "twapConfig"
+              "name": "proposalParams"
             }
+          }
+        },
+        {
+          "name": "metadata",
+          "type": {
+            "option": "string"
           }
         }
       ],
@@ -463,7 +659,7 @@ export type Futarchy = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "creator",
           "writable": true,
           "signer": true
         },
@@ -500,7 +696,10 @@ export type Futarchy = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "proposal"
+          ]
         },
         {
           "name": "systemProgram",
@@ -548,7 +747,7 @@ export type Futarchy = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "creator",
           "writable": true,
           "signer": true
         },
@@ -584,7 +783,10 @@ export type Futarchy = {
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "proposal"
+          ]
         },
         {
           "name": "pool",
@@ -612,20 +814,135 @@ export type Futarchy = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "upgradeDao",
+      "discriminator": [
+        81,
+        178,
+        57,
+        196,
+        156,
+        38,
+        145,
+        93
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "parentAdmin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "dao.name",
+                "account": "daoAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "parentDao",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "parent_dao.name",
+                "account": "daoAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "dao.name",
+                "account": "daoAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "baseMint"
+        },
+        {
+          "name": "quoteMint"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "poolType",
+          "type": {
+            "defined": {
+              "name": "poolType"
+            }
+          }
+        }
+      ]
     }
   ],
   "accounts": [
     {
-      "name": "globalConfig",
+      "name": "daoAccount",
       "discriminator": [
-        149,
-        8,
-        156,
-        202,
-        160,
-        252,
-        176,
-        217
+        204,
+        10,
+        113,
+        79,
+        232,
+        184,
+        83,
+        201
       ]
     },
     {
@@ -656,6 +973,32 @@ export type Futarchy = {
     }
   ],
   "events": [
+    {
+      "name": "daoInitialized",
+      "discriminator": [
+        17,
+        212,
+        203,
+        144,
+        165,
+        153,
+        118,
+        92
+      ]
+    },
+    {
+      "name": "daoUpgraded",
+      "discriminator": [
+        8,
+        62,
+        51,
+        188,
+        195,
+        69,
+        78,
+        7
+      ]
+    },
     {
       "name": "liquidityRedeemed",
       "discriminator": [
@@ -805,11 +1148,39 @@ export type Futarchy = {
       "code": 6013,
       "name": "invalidVersion",
       "msg": "Invalid account version"
+    },
+    {
+      "code": 6014,
+      "name": "nameTooLong",
+      "msg": "Name exceeds 32 bytes"
+    },
+    {
+      "code": 6015,
+      "name": "metadataTooLong",
+      "msg": "Metadata CID exceeds 64 bytes"
+    },
+    {
+      "code": 6016,
+      "name": "invalidDao",
+      "msg": "Invalid DAO account"
+    },
+    {
+      "code": 6017,
+      "name": "mathOverflow",
+      "msg": "Math overflow"
+    },
+    {
+      "code": 6018,
+      "name": "invalidProposalParams",
+      "msg": "Invalid proposal parameters"
     }
   ],
   "types": [
     {
-      "name": "globalConfig",
+      "name": "daoAccount",
+      "docs": [
+        "Seeds: [DAO_SEED, &dao_id.to_le_bytes()]"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -818,8 +1189,142 @@ export type Futarchy = {
             "type": "u8"
           },
           {
-            "name": "moderatorIdCounter",
-            "type": "u32"
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "tokenMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "cosigner",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasuryMultisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "mintAuthMultisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "daoType",
+            "type": {
+              "defined": {
+                "name": "daoType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "daoInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasuryMultisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "mintMultisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "daoType",
+            "type": {
+              "defined": {
+                "name": "daoType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "daoType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "parent",
+            "fields": [
+              {
+                "name": "moderator",
+                "type": "pubkey"
+              },
+              {
+                "name": "pool",
+                "type": "pubkey"
+              },
+              {
+                "name": "poolType",
+                "type": {
+                  "defined": {
+                    "name": "poolType"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "child",
+            "fields": [
+              {
+                "name": "parentDao",
+                "type": "pubkey"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "daoUpgraded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dao",
+            "type": "pubkey"
+          },
+          {
+            "name": "parentDao",
+            "type": "pubkey"
+          },
+          {
+            "name": "daoType",
+            "type": {
+              "defined": {
+                "name": "daoType"
+              }
+            }
+          },
+          {
+            "name": "tokenMint",
+            "type": "pubkey"
           }
         ]
       }
@@ -850,6 +1355,9 @@ export type Futarchy = {
     },
     {
       "name": "moderatorAccount",
+      "docs": [
+        "Seeds: [MODERATOR_SEED, &id.to_le_bytes()]"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -862,8 +1370,8 @@ export type Futarchy = {
             "type": "u8"
           },
           {
-            "name": "id",
-            "type": "u32"
+            "name": "name",
+            "type": "string"
           },
           {
             "name": "quoteMint",
@@ -894,12 +1402,12 @@ export type Futarchy = {
             "type": "u8"
           },
           {
-            "name": "id",
-            "type": "u32"
-          },
-          {
             "name": "moderator",
             "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
           },
           {
             "name": "baseMint",
@@ -937,7 +1445,24 @@ export type Futarchy = {
       }
     },
     {
+      "name": "poolType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "damm"
+          },
+          {
+            "name": "dlmm"
+          }
+        ]
+      }
+    },
+    {
       "name": "proposalAccount",
+      "docs": [
+        "Seeds: [PROPOSAL_SEED, moderator.key(), &id.to_le_bytes()]"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -974,8 +1499,8 @@ export type Futarchy = {
             "type": "i64"
           },
           {
-            "name": "length",
-            "type": "u16"
+            "name": "creator",
+            "type": "pubkey"
           },
           {
             "name": "baseMint",
@@ -999,19 +1524,17 @@ export type Futarchy = {
             }
           },
           {
-            "name": "creator",
-            "type": "pubkey"
-          },
-          {
-            "name": "fee",
-            "type": "u16"
-          },
-          {
-            "name": "twapConfig",
+            "name": "config",
             "type": {
               "defined": {
-                "name": "twapConfig"
+                "name": "proposalParams"
               }
+            }
+          },
+          {
+            "name": "metadata",
+            "type": {
+              "option": "string"
             }
           }
         ]
@@ -1102,6 +1625,38 @@ export type Futarchy = {
       }
     },
     {
+      "name": "proposalParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "length",
+            "type": "u16"
+          },
+          {
+            "name": "startingObservation",
+            "type": "u128"
+          },
+          {
+            "name": "maxObservationDelta",
+            "type": "u128"
+          },
+          {
+            "name": "warmupDuration",
+            "type": "u32"
+          },
+          {
+            "name": "marketBias",
+            "type": "u16"
+          },
+          {
+            "name": "fee",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
       "name": "proposalState",
       "type": {
         "kind": "enum",
@@ -1120,38 +1675,13 @@ export type Futarchy = {
           }
         ]
       }
-    },
-    {
-      "name": "twapConfig",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "startingObservation",
-            "type": "u128"
-          },
-          {
-            "name": "maxObservationDelta",
-            "type": "u128"
-          },
-          {
-            "name": "warmupDuration",
-            "type": "u32"
-          }
-        ]
-      }
     }
   ],
   "constants": [
     {
-      "name": "globalConfigSeed",
+      "name": "daoSeed",
       "type": "bytes",
-      "value": "[103, 108, 111, 98, 97, 108, 95, 99, 111, 110, 102, 105, 103]"
-    },
-    {
-      "name": "globalConfigVersion",
-      "type": "u8",
-      "value": "1"
+      "value": "[100, 97, 111]"
     },
     {
       "name": "maxOptions",
@@ -1169,19 +1699,9 @@ export type Futarchy = {
       "value": "[109, 111, 100, 101, 114, 97, 116, 111, 114]"
     },
     {
-      "name": "moderatorVersion",
-      "type": "u8",
-      "value": "1"
-    },
-    {
       "name": "proposalSeed",
       "type": "bytes",
       "value": "[112, 114, 111, 112, 111, 115, 97, 108]"
-    },
-    {
-      "name": "proposalVersion",
-      "type": "u8",
-      "value": "1"
     }
   ]
 };

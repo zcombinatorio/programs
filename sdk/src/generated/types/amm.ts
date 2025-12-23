@@ -1,4 +1,10 @@
-{
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/amm.json`.
+ */
+export type Amm = {
   "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC",
   "metadata": {
     "name": "amm",
@@ -8,7 +14,7 @@
   },
   "instructions": [
     {
-      "name": "add_liquidity",
+      "name": "addLiquidity",
       "discriminator": [
         181,
         157,
@@ -40,23 +46,23 @@
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserve_a",
+          "name": "reserveA",
           "writable": true,
           "pda": {
             "seeds": [
@@ -79,13 +85,13 @@
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserve_b",
+          "name": "reserveB",
           "writable": true,
           "pda": {
             "seeds": [
@@ -108,37 +114,37 @@
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "depositor_token_acc_a",
+          "name": "depositorTokenAccA",
           "writable": true
         },
         {
-          "name": "depositor_token_acc_b",
+          "name": "depositorTokenAccB",
           "writable": true
         },
         {
-          "name": "token_program",
+          "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
       "args": [
         {
-          "name": "amount_a",
+          "name": "amountA",
           "type": "u64"
         },
         {
-          "name": "amount_b",
+          "name": "amountB",
           "type": "u64"
         }
       ]
     },
     {
-      "name": "cease_trading",
+      "name": "ceaseTrading",
       "discriminator": [
         187,
         140,
@@ -171,17 +177,17 @@
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
@@ -190,7 +196,7 @@
       "args": []
     },
     {
-      "name": "crank_twap",
+      "name": "crankTwap",
       "discriminator": [
         43,
         127,
@@ -219,23 +225,23 @@
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserve_a",
+          "name": "reserveA",
           "pda": {
             "seeds": [
               {
@@ -257,13 +263,13 @@
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserve_b",
+          "name": "reserveB",
           "pda": {
             "seeds": [
               {
@@ -285,19 +291,17 @@
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         }
       ],
       "args": [],
-      "returns": {
-        "option": "u128"
-      }
+      "returns": "u128"
     },
     {
-      "name": "create_pool",
+      "name": "createPool",
       "discriminator": [
         233,
         146,
@@ -319,10 +323,10 @@
           "signer": true
         },
         {
-          "name": "mint_a"
+          "name": "mintA"
         },
         {
-          "name": "mint_b"
+          "name": "mintB"
         },
         {
           "name": "pool",
@@ -344,17 +348,17 @@
               },
               {
                 "kind": "account",
-                "path": "mint_a"
+                "path": "mintA"
               },
               {
                 "kind": "account",
-                "path": "mint_b"
+                "path": "mintB"
               }
             ]
           }
         },
         {
-          "name": "reserve_a",
+          "name": "reserveA",
           "writable": true,
           "pda": {
             "seeds": [
@@ -376,13 +380,13 @@
               },
               {
                 "kind": "account",
-                "path": "mint_a"
+                "path": "mintA"
               }
             ]
           }
         },
         {
-          "name": "reserve_b",
+          "name": "reserveB",
           "writable": true,
           "pda": {
             "seeds": [
@@ -404,17 +408,17 @@
               },
               {
                 "kind": "account",
-                "path": "mint_b"
+                "path": "mintB"
               }
             ]
           }
         },
         {
-          "name": "fee_authority",
+          "name": "feeAuthority",
           "address": "FEEnkcCNE2623LYCPtLf63LFzXpCFigBLTu4qZovRGZC"
         },
         {
-          "name": "fee_vault",
+          "name": "feeVault",
           "writable": true,
           "pda": {
             "seeds": [
@@ -440,11 +444,11 @@
           }
         },
         {
-          "name": "token_program",
+          "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -454,19 +458,19 @@
           "type": "u16"
         },
         {
-          "name": "starting_observation",
+          "name": "startingObservation",
           "type": "u128"
         },
         {
-          "name": "max_observation_delta",
+          "name": "maxObservationDelta",
           "type": "u128"
         },
         {
-          "name": "warmup_duration",
+          "name": "warmupDuration",
           "type": "u32"
         },
         {
-          "name": "liquidity_provider",
+          "name": "liquidityProvider",
           "type": {
             "option": "pubkey"
           }
@@ -474,7 +478,7 @@
       ]
     },
     {
-      "name": "remove_liquidity",
+      "name": "removeLiquidity",
       "discriminator": [
         80,
         85,
@@ -506,23 +510,23 @@
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserve_a",
+          "name": "reserveA",
           "writable": true,
           "pda": {
             "seeds": [
@@ -545,13 +549,13 @@
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserve_b",
+          "name": "reserveB",
           "writable": true,
           "pda": {
             "seeds": [
@@ -574,31 +578,31 @@
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "depositor_token_acc_a",
+          "name": "depositorTokenAccA",
           "writable": true
         },
         {
-          "name": "depositor_token_acc_b",
+          "name": "depositorTokenAccB",
           "writable": true
         },
         {
-          "name": "token_program",
+          "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
       "args": [
         {
-          "name": "amount_a",
+          "name": "amountA",
           "type": "u64"
         },
         {
-          "name": "amount_b",
+          "name": "amountB",
           "type": "u64"
         }
       ]
@@ -637,23 +641,23 @@
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserve_a",
+          "name": "reserveA",
           "writable": true,
           "pda": {
             "seeds": [
@@ -676,13 +680,13 @@
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserve_b",
+          "name": "reserveB",
           "writable": true,
           "pda": {
             "seeds": [
@@ -705,13 +709,13 @@
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "PoolAccount"
+                "account": "poolAccount"
               }
             ]
           }
         },
         {
-          "name": "fee_vault",
+          "name": "feeVault",
           "docs": [
             "Fee vault with hardcoded fee authority wallet"
           ],
@@ -740,29 +744,29 @@
           }
         },
         {
-          "name": "trader_account_a",
+          "name": "traderAccountA",
           "writable": true
         },
         {
-          "name": "trader_account_b",
+          "name": "traderAccountB",
           "writable": true
         },
         {
-          "name": "token_program",
+          "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
       "args": [
         {
-          "name": "swap_a_to_b",
+          "name": "swapAToB",
           "type": "bool"
         },
         {
-          "name": "input_amount",
+          "name": "inputAmount",
           "type": "u64"
         },
         {
-          "name": "min_output_amount",
+          "name": "minOutputAmount",
           "type": "u64"
         }
       ]
@@ -770,7 +774,7 @@
   ],
   "accounts": [
     {
-      "name": "PoolAccount",
+      "name": "poolAccount",
       "discriminator": [
         116,
         210,
@@ -785,7 +789,7 @@
   ],
   "events": [
     {
-      "name": "CondSwap",
+      "name": "condSwap",
       "discriminator": [
         99,
         23,
@@ -798,7 +802,7 @@
       ]
     },
     {
-      "name": "LiquidityAdded",
+      "name": "liquidityAdded",
       "discriminator": [
         154,
         26,
@@ -811,7 +815,7 @@
       ]
     },
     {
-      "name": "LiquidityRemoved",
+      "name": "liquidityRemoved",
       "discriminator": [
         225,
         105,
@@ -824,7 +828,7 @@
       ]
     },
     {
-      "name": "PoolCreated",
+      "name": "poolCreated",
       "discriminator": [
         202,
         44,
@@ -837,7 +841,7 @@
       ]
     },
     {
-      "name": "TWAPUpdate",
+      "name": "twapUpdate",
       "discriminator": [
         48,
         209,
@@ -853,68 +857,68 @@
   "errors": [
     {
       "code": 6000,
-      "name": "InvalidAdmin",
+      "name": "invalidAdmin",
       "msg": "Invalid admin"
     },
     {
       "code": 6001,
-      "name": "InvalidDepositor",
+      "name": "invalidDepositor",
       "msg": "Invalid depositor"
     },
     {
       "code": 6002,
-      "name": "InvalidState",
+      "name": "invalidState",
       "msg": "Invalid state"
     },
     {
       "code": 6003,
-      "name": "InvalidAmount",
+      "name": "invalidAmount",
       "msg": "Invalid amount"
     },
     {
       "code": 6004,
-      "name": "SlippageExceeded",
+      "name": "slippageExceeded",
       "msg": "Slippage exceeded"
     },
     {
       "code": 6005,
-      "name": "InvariantViolated",
+      "name": "invariantViolated",
       "msg": "Invariant violated"
     },
     {
       "code": 6006,
-      "name": "EmptyPool",
+      "name": "emptyPool",
       "msg": "Pool is empty"
     },
     {
       "code": 6007,
-      "name": "MathOverflow",
+      "name": "mathOverflow",
       "msg": "Math overflow"
     },
     {
       "code": 6008,
-      "name": "MathUnderflow",
+      "name": "mathUnderflow",
       "msg": "Math underflow"
     },
     {
       "code": 6009,
-      "name": "OutputTooSmall",
+      "name": "outputTooSmall",
       "msg": "Output too small"
     },
     {
       "code": 6010,
-      "name": "InsufficientReserve",
+      "name": "insufficientReserve",
       "msg": "Insufficient reserve balance"
     },
     {
       "code": 6011,
-      "name": "InvalidFee",
+      "name": "invalidFee",
       "msg": "Fee exceeds maximum"
     }
   ],
   "types": [
     {
-      "name": "CondSwap",
+      "name": "condSwap",
       "type": {
         "kind": "struct",
         "fields": [
@@ -927,26 +931,26 @@
             "type": "pubkey"
           },
           {
-            "name": "swap_a_to_b",
+            "name": "swapAToB",
             "type": "bool"
           },
           {
-            "name": "input_amount",
+            "name": "inputAmount",
             "type": "u64"
           },
           {
-            "name": "output_amount",
+            "name": "outputAmount",
             "type": "u64"
           },
           {
-            "name": "fee_amount",
+            "name": "feeAmount",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "LiquidityAdded",
+      "name": "liquidityAdded",
       "type": {
         "kind": "struct",
         "fields": [
@@ -955,18 +959,18 @@
             "type": "pubkey"
           },
           {
-            "name": "amount_a",
+            "name": "amountA",
             "type": "u64"
           },
           {
-            "name": "amount_b",
+            "name": "amountB",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "LiquidityRemoved",
+      "name": "liquidityRemoved",
       "type": {
         "kind": "struct",
         "fields": [
@@ -975,18 +979,18 @@
             "type": "pubkey"
           },
           {
-            "name": "amount_a",
+            "name": "amountA",
             "type": "u64"
           },
           {
-            "name": "amount_b",
+            "name": "amountB",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "PoolAccount",
+      "name": "poolAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -998,7 +1002,7 @@
             "name": "bumps",
             "type": {
               "defined": {
-                "name": "PoolBumps"
+                "name": "poolBumps"
               }
             }
           },
@@ -1006,16 +1010,16 @@
             "name": "state",
             "type": {
               "defined": {
-                "name": "PoolState"
+                "name": "poolState"
               }
             }
           },
           {
-            "name": "mint_a",
+            "name": "mintA",
             "type": "pubkey"
           },
           {
-            "name": "mint_b",
+            "name": "mintB",
             "type": "pubkey"
           },
           {
@@ -1027,14 +1031,14 @@
             "type": "pubkey"
           },
           {
-            "name": "liquidity_provider",
+            "name": "liquidityProvider",
             "type": "pubkey"
           },
           {
             "name": "oracle",
             "type": {
               "defined": {
-                "name": "TwapOracle"
+                "name": "twapOracle"
               }
             }
           }
@@ -1042,7 +1046,7 @@
       }
     },
     {
-      "name": "PoolBumps",
+      "name": "poolBumps",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1051,22 +1055,22 @@
             "type": "u8"
           },
           {
-            "name": "reserve_a",
+            "name": "reserveA",
             "type": "u8"
           },
           {
-            "name": "reserve_b",
+            "name": "reserveB",
             "type": "u8"
           },
           {
-            "name": "fee_vault",
+            "name": "feeVault",
             "type": "u8"
           }
         ]
       }
     },
     {
-      "name": "PoolCreated",
+      "name": "poolCreated",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1079,11 +1083,11 @@
             "type": "pubkey"
           },
           {
-            "name": "mint_a",
+            "name": "mintA",
             "type": "pubkey"
           },
           {
-            "name": "mint_b",
+            "name": "mintB",
             "type": "pubkey"
           },
           {
@@ -1098,26 +1102,26 @@
       }
     },
     {
-      "name": "PoolState",
+      "name": "poolState",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Trading"
+            "name": "trading"
           },
           {
-            "name": "Finalized"
+            "name": "finalized"
           }
         ]
       }
     },
     {
-      "name": "TWAPUpdate",
+      "name": "twapUpdate",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "unix_time",
+            "name": "unixTime",
             "type": "i64"
           },
           {
@@ -1129,7 +1133,7 @@
             "type": "u128"
           },
           {
-            "name": "cumulative_observations",
+            "name": "cumulativeObservations",
             "type": "u128"
           },
           {
@@ -1140,7 +1144,7 @@
       }
     },
     {
-      "name": "TwapOracle",
+      "name": "twapOracle",
       "docs": [
         "TWAP oracle that tracks time-weighted average prices with manipulation resistance.",
         "",
@@ -1152,7 +1156,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "cumulative_observations",
+            "name": "cumulativeObservations",
             "docs": [
               "Running sum of (observation * seconds_elapsed) used for TWAP calculation.",
               "On overflow, wraps back to 0 - clients should handle this edge case."
@@ -1160,56 +1164,56 @@
             "type": "u128"
           },
           {
-            "name": "last_update_unix_time",
+            "name": "lastUpdateUnixTime",
             "docs": [
               "Unix timestamp of the most recent price recording"
             ],
             "type": "i64"
           },
           {
-            "name": "created_at_unix_time",
+            "name": "createdAtUnixTime",
             "docs": [
               "Unix timestamp when this oracle was initialized"
             ],
             "type": "i64"
           },
           {
-            "name": "last_price",
+            "name": "lastPrice",
             "docs": [
               "Most recent raw price from pool reserves (reserves_a / reserves_b * PRICE_SCALE)"
             ],
             "type": "u128"
           },
           {
-            "name": "last_observation",
+            "name": "lastObservation",
             "docs": [
               "Rate-limited observation that moves toward price bounded by max_observation_delta"
             ],
             "type": "u128"
           },
           {
-            "name": "max_observation_delta",
+            "name": "maxObservationDelta",
             "docs": [
               "Maximum amount observation can change per crank (manipulation resistance)"
             ],
             "type": "u128"
           },
           {
-            "name": "starting_observation",
+            "name": "startingObservation",
             "docs": [
               "Initial value for last_observation when oracle is created"
             ],
             "type": "u128"
           },
           {
-            "name": "warmup_duration",
+            "name": "warmupDuration",
             "docs": [
               "Seconds after creation before TWAP accumulation begins"
             ],
             "type": "u32"
           },
           {
-            "name": "min_recording_interval",
+            "name": "minRecordingInterval",
             "docs": [
               "Minimum time in-between TWAP recordings"
             ],
@@ -1221,34 +1225,34 @@
   ],
   "constants": [
     {
-      "name": "AMM_VERSION",
+      "name": "ammVersion",
       "type": "u8",
       "value": "1"
     },
     {
-      "name": "FEE_AUTHORITY",
+      "name": "feeAuthority",
       "type": "pubkey",
       "value": "FEEnkcCNE2623LYCPtLf63LFzXpCFigBLTu4qZovRGZC"
     },
     {
-      "name": "FEE_VAULT_SEED",
+      "name": "feeVaultSeed",
       "type": "bytes",
       "value": "[102, 101, 101, 95, 118, 97, 117, 108, 116]"
     },
     {
-      "name": "MAX_FEE",
+      "name": "maxFee",
       "type": "u16",
       "value": "5000"
     },
     {
-      "name": "POOL_SEED",
+      "name": "poolSeed",
       "type": "bytes",
       "value": "[112, 111, 111, 108]"
     },
     {
-      "name": "RESERVE_SEED",
+      "name": "reserveSeed",
       "type": "bytes",
       "value": "[114, 101, 115, 101, 114, 118, 101]"
     }
   ]
-}
+};

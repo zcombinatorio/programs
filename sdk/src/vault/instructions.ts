@@ -38,8 +38,6 @@ export function addOption(
   payer: PublicKey,
   owner: PublicKey,
   vaultPda: PublicKey,
-  baseMint: PublicKey,
-  quoteMint: PublicKey,
   condBaseMint: PublicKey,
   condQuoteMint: PublicKey
 ) {
@@ -47,8 +45,6 @@ export function addOption(
     payer,
     owner,
     vault: vaultPda,
-    baseMint,
-    quoteMint,
     condBaseMint,
     condQuoteMint,
   });

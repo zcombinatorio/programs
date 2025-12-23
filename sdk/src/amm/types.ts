@@ -1,8 +1,8 @@
 import { BN, IdlAccounts, IdlEvents, IdlTypes } from "@coral-xyz/anchor";
 
 // Re-export the generated IDL type
-export { Amm } from "../programs/types";
-import type { Amm } from "../programs/types";
+export { Amm } from "../generated/types";
+import type { Amm } from "../generated/types";
 
 // =============================================================================
 // IDL-derived Types (primary account/state types)

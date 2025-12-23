@@ -129,12 +129,6 @@ export type Vault = {
           }
         },
         {
-          "name": "baseMint"
-        },
-        {
-          "name": "quoteMint"
-        },
-        {
           "name": "condBaseMint",
           "writable": true
         },
@@ -436,7 +430,7 @@ export type Vault = {
         {
           "name": "owner",
           "docs": [
-            "Owner of the vault — needs to sign"
+            "Owner of the vault"
           ],
           "signer": true
         },
@@ -1207,6 +1201,22 @@ export type Vault = {
       }
     },
     {
+      "name": "tokenMint",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "vaultAccount",
       "type": {
         "kind": "struct",
@@ -1225,18 +1235,22 @@ export type Vault = {
           },
           {
             "name": "baseMint",
-            "type": "pubkey"
+            "type": {
+              "defined": {
+                "name": "tokenMint"
+              }
+            }
           },
           {
             "name": "quoteMint",
-            "type": "pubkey"
+            "type": {
+              "defined": {
+                "name": "tokenMint"
+              }
+            }
           },
           {
             "name": "nonce",
-            "type": "u16"
-          },
-          {
-            "name": "proposalId",
             "type": "u16"
           },
           {

@@ -7,3 +7,4 @@ export const CONDITIONAL_MINT_SEED = Buffer.from("cmint");
 
 export const MAX_OPTIONS = 8;
 export const MIN_OPTIONS = 2;
+export const VAULT_VERSION = 1;

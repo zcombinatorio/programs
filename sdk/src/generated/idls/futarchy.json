@@ -21,7 +21,7 @@
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "admin",
           "writable": true,
           "signer": true
         },
@@ -46,7 +46,7 @@
               },
               {
                 "kind": "account",
-                "path": "moderator.id",
+                "path": "moderator.name",
                 "account": "ModeratorAccount"
               }
             ]
@@ -121,7 +121,7 @@
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "creator",
           "writable": true,
           "signer": true
         },
@@ -229,7 +229,10 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "proposal"
+          ]
         },
         {
           "name": "vault_program",
@@ -241,6 +244,105 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "initialize_child_dao",
+      "discriminator": [
+        241,
+        144,
+        136,
+        34,
+        152,
+        26,
+        21,
+        190
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "parent_admin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "parent_dao",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "parent_dao.name",
+                "account": "DAOAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "program_config"
+        },
+        {
+          "name": "program_config_treasury",
+          "writable": true
+        },
+        {
+          "name": "treasury_multisig",
+          "writable": true
+        },
+        {
+          "name": "mint_multisig",
+          "writable": true
+        },
+        {
+          "name": "squads_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "treasury_cosigner",
+          "type": "pubkey"
+        }
+      ]
     },
     {
       "name": "initialize_moderator",
@@ -256,35 +358,9 @@
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "admin",
           "writable": true,
           "signer": true
-        },
-        {
-          "name": "global_config",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  108,
-                  111,
-                  98,
-                  97,
-                  108,
-                  95,
-                  99,
-                  111,
-                  110,
-                  102,
-                  105,
-                  103
-                ]
-              }
-            ]
-          }
         },
         {
           "name": "base_mint"
@@ -312,9 +388,8 @@
                 ]
               },
               {
-                "kind": "account",
-                "path": "global_config.moderator_id_counter",
-                "account": "GlobalConfig"
+                "kind": "arg",
+                "path": "name"
               }
             ]
           }
@@ -324,26 +399,54 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": [],
-      "returns": "u32"
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
     },
     {
-      "name": "initialize_proposal",
+      "name": "initialize_parent_dao",
       "discriminator": [
-        50,
-        73,
-        156,
-        98,
-        129,
-        149,
-        21,
-        158
+        188,
+        86,
+        227,
+        249,
+        221,
+        148,
+        66,
+        241
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "admin",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "parent_admin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
         },
         {
           "name": "moderator",
@@ -365,8 +468,103 @@
                 ]
               },
               {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_mint"
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "program_config"
+        },
+        {
+          "name": "program_config_treasury",
+          "writable": true
+        },
+        {
+          "name": "treasury_multisig",
+          "writable": true
+        },
+        {
+          "name": "mint_multisig",
+          "writable": true
+        },
+        {
+          "name": "squads_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "treasury_cosigner",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool_type",
+          "type": {
+            "defined": {
+              "name": "PoolType"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_proposal",
+      "discriminator": [
+        50,
+        73,
+        156,
+        98,
+        129,
+        149,
+        21,
+        158
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "moderator",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
                 "kind": "account",
-                "path": "moderator.id",
+                "path": "moderator.name",
                 "account": "ModeratorAccount"
               }
             ]
@@ -425,19 +623,17 @@
       ],
       "args": [
         {
-          "name": "length",
-          "type": "u16"
-        },
-        {
-          "name": "fee",
-          "type": "u16"
-        },
-        {
-          "name": "twap_config",
+          "name": "proposal_params",
           "type": {
             "defined": {
-              "name": "TWAPConfig"
+              "name": "ProposalParams"
             }
+          }
+        },
+        {
+          "name": "metadata",
+          "type": {
+            "option": "string"
           }
         }
       ],
@@ -457,7 +653,7 @@
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "creator",
           "writable": true,
           "signer": true
         },
@@ -494,7 +690,10 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "proposal"
+          ]
         },
         {
           "name": "system_program",
@@ -542,7 +741,7 @@
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "creator",
           "writable": true,
           "signer": true
         },
@@ -578,7 +777,10 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "proposal"
+          ]
         },
         {
           "name": "pool",
@@ -606,20 +808,135 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "upgrade_dao",
+      "discriminator": [
+        81,
+        178,
+        57,
+        196,
+        156,
+        38,
+        145,
+        93
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "parent_admin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "dao.name",
+                "account": "DAOAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "parent_dao",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "parent_dao.name",
+                "account": "DAOAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "dao.name",
+                "account": "DAOAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_mint"
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool_type",
+          "type": {
+            "defined": {
+              "name": "PoolType"
+            }
+          }
+        }
+      ]
     }
   ],
   "accounts": [
     {
-      "name": "GlobalConfig",
+      "name": "DAOAccount",
       "discriminator": [
-        149,
-        8,
-        156,
-        202,
-        160,
-        252,
-        176,
-        217
+        204,
+        10,
+        113,
+        79,
+        232,
+        184,
+        83,
+        201
       ]
     },
     {
@@ -650,6 +967,32 @@
     }
   ],
   "events": [
+    {
+      "name": "DAOInitialized",
+      "discriminator": [
+        17,
+        212,
+        203,
+        144,
+        165,
+        153,
+        118,
+        92
+      ]
+    },
+    {
+      "name": "DAOUpgraded",
+      "discriminator": [
+        8,
+        62,
+        51,
+        188,
+        195,
+        69,
+        78,
+        7
+      ]
+    },
     {
       "name": "LiquidityRedeemed",
       "discriminator": [
@@ -799,11 +1142,39 @@
       "code": 6013,
       "name": "InvalidVersion",
       "msg": "Invalid account version"
+    },
+    {
+      "code": 6014,
+      "name": "NameTooLong",
+      "msg": "Name exceeds 32 bytes"
+    },
+    {
+      "code": 6015,
+      "name": "MetadataTooLong",
+      "msg": "Metadata CID exceeds 64 bytes"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidDAO",
+      "msg": "Invalid DAO account"
+    },
+    {
+      "code": 6017,
+      "name": "MathOverflow",
+      "msg": "Math overflow"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidProposalParams",
+      "msg": "Invalid proposal parameters"
     }
   ],
   "types": [
     {
-      "name": "GlobalConfig",
+      "name": "DAOAccount",
+      "docs": [
+        "Seeds: [DAO_SEED, &dao_id.to_le_bytes()]"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -812,8 +1183,142 @@
             "type": "u8"
           },
           {
-            "name": "moderator_id_counter",
-            "type": "u32"
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "cosigner",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury_multisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint_auth_multisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "dao_type",
+            "type": {
+              "defined": {
+                "name": "DAOType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "DAOInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury_multisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint_multisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "dao_type",
+            "type": {
+              "defined": {
+                "name": "DAOType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "DAOType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Parent",
+            "fields": [
+              {
+                "name": "moderator",
+                "type": "pubkey"
+              },
+              {
+                "name": "pool",
+                "type": "pubkey"
+              },
+              {
+                "name": "pool_type",
+                "type": {
+                  "defined": {
+                    "name": "PoolType"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Child",
+            "fields": [
+              {
+                "name": "parent_dao",
+                "type": "pubkey"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "DAOUpgraded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dao",
+            "type": "pubkey"
+          },
+          {
+            "name": "parent_dao",
+            "type": "pubkey"
+          },
+          {
+            "name": "dao_type",
+            "type": {
+              "defined": {
+                "name": "DAOType"
+              }
+            }
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
           }
         ]
       }
@@ -844,6 +1349,9 @@
     },
     {
       "name": "ModeratorAccount",
+      "docs": [
+        "Seeds: [MODERATOR_SEED, &id.to_le_bytes()]"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -856,8 +1364,8 @@
             "type": "u8"
           },
           {
-            "name": "id",
-            "type": "u32"
+            "name": "name",
+            "type": "string"
           },
           {
             "name": "quote_mint",
@@ -888,12 +1396,12 @@
             "type": "u8"
           },
           {
-            "name": "id",
-            "type": "u32"
-          },
-          {
             "name": "moderator",
             "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
           },
           {
             "name": "base_mint",
@@ -931,7 +1439,24 @@
       }
     },
     {
+      "name": "PoolType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "DAMM"
+          },
+          {
+            "name": "DLMM"
+          }
+        ]
+      }
+    },
+    {
       "name": "ProposalAccount",
+      "docs": [
+        "Seeds: [PROPOSAL_SEED, moderator.key(), &id.to_le_bytes()]"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -968,8 +1493,8 @@
             "type": "i64"
           },
           {
-            "name": "length",
-            "type": "u16"
+            "name": "creator",
+            "type": "pubkey"
           },
           {
             "name": "base_mint",
@@ -993,19 +1518,17 @@
             }
           },
           {
-            "name": "creator",
-            "type": "pubkey"
-          },
-          {
-            "name": "fee",
-            "type": "u16"
-          },
-          {
-            "name": "twap_config",
+            "name": "config",
             "type": {
               "defined": {
-                "name": "TWAPConfig"
+                "name": "ProposalParams"
               }
+            }
+          },
+          {
+            "name": "metadata",
+            "type": {
+              "option": "string"
             }
           }
         ]
@@ -1096,6 +1619,38 @@
       }
     },
     {
+      "name": "ProposalParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "length",
+            "type": "u16"
+          },
+          {
+            "name": "starting_observation",
+            "type": "u128"
+          },
+          {
+            "name": "max_observation_delta",
+            "type": "u128"
+          },
+          {
+            "name": "warmup_duration",
+            "type": "u32"
+          },
+          {
+            "name": "market_bias",
+            "type": "u16"
+          },
+          {
+            "name": "fee",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
       "name": "ProposalState",
       "type": {
         "kind": "enum",
@@ -1114,38 +1669,13 @@
           }
         ]
       }
-    },
-    {
-      "name": "TWAPConfig",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "starting_observation",
-            "type": "u128"
-          },
-          {
-            "name": "max_observation_delta",
-            "type": "u128"
-          },
-          {
-            "name": "warmup_duration",
-            "type": "u32"
-          }
-        ]
-      }
     }
   ],
   "constants": [
     {
-      "name": "GLOBAL_CONFIG_SEED",
+      "name": "DAO_SEED",
       "type": "bytes",
-      "value": "[103, 108, 111, 98, 97, 108, 95, 99, 111, 110, 102, 105, 103]"
-    },
-    {
-      "name": "GLOBAL_CONFIG_VERSION",
-      "type": "u8",
-      "value": "1"
+      "value": "[100, 97, 111]"
     },
     {
       "name": "MAX_OPTIONS",
@@ -1163,19 +1693,9 @@
       "value": "[109, 111, 100, 101, 114, 97, 116, 111, 114]"
     },
     {
-      "name": "MODERATOR_VERSION",
-      "type": "u8",
-      "value": "1"
-    },
-    {
       "name": "PROPOSAL_SEED",
       "type": "bytes",
       "value": "[112, 114, 111, 112, 111, 115, 97, 108]"
-    },
-    {
-      "name": "PROPOSAL_VERSION",
-      "type": "u8",
-      "value": "1"
     }
   ]
 }

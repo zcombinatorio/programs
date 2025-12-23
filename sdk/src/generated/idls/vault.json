@@ -123,12 +123,6 @@
           }
         },
         {
-          "name": "base_mint"
-        },
-        {
-          "name": "quote_mint"
-        },
-        {
           "name": "cond_base_mint",
           "writable": true
         },
@@ -430,7 +424,7 @@
         {
           "name": "owner",
           "docs": [
-            "Owner of the vault — needs to sign"
+            "Owner of the vault"
           ],
           "signer": true
         },
@@ -1201,6 +1195,22 @@
       }
     },
     {
+      "name": "TokenMint",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "VaultAccount",
       "type": {
         "kind": "struct",
@@ -1219,18 +1229,22 @@
           },
           {
             "name": "base_mint",
-            "type": "pubkey"
+            "type": {
+              "defined": {
+                "name": "TokenMint"
+              }
+            }
           },
           {
             "name": "quote_mint",
-            "type": "pubkey"
+            "type": {
+              "defined": {
+                "name": "TokenMint"
+              }
+            }
           },
           {
             "name": "nonce",
-            "type": "u16"
-          },
-          {
-            "name": "proposal_id",
             "type": "u16"
           },
           {

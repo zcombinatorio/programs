@@ -29,7 +29,7 @@ import {
   ceaseTrading,
 } from "./instructions";
 
-import { AmmIDL } from "../programs/idls";
+import { AmmIDL } from "../generated/idls";
 
 const MAX_COMPUTE_UNITS = 300_000;
 

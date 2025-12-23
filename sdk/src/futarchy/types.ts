@@ -1,8 +1,8 @@
 import { BN, IdlAccounts, IdlEvents, IdlTypes } from "@coral-xyz/anchor";
 
 // Re-export the generated IDL type
-export { Futarchy } from "../programs/types";
-import type { Futarchy } from "../programs/types";
+export { Futarchy } from "../generated/types";
+import type { Futarchy } from "../generated/types";
 
 // =============================================================================
 // IDL-derived Types (primary account/state types)

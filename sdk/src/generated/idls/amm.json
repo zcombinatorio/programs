@@ -1,10 +1,4 @@
-/**
- * Program IDL in camelCase format in order to be used in JS/TS.
- *
- * Note that this is only a type helper and is not the actual IDL. The original
- * IDL can be found at `target/idl/amm.json`.
- */
-export type Amm = {
+{
   "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC",
   "metadata": {
     "name": "amm",
@@ -14,7 +8,7 @@ export type Amm = {
   },
   "instructions": [
     {
-      "name": "addLiquidity",
+      "name": "add_liquidity",
       "discriminator": [
         181,
         157,
@@ -46,23 +40,23 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserveA",
+          "name": "reserve_a",
           "writable": true,
           "pda": {
             "seeds": [
@@ -85,13 +79,13 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserveB",
+          "name": "reserve_b",
           "writable": true,
           "pda": {
             "seeds": [
@@ -114,37 +108,37 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "depositorTokenAccA",
+          "name": "depositor_token_acc_a",
           "writable": true
         },
         {
-          "name": "depositorTokenAccB",
+          "name": "depositor_token_acc_b",
           "writable": true
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
       "args": [
         {
-          "name": "amountA",
+          "name": "amount_a",
           "type": "u64"
         },
         {
-          "name": "amountB",
+          "name": "amount_b",
           "type": "u64"
         }
       ]
     },
     {
-      "name": "ceaseTrading",
+      "name": "cease_trading",
       "discriminator": [
         187,
         140,
@@ -177,17 +171,17 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
@@ -196,7 +190,7 @@ export type Amm = {
       "args": []
     },
     {
-      "name": "crankTwap",
+      "name": "crank_twap",
       "discriminator": [
         43,
         127,
@@ -225,23 +219,23 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserveA",
+          "name": "reserve_a",
           "pda": {
             "seeds": [
               {
@@ -263,13 +257,13 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserveB",
+          "name": "reserve_b",
           "pda": {
             "seeds": [
               {
@@ -291,19 +285,17 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         }
       ],
       "args": [],
-      "returns": {
-        "option": "u128"
-      }
+      "returns": "u128"
     },
     {
-      "name": "createPool",
+      "name": "create_pool",
       "discriminator": [
         233,
         146,
@@ -325,10 +317,10 @@ export type Amm = {
           "signer": true
         },
         {
-          "name": "mintA"
+          "name": "mint_a"
         },
         {
-          "name": "mintB"
+          "name": "mint_b"
         },
         {
           "name": "pool",
@@ -350,17 +342,17 @@ export type Amm = {
               },
               {
                 "kind": "account",
-                "path": "mintA"
+                "path": "mint_a"
               },
               {
                 "kind": "account",
-                "path": "mintB"
+                "path": "mint_b"
               }
             ]
           }
         },
         {
-          "name": "reserveA",
+          "name": "reserve_a",
           "writable": true,
           "pda": {
             "seeds": [
@@ -382,13 +374,13 @@ export type Amm = {
               },
               {
                 "kind": "account",
-                "path": "mintA"
+                "path": "mint_a"
               }
             ]
           }
         },
         {
-          "name": "reserveB",
+          "name": "reserve_b",
           "writable": true,
           "pda": {
             "seeds": [
@@ -410,17 +402,17 @@ export type Amm = {
               },
               {
                 "kind": "account",
-                "path": "mintB"
+                "path": "mint_b"
               }
             ]
           }
         },
         {
-          "name": "feeAuthority",
+          "name": "fee_authority",
           "address": "FEEnkcCNE2623LYCPtLf63LFzXpCFigBLTu4qZovRGZC"
         },
         {
-          "name": "feeVault",
+          "name": "fee_vault",
           "writable": true,
           "pda": {
             "seeds": [
@@ -446,11 +438,11 @@ export type Amm = {
           }
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -460,19 +452,19 @@ export type Amm = {
           "type": "u16"
         },
         {
-          "name": "startingObservation",
+          "name": "starting_observation",
           "type": "u128"
         },
         {
-          "name": "maxObservationDelta",
+          "name": "max_observation_delta",
           "type": "u128"
         },
         {
-          "name": "warmupDuration",
+          "name": "warmup_duration",
           "type": "u32"
         },
         {
-          "name": "liquidityProvider",
+          "name": "liquidity_provider",
           "type": {
             "option": "pubkey"
           }
@@ -480,7 +472,7 @@ export type Amm = {
       ]
     },
     {
-      "name": "removeLiquidity",
+      "name": "remove_liquidity",
       "discriminator": [
         80,
         85,
@@ -512,23 +504,23 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserveA",
+          "name": "reserve_a",
           "writable": true,
           "pda": {
             "seeds": [
@@ -551,13 +543,13 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserveB",
+          "name": "reserve_b",
           "writable": true,
           "pda": {
             "seeds": [
@@ -580,31 +572,31 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "depositorTokenAccA",
+          "name": "depositor_token_acc_a",
           "writable": true
         },
         {
-          "name": "depositorTokenAccB",
+          "name": "depositor_token_acc_b",
           "writable": true
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
       "args": [
         {
-          "name": "amountA",
+          "name": "amount_a",
           "type": "u64"
         },
         {
-          "name": "amountB",
+          "name": "amount_b",
           "type": "u64"
         }
       ]
@@ -643,23 +635,23 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.admin",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               },
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserveA",
+          "name": "reserve_a",
           "writable": true,
           "pda": {
             "seeds": [
@@ -682,13 +674,13 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.mint_a",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "reserveB",
+          "name": "reserve_b",
           "writable": true,
           "pda": {
             "seeds": [
@@ -711,13 +703,13 @@ export type Amm = {
               {
                 "kind": "account",
                 "path": "pool.mint_b",
-                "account": "poolAccount"
+                "account": "PoolAccount"
               }
             ]
           }
         },
         {
-          "name": "feeVault",
+          "name": "fee_vault",
           "docs": [
             "Fee vault with hardcoded fee authority wallet"
           ],
@@ -746,29 +738,29 @@ export type Amm = {
           }
         },
         {
-          "name": "traderAccountA",
+          "name": "trader_account_a",
           "writable": true
         },
         {
-          "name": "traderAccountB",
+          "name": "trader_account_b",
           "writable": true
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
       "args": [
         {
-          "name": "swapAToB",
+          "name": "swap_a_to_b",
           "type": "bool"
         },
         {
-          "name": "inputAmount",
+          "name": "input_amount",
           "type": "u64"
         },
         {
-          "name": "minOutputAmount",
+          "name": "min_output_amount",
           "type": "u64"
         }
       ]
@@ -776,7 +768,7 @@ export type Amm = {
   ],
   "accounts": [
     {
-      "name": "poolAccount",
+      "name": "PoolAccount",
       "discriminator": [
         116,
         210,
@@ -791,7 +783,7 @@ export type Amm = {
   ],
   "events": [
     {
-      "name": "condSwap",
+      "name": "CondSwap",
       "discriminator": [
         99,
         23,
@@ -804,7 +796,7 @@ export type Amm = {
       ]
     },
     {
-      "name": "liquidityAdded",
+      "name": "LiquidityAdded",
       "discriminator": [
         154,
         26,
@@ -817,7 +809,7 @@ export type Amm = {
       ]
     },
     {
-      "name": "liquidityRemoved",
+      "name": "LiquidityRemoved",
       "discriminator": [
         225,
         105,
@@ -830,7 +822,7 @@ export type Amm = {
       ]
     },
     {
-      "name": "poolCreated",
+      "name": "PoolCreated",
       "discriminator": [
         202,
         44,
@@ -843,7 +835,7 @@ export type Amm = {
       ]
     },
     {
-      "name": "twapUpdate",
+      "name": "TWAPUpdate",
       "discriminator": [
         48,
         209,
@@ -859,68 +851,68 @@ export type Amm = {
   "errors": [
     {
       "code": 6000,
-      "name": "invalidAdmin",
+      "name": "InvalidAdmin",
       "msg": "Invalid admin"
     },
     {
       "code": 6001,
-      "name": "invalidDepositor",
+      "name": "InvalidDepositor",
       "msg": "Invalid depositor"
     },
     {
       "code": 6002,
-      "name": "invalidState",
+      "name": "InvalidState",
       "msg": "Invalid state"
     },
     {
       "code": 6003,
-      "name": "invalidAmount",
+      "name": "InvalidAmount",
       "msg": "Invalid amount"
     },
     {
       "code": 6004,
-      "name": "slippageExceeded",
+      "name": "SlippageExceeded",
       "msg": "Slippage exceeded"
     },
     {
       "code": 6005,
-      "name": "invariantViolated",
+      "name": "InvariantViolated",
       "msg": "Invariant violated"
     },
     {
       "code": 6006,
-      "name": "emptyPool",
+      "name": "EmptyPool",
       "msg": "Pool is empty"
     },
     {
       "code": 6007,
-      "name": "mathOverflow",
+      "name": "MathOverflow",
       "msg": "Math overflow"
     },
     {
       "code": 6008,
-      "name": "mathUnderflow",
+      "name": "MathUnderflow",
       "msg": "Math underflow"
     },
     {
       "code": 6009,
-      "name": "outputTooSmall",
+      "name": "OutputTooSmall",
       "msg": "Output too small"
     },
     {
       "code": 6010,
-      "name": "insufficientReserve",
+      "name": "InsufficientReserve",
       "msg": "Insufficient reserve balance"
     },
     {
       "code": 6011,
-      "name": "invalidFee",
+      "name": "InvalidFee",
       "msg": "Fee exceeds maximum"
     }
   ],
   "types": [
     {
-      "name": "condSwap",
+      "name": "CondSwap",
       "type": {
         "kind": "struct",
         "fields": [
@@ -933,26 +925,26 @@ export type Amm = {
             "type": "pubkey"
           },
           {
-            "name": "swapAToB",
+            "name": "swap_a_to_b",
             "type": "bool"
           },
           {
-            "name": "inputAmount",
+            "name": "input_amount",
             "type": "u64"
           },
           {
-            "name": "outputAmount",
+            "name": "output_amount",
             "type": "u64"
           },
           {
-            "name": "feeAmount",
+            "name": "fee_amount",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "liquidityAdded",
+      "name": "LiquidityAdded",
       "type": {
         "kind": "struct",
         "fields": [
@@ -961,18 +953,18 @@ export type Amm = {
             "type": "pubkey"
           },
           {
-            "name": "amountA",
+            "name": "amount_a",
             "type": "u64"
           },
           {
-            "name": "amountB",
+            "name": "amount_b",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "liquidityRemoved",
+      "name": "LiquidityRemoved",
       "type": {
         "kind": "struct",
         "fields": [
@@ -981,18 +973,18 @@ export type Amm = {
             "type": "pubkey"
           },
           {
-            "name": "amountA",
+            "name": "amount_a",
             "type": "u64"
           },
           {
-            "name": "amountB",
+            "name": "amount_b",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "poolAccount",
+      "name": "PoolAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1004,7 +996,7 @@ export type Amm = {
             "name": "bumps",
             "type": {
               "defined": {
-                "name": "poolBumps"
+                "name": "PoolBumps"
               }
             }
           },
@@ -1012,16 +1004,16 @@ export type Amm = {
             "name": "state",
             "type": {
               "defined": {
-                "name": "poolState"
+                "name": "PoolState"
               }
             }
           },
           {
-            "name": "mintA",
+            "name": "mint_a",
             "type": "pubkey"
           },
           {
-            "name": "mintB",
+            "name": "mint_b",
             "type": "pubkey"
           },
           {
@@ -1033,14 +1025,14 @@ export type Amm = {
             "type": "pubkey"
           },
           {
-            "name": "liquidityProvider",
+            "name": "liquidity_provider",
             "type": "pubkey"
           },
           {
             "name": "oracle",
             "type": {
               "defined": {
-                "name": "twapOracle"
+                "name": "TwapOracle"
               }
             }
           }
@@ -1048,7 +1040,7 @@ export type Amm = {
       }
     },
     {
-      "name": "poolBumps",
+      "name": "PoolBumps",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1057,22 +1049,22 @@ export type Amm = {
             "type": "u8"
           },
           {
-            "name": "reserveA",
+            "name": "reserve_a",
             "type": "u8"
           },
           {
-            "name": "reserveB",
+            "name": "reserve_b",
             "type": "u8"
           },
           {
-            "name": "feeVault",
+            "name": "fee_vault",
             "type": "u8"
           }
         ]
       }
     },
     {
-      "name": "poolCreated",
+      "name": "PoolCreated",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1085,11 +1077,11 @@ export type Amm = {
             "type": "pubkey"
           },
           {
-            "name": "mintA",
+            "name": "mint_a",
             "type": "pubkey"
           },
           {
-            "name": "mintB",
+            "name": "mint_b",
             "type": "pubkey"
           },
           {
@@ -1104,26 +1096,26 @@ export type Amm = {
       }
     },
     {
-      "name": "poolState",
+      "name": "PoolState",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "trading"
+            "name": "Trading"
           },
           {
-            "name": "finalized"
+            "name": "Finalized"
           }
         ]
       }
     },
     {
-      "name": "twapUpdate",
+      "name": "TWAPUpdate",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "unixTime",
+            "name": "unix_time",
             "type": "i64"
           },
           {
@@ -1135,7 +1127,7 @@ export type Amm = {
             "type": "u128"
           },
           {
-            "name": "cumulativeObservations",
+            "name": "cumulative_observations",
             "type": "u128"
           },
           {
@@ -1146,7 +1138,7 @@ export type Amm = {
       }
     },
     {
-      "name": "twapOracle",
+      "name": "TwapOracle",
       "docs": [
         "TWAP oracle that tracks time-weighted average prices with manipulation resistance.",
         "",
@@ -1158,7 +1150,7 @@ export type Amm = {
         "kind": "struct",
         "fields": [
           {
-            "name": "cumulativeObservations",
+            "name": "cumulative_observations",
             "docs": [
               "Running sum of (observation * seconds_elapsed) used for TWAP calculation.",
               "On overflow, wraps back to 0 - clients should handle this edge case."
@@ -1166,56 +1158,56 @@ export type Amm = {
             "type": "u128"
           },
           {
-            "name": "lastUpdateUnixTime",
+            "name": "last_update_unix_time",
             "docs": [
               "Unix timestamp of the most recent price recording"
             ],
             "type": "i64"
           },
           {
-            "name": "createdAtUnixTime",
+            "name": "created_at_unix_time",
             "docs": [
               "Unix timestamp when this oracle was initialized"
             ],
             "type": "i64"
           },
           {
-            "name": "lastPrice",
+            "name": "last_price",
             "docs": [
               "Most recent raw price from pool reserves (reserves_a / reserves_b * PRICE_SCALE)"
             ],
             "type": "u128"
           },
           {
-            "name": "lastObservation",
+            "name": "last_observation",
             "docs": [
               "Rate-limited observation that moves toward price bounded by max_observation_delta"
             ],
             "type": "u128"
           },
           {
-            "name": "maxObservationDelta",
+            "name": "max_observation_delta",
             "docs": [
               "Maximum amount observation can change per crank (manipulation resistance)"
             ],
             "type": "u128"
           },
           {
-            "name": "startingObservation",
+            "name": "starting_observation",
             "docs": [
               "Initial value for last_observation when oracle is created"
             ],
             "type": "u128"
           },
           {
-            "name": "warmupDuration",
+            "name": "warmup_duration",
             "docs": [
               "Seconds after creation before TWAP accumulation begins"
             ],
             "type": "u32"
           },
           {
-            "name": "minRecordingInterval",
+            "name": "min_recording_interval",
             "docs": [
               "Minimum time in-between TWAP recordings"
             ],
@@ -1227,34 +1219,34 @@ export type Amm = {
   ],
   "constants": [
     {
-      "name": "ammVersion",
+      "name": "AMM_VERSION",
       "type": "u8",
       "value": "1"
     },
     {
-      "name": "feeAuthority",
+      "name": "FEE_AUTHORITY",
       "type": "pubkey",
       "value": "FEEnkcCNE2623LYCPtLf63LFzXpCFigBLTu4qZovRGZC"
     },
     {
-      "name": "feeVaultSeed",
+      "name": "FEE_VAULT_SEED",
       "type": "bytes",
       "value": "[102, 101, 101, 95, 118, 97, 117, 108, 116]"
     },
     {
-      "name": "maxFee",
+      "name": "MAX_FEE",
       "type": "u16",
       "value": "5000"
     },
     {
-      "name": "poolSeed",
+      "name": "POOL_SEED",
       "type": "bytes",
       "value": "[112, 111, 111, 108]"
     },
     {
-      "name": "reserveSeed",
+      "name": "RESERVE_SEED",
       "type": "bytes",
       "value": "[114, 101, 115, 101, 114, 118, 101]"
     }
   ]
-};
+}

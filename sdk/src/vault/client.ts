@@ -26,7 +26,7 @@ import {
   redeemWinnings,
 } from "./instructions";
 
-import { VaultIDL } from "../programs/idls";
+import { VaultIDL } from "../generated/idls";
 
 const MAX_COMPUTE_UNITS = 450_000;
 
@@ -68,7 +68,7 @@ export class VaultClient {
 
   async fetchUserATAs(vaultPda: PublicKey, user: PublicKey, vaultType: VaultType) {
     const vault = await this.fetchVault(vaultPda);
-    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    const mint = vaultType === VaultType.Base ? vault.baseMint.address : vault.quoteMint.address;
     const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
       .slice(0, vault.numOptions);
     return {
@@ -79,7 +79,7 @@ export class VaultClient {
 
   async fetchVaultATA(vaultPda: PublicKey, vaultType: VaultType) {
     const vault = await this.fetchVault(vaultPda);
-    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    const mint = vaultType === VaultType.Base ? vault.baseMint.address : vault.quoteMint.address;
     return getAssociatedTokenAddressSync(mint, vaultPda, true);
   }
 
@@ -172,8 +172,6 @@ export class VaultClient {
       payer,
       owner,
       vaultPda,
-      vault.baseMint,
-      vault.quoteMint,
       condBaseMint,
       condQuoteMint
     );
@@ -192,7 +190,7 @@ export class VaultClient {
     amount: BN | number
   ) {
     const vault = await this.fetchVault(vaultPda);
-    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    const mint = vaultType === VaultType.Base ? vault.baseMint.address : vault.quoteMint.address;
     const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
       .slice(0, vault.numOptions);
 
@@ -241,7 +239,7 @@ export class VaultClient {
     amount: BN | number
   ) {
     const vault = await this.fetchVault(vaultPda);
-    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    const mint = vaultType === VaultType.Base ? vault.baseMint.address : vault.quoteMint.address;
     const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
       .slice(0, vault.numOptions);
 
@@ -276,7 +274,7 @@ export class VaultClient {
 
   async redeemWinnings(signer: PublicKey, vaultPda: PublicKey, vaultType: VaultType) {
     const vault = await this.fetchVault(vaultPda);
-    const mint = vaultType === VaultType.Base ? vault.baseMint : vault.quoteMint;
+    const mint = vaultType === VaultType.Base ? vault.baseMint.address : vault.quoteMint.address;
     const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
       .slice(0, vault.numOptions);
 
