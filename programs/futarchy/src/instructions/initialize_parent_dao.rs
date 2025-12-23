@@ -113,7 +113,6 @@ pub fn initialize_parent_dao_handler(
     });
     let dao_type = DAOType::Parent {
         moderator: moderator.key(),
-        token_mint: moderator.base_mint,
         pool,
         pool_type
     };
@@ -122,6 +121,7 @@ pub fn initialize_parent_dao_handler(
         bump: ctx.bumps.dao,
         name: name.clone(),
         admin: ctx.accounts.admin.key(),
+        token_mint: moderator.base_mint,
         cosigner: treasury_cosigner,
         treasury_multisig: ctx.accounts.treasury_multisig.key(),
         mint_auth_multisig: ctx.accounts.mint_multisig.key(),

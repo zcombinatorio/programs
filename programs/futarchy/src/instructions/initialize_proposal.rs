@@ -3,7 +3,6 @@ use anchor_lang::prelude::*;
 use vault::VAULT_VERSION;
 use vault::cpi::accounts::InitializeVault;
 
-use crate::proposal;
 use crate::state::moderator::{ModeratorAccount, MODERATOR_SEED};
 use crate::state::proposal::*;
 use crate::errors::FutarchyError;

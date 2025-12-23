@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token;
 
 use crate::errors::FutarchyError;
 use crate::state::moderator::*;
@@ -9,7 +10,8 @@ use anchor_spl::token::Mint;
 pub struct DAOUpgraded {
     pub dao: Pubkey,
     pub parent_dao: Pubkey,
-    pub dao_type: DAOType
+    pub dao_type: DAOType,
+    pub token_mint: Pubkey
 }
 
 #[derive(Accounts)]
@@ -65,6 +67,7 @@ pub struct UpgradeDAO<'info> {
 
 pub fn upgrade_dao_handler(
     ctx: Context<UpgradeDAO>,
+    token_mint: Pubkey,
     pool: Pubkey,
     pool_type: PoolType
 ) -> Result<()> {
@@ -81,9 +84,9 @@ pub fn upgrade_dao_handler(
         proposal_id_counter: 0,
         admin: ctx.accounts.admin.key()
     });
+    dao.token_mint = token_mint;
     dao.dao_type = DAOType::Parent {
         moderator: moderator.key(),
-        token_mint: moderator.base_mint,
         pool,
         pool_type
     };
@@ -91,7 +94,8 @@ pub fn upgrade_dao_handler(
     emit!(DAOUpgraded {
         dao: dao.key(),
         parent_dao: ctx.accounts.parent_dao.key(),
-        dao_type: dao.dao_type
+        dao_type: dao.dao_type,
+        token_mint: dao.token_mint,
     });
 
     Ok(())

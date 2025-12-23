@@ -59,6 +59,7 @@ pub struct InitializeChildDAO<'info> {
 pub fn initialize_child_dao_handler(
     ctx: Context<InitializeChildDAO>,
     name: String,
+    token_mint: Pubkey,
     treasury_cosigner: Pubkey,
 ) -> Result<()> {
     require!(name.len() <= 32, FutarchyError::NameTooLong);
@@ -101,6 +102,7 @@ pub fn initialize_child_dao_handler(
         bump: ctx.bumps.dao,
         name: name.clone(),
         admin: ctx.accounts.admin.key(),
+        token_mint: token_mint,
         cosigner: treasury_cosigner,
         treasury_multisig: ctx.accounts.treasury_multisig.key(),
         mint_auth_multisig: ctx.accounts.mint_multisig.key(),

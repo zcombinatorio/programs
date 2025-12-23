@@ -15,8 +15,7 @@ pub enum PoolType {
 pub enum DAOType {                                             
     /// Top-level DAO with its own liquidity pool              
     Parent {                                                   
-        moderator: Pubkey,                                     
-        token_mint: Pubkey,                                     
+        moderator: Pubkey,                                                                       
         pool: Pubkey,                                          
         pool_type: PoolType,                                   
     },                                                         
@@ -37,6 +36,7 @@ pub struct DAOAccount {
     pub name: String, 
 
     pub admin: Pubkey,
+    pub token_mint: Pubkey,   
     pub cosigner: Pubkey,
     pub treasury_multisig: Pubkey,
     pub mint_auth_multisig: Pubkey,

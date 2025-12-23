@@ -90,20 +90,23 @@ pub mod futarchy {
     pub fn initialize_child_dao(
         ctx: Context<InitializeChildDAO>,
         name: String,
+        token_mint: Pubkey,
         treasury_cosigner: Pubkey,
     ) -> Result<()> {
         instructions::initialize_child_dao::initialize_child_dao_handler(
             ctx,
             name,
+            token_mint,
             treasury_cosigner,
         )
     }
 
     pub fn upgrade_dao(
         ctx: Context<UpgradeDAO>,
+        token_mint: Pubkey,
         pool: Pubkey,
         pool_type: PoolType,
     ) -> Result<()> {
-        instructions::upgrade_dao::upgrade_dao_handler(ctx, pool, pool_type)
+        instructions::upgrade_dao::upgrade_dao_handler(ctx, token_mint, pool, pool_type)
     }
 }
