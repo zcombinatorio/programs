@@ -70,7 +70,7 @@ pub fn add_option_handler<'info>(
     require!(curr_options < MAX_OPTIONS, FutarchyError::TooManyOptions);
 
     // Update state
-    proposal.pools[curr_options as usize] = ctx.remaining_accounts[5].key(); // pool
+    proposal.pools[curr_options as usize] = ctx.remaining_accounts[3].key(); // pool
     proposal.num_options += 1;
 
     // Build proposal PDA signer seeds
