@@ -5,6 +5,9 @@ pub const DAO_VERSION: u8 = 1;
 #[constant]
 pub const DAO_SEED: &[u8] = b"dao";
 
+#[constant]
+pub const MINT_CREATE_KEY_SEED: &[u8] = b"mint_key";
+
 #[derive(Copy, Clone, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
 pub enum PoolType {
     DAMM,

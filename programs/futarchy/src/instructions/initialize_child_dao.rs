@@ -56,7 +56,16 @@ pub struct InitializeChildDAO<'info> {
     /// CHECK: checked by squads CPI
     #[account(mut)]
     pub mint_multisig: UncheckedAccount<'info>,
-
+    /// CHECK: PDA used as create_key for mint_multisig, validated by seeds
+    #[account(
+        seeds = [
+            dao.key().as_ref(), 
+            MINT_CREATE_KEY_SEED, 
+            name.as_bytes()
+        ],
+        bump
+    )]
+    pub mint_create_key: UncheckedAccount<'info>,
 
     /// CHECK: checked by squads CPI
     pub squads_program: UncheckedAccount<'info>,
@@ -87,12 +96,12 @@ pub fn initialize_child_dao_handler(
         ),
     )?;
 
-    // Create mint multisig
+    // Create mint multisig (uses mint_create_key PDA to differentiate from treasury multisig)
     SquadsMultisig::create_squads_multisig(
         ctx.accounts.program_config.to_account_info(),     // program_config
         ctx.accounts.program_config_treasury.to_account_info(),  // treasury
         ctx.accounts.mint_multisig.to_account_info(),            // multisig (being created)
-        dao.to_account_info(),                                 // create_key (PDA seed)
+        ctx.accounts.mint_create_key.to_account_info(),          // create_key (different from treasury)
         ctx.accounts.admin.to_account_info(),                     // creator (payer)
         ctx.accounts.system_program.to_account_info(),     // system_program
         ctx.accounts.squads_program.to_account_info(),     // squads_program
