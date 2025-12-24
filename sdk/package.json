@@ -1,5 +1,5 @@
 {
-  "name": "@combinator/sdk",
+  "name": "@zcomb/programs-sdk",
   "version": "1.0.0",
   "description": "SDK for ZCombinator Programs",
   "main": "dist/index.js",
