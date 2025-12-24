@@ -1,3 +1,8 @@
+/*
+ * High-level client for the Futarchy program.
+ * Handles account derivation, instruction building, and transaction composition.
+ */
+
 import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
 import {
   PublicKey,
@@ -11,19 +16,21 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { PROGRAM_ID } from "./constants";
+import { PROGRAM_ID, SQUADS_PROGRAM_ID } from "./constants";
 import {
   Futarchy,
-  GlobalConfig,
+  DAOAccount,
   ModeratorAccount,
   ProposalAccount,
-  TWAPConfig,
+  ProposalParams,
+  PoolType,
 } from "./types";
 import {
-  deriveGlobalConfigPDA,
+  deriveDAOPDA,
   deriveModeratorPDA,
   deriveProposalPDA,
-  fetchGlobalConfig,
+  deriveMintCreateKeyPDA,
+  fetchDAOAccount,
   fetchModeratorAccount,
   fetchProposalAccount,
   parseProposalState,
@@ -38,50 +45,53 @@ import {
   finalizeProposal,
   redeemLiquidity,
   addHistoricalProposal,
+  initializeParentDAO,
+  initializeChildDAO,
+  upgradeDAO,
 } from "./instructions";
+import { TxOptions } from "../utils";
 
 import { VaultClient, deriveVaultPDA, deriveConditionalMint, VaultType } from "../vault";
 import { AMMClient, derivePoolPDA, deriveReservePDA, deriveFeeVaultPDA, FEE_AUTHORITY } from "../amm";
 
 import { FutarchyIDL } from "../generated/idls";
+import * as multisig from "@sqds/multisig";
 
-const MAX_COMPUTE_UNITS = 500_000;
+const DEFAULT_COMPUTE_UNITS = 500_000;
 
 export class FutarchyClient {
   public program: Program<Futarchy>;
   public programId: PublicKey;
   public vault: VaultClient;
   public amm: AMMClient;
+  private defaultComputeUnits: number;
 
-  constructor(provider: AnchorProvider, programId?: PublicKey) {
+  constructor(provider: AnchorProvider, programId?: PublicKey, computeUnits?: number) {
     this.programId = programId ?? PROGRAM_ID;
     this.program = new Program(FutarchyIDL as Futarchy, provider);
     this.vault = new VaultClient(provider);
     this.amm = new AMMClient(provider);
+    this.defaultComputeUnits = computeUnits ?? DEFAULT_COMPUTE_UNITS;
   }
 
-  // ===========================================================================
-  // PDA Helpers
-  // ===========================================================================
+  /* PDA Helpers */
 
-  deriveGlobalConfigPDA(): [PublicKey, number] {
-    return deriveGlobalConfigPDA(this.programId);
+  deriveDAOPDA(name: string): [PublicKey, number] {
+    return deriveDAOPDA(name, this.programId);
   }
 
-  deriveModeratorPDA(moderatorId: number): [PublicKey, number] {
-    return deriveModeratorPDA(moderatorId, this.programId);
+  deriveModeratorPDA(name: string): [PublicKey, number] {
+    return deriveModeratorPDA(name, this.programId);
   }
 
   deriveProposalPDA(moderator: PublicKey, proposalId: number): [PublicKey, number] {
     return deriveProposalPDA(moderator, proposalId, this.programId);
   }
 
-  // ===========================================================================
-  // Fetch
-  // ===========================================================================
+  /* Fetchers */
 
-  async fetchGlobalConfig(): Promise<GlobalConfig> {
-    return fetchGlobalConfig(this.program, this.programId);
+  async fetchDAO(daoPda: PublicKey): Promise<DAOAccount> {
+    return fetchDAOAccount(this.program, daoPda);
   }
 
   async fetchModerator(moderatorPda: PublicKey): Promise<ModeratorAccount> {
@@ -92,6 +102,8 @@ export class FutarchyClient {
     return fetchProposalAccount(this.program, proposalPda);
   }
 
+  /* Proposal Helpers */
+
   isProposalExpired(proposal: ProposalAccount): boolean {
     return isProposalExpired(proposal);
   }
@@ -100,49 +112,48 @@ export class FutarchyClient {
     return getTimeRemaining(proposal);
   }
 
-  // ===========================================================================
-  // High-level Instruction Builders
-  // ===========================================================================
+  private getComputeUnits(options?: TxOptions): number {
+    return options?.computeUnits ?? this.defaultComputeUnits;
+  }
 
-  async initializeModerator(signer: PublicKey, baseMint: PublicKey, quoteMint: PublicKey) {
-    const [globalConfig] = this.deriveGlobalConfigPDA();
-
-    // Fetch current counter to derive moderator PDA
-    let moderatorId: number;
-    try {
-      const config = await this.fetchGlobalConfig();
-      moderatorId = config.moderatorIdCounter;
-    } catch {
-      // Global config doesn't exist yet, first moderator will be id 0
-      moderatorId = 0;
+  private maybeAddComputeBudget(options?: TxOptions): TransactionInstruction[] {
+    if (options?.includeCuBudget === false) {
+      return [];
     }
+    return [ComputeBudgetProgram.setComputeUnitLimit({ units: this.getComputeUnits(options) })];
+  }
 
-    const [moderatorPda] = this.deriveModeratorPDA(moderatorId);
+  /* Instruction Builders */
+
+  async initializeModerator(
+    admin: PublicKey,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    name: string,
+    options?: TxOptions
+  ) {
+    const [moderatorPda] = this.deriveModeratorPDA(name);
 
     const builder = initializeModerator(
       this.program,
-      signer,
-      globalConfig,
+      admin,
       baseMint,
       quoteMint,
-      moderatorPda
-    );
-
-    return {
-      builder,
-      globalConfig,
       moderatorPda,
-      moderatorId,
-    };
+      name
+    ).preInstructions(this.maybeAddComputeBudget(options));
+
+    return { builder, moderatorPda, name };
   }
 
   async addHistoricalProposal(
-    signer: PublicKey,
+    admin: PublicKey,
     moderatorPda: PublicKey,
     numOptions: number,
     winningIdx: number,
     length: number,
-    createdAt: BN | number
+    createdAt: BN | number,
+    options?: TxOptions
   ) {
     const moderator = await this.fetchModerator(moderatorPda);
     const proposalId = moderator.proposalIdCounter;
@@ -150,31 +161,24 @@ export class FutarchyClient {
 
     const builder = addHistoricalProposal(
       this.program,
-      signer,
+      admin,
       moderatorPda,
       proposalPda,
       numOptions,
       winningIdx,
       length,
       createdAt
-    );
+    ).preInstructions(this.maybeAddComputeBudget(options));
 
-    const instruction = await builder.instruction();
-
-    return {
-      builder,
-      instruction,
-      proposalPda,
-      proposalId,
-    };
+    return { builder, proposalPda, proposalId };
   }
 
   async initializeProposal(
-    signer: PublicKey,
+    creator: PublicKey,
     moderatorPda: PublicKey,
-    length: number,
-    fee: number,
-    twapConfig: TWAPConfig
+    proposalParams: ProposalParams,
+    metadata?: string,
+    options?: TxOptions
   ) {
     const moderator = await this.fetchModerator(moderatorPda);
     const proposalId = moderator.proposalIdCounter;
@@ -229,20 +233,16 @@ export class FutarchyClient {
 
     const builder = initializeProposal(
       this.program,
-      signer,
+      creator,
       moderatorPda,
       proposalPda,
-      length,
-      fee,
-      twapConfig,
+      proposalParams,
+      metadata ?? null,
       remainingAccounts
-    ).preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: MAX_COMPUTE_UNITS })]);
-
-    const instruction = await builder.instruction();
+    ).preInstructions(this.maybeAddComputeBudget(options));
 
     return {
       builder,
-      instruction,
       proposalPda,
       proposalId,
       vaultPda,
@@ -252,7 +252,7 @@ export class FutarchyClient {
     };
   }
 
-  async addOption(signer: PublicKey, proposalPda: PublicKey) {
+  async addOption(creator: PublicKey, proposalPda: PublicKey, options?: TxOptions) {
     const proposal = await this.fetchProposal(proposalPda);
     const optionIndex = proposal.numOptions;
 
@@ -269,37 +269,27 @@ export class FutarchyClient {
     // Build remaining accounts (see add_option.rs)
     const remainingAccounts = [
       { pubkey: proposal.vault, isSigner: false, isWritable: true },           // 0: vault
-      { pubkey: proposal.baseMint, isSigner: false, isWritable: false },       // 1: base_mint
-      { pubkey: proposal.quoteMint, isSigner: false, isWritable: false },      // 2: quote_mint
-      { pubkey: condBaseMint, isSigner: false, isWritable: true },             // 3: cond_base_mint
-      { pubkey: condQuoteMint, isSigner: false, isWritable: true },            // 4: cond_quote_mint
-      { pubkey: pool, isSigner: false, isWritable: true },                     // 5: pool
-      { pubkey: reserveA, isSigner: false, isWritable: true },                 // 6: reserve_a
-      { pubkey: reserveB, isSigner: false, isWritable: true },                 // 7: reserve_b
-      { pubkey: FEE_AUTHORITY, isSigner: false, isWritable: false },           // 8: fee_authority
-      { pubkey: feeVault, isSigner: false, isWritable: true },                 // 9: fee_vault
+      { pubkey: condBaseMint, isSigner: false, isWritable: true },             // 1: cond_base_mint
+      { pubkey: condQuoteMint, isSigner: false, isWritable: true },            // 2: cond_quote_mint
+      { pubkey: pool, isSigner: false, isWritable: true },                     // 3: pool
+      { pubkey: reserveA, isSigner: false, isWritable: true },                 // 4: reserve_a
+      { pubkey: reserveB, isSigner: false, isWritable: true },                 // 5: reserve_b
+      { pubkey: FEE_AUTHORITY, isSigner: false, isWritable: false },           // 6: fee_authority
+      { pubkey: feeVault, isSigner: false, isWritable: true },                 // 7: fee_vault
     ];
 
-    const builder = addOption(this.program, signer, proposalPda, remainingAccounts)
-      .preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: MAX_COMPUTE_UNITS })]);
+    const builder = addOption(this.program, creator, proposalPda, remainingAccounts)
+      .preInstructions(this.maybeAddComputeBudget(options));
 
-    const instruction = await builder.instruction();
-
-    return {
-      builder,
-      instruction,
-      optionIndex,
-      pool,
-      condBaseMint,
-      condQuoteMint,
-    };
+    return { builder, optionIndex, pool, condBaseMint, condQuoteMint };
   }
 
   async launchProposal(
-    signer: PublicKey,
+    creator: PublicKey,
     proposalPda: PublicKey,
     baseAmount: BN | number,
-    quoteAmount: BN | number
+    quoteAmount: BN | number,
+    options?: TxOptions
   ) {
     const proposal = await this.fetchProposal(proposalPda);
     const vault = await this.vault.fetchVault(proposal.vault);
@@ -311,8 +301,8 @@ export class FutarchyClient {
     const pools = proposal.pools.slice(0, numOptions);
 
     // Derive all user conditional token ATAs
-    const userCondBaseATAs = condBaseMints.map((m) => getAssociatedTokenAddressSync(m, signer));
-    const userCondQuoteATAs = condQuoteMints.map((m) => getAssociatedTokenAddressSync(m, signer));
+    const userCondBaseATAs = condBaseMints.map((m) => getAssociatedTokenAddressSync(m, creator));
+    const userCondQuoteATAs = condQuoteMints.map((m) => getAssociatedTokenAddressSync(m, creator));
 
     // Derive reserve accounts for each pool
     const reservesA: PublicKey[] = [];
@@ -327,12 +317,12 @@ export class FutarchyClient {
     // Build remaining accounts (see launch_proposal.rs)
     // Layout: 6 fixed + 7*N variable
     const remainingAccounts: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[] = [
-      { pubkey: vault.baseMint, isSigner: false, isWritable: false },                              // 0: base_mint
-      { pubkey: vault.quoteMint, isSigner: false, isWritable: false },                             // 1: quote_mint
-      { pubkey: getAssociatedTokenAddressSync(vault.baseMint, proposal.vault, true), isSigner: false, isWritable: true },   // 2: vault_base_ata
-      { pubkey: getAssociatedTokenAddressSync(vault.quoteMint, proposal.vault, true), isSigner: false, isWritable: true },  // 3: vault_quote_ata
-      { pubkey: getAssociatedTokenAddressSync(vault.baseMint, signer), isSigner: false, isWritable: true },  // 4: user_base_ata
-      { pubkey: getAssociatedTokenAddressSync(vault.quoteMint, signer), isSigner: false, isWritable: true }, // 5: user_quote_ata
+      { pubkey: vault.baseMint.address, isSigner: false, isWritable: false },                              // 0: base_mint
+      { pubkey: vault.quoteMint.address, isSigner: false, isWritable: false },                             // 1: quote_mint
+      { pubkey: getAssociatedTokenAddressSync(vault.baseMint.address, proposal.vault, true), isSigner: false, isWritable: true },   // 2: vault_base_ata
+      { pubkey: getAssociatedTokenAddressSync(vault.quoteMint.address, proposal.vault, true), isSigner: false, isWritable: true },  // 3: vault_quote_ata
+      { pubkey: getAssociatedTokenAddressSync(vault.baseMint.address, creator), isSigner: false, isWritable: true },  // 4: user_base_ata
+      { pubkey: getAssociatedTokenAddressSync(vault.quoteMint.address, creator), isSigner: false, isWritable: true }, // 5: user_quote_ata
     ];
 
     // 6..6+N: cond_base_mints
@@ -366,20 +356,18 @@ export class FutarchyClient {
 
     const builder = launchProposal(
       this.program,
-      signer,
+      creator,
       proposalPda,
       proposal.vault,
       baseAmount,
       quoteAmount,
       remainingAccounts
-    ).preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: MAX_COMPUTE_UNITS })]);
+    ).preInstructions(this.maybeAddComputeBudget(options));
 
-    const instruction = await builder.instruction();
-
-    return { builder, instruction };
+    return { builder };
   }
 
-  async finalizeProposal(signer: PublicKey, proposalPda: PublicKey) {
+  async finalizeProposal(signer: PublicKey, proposalPda: PublicKey, options?: TxOptions) {
     const proposal = await this.fetchProposal(proposalPda);
     const vault = await this.vault.fetchVault(proposal.vault);
     const numOptions = proposal.numOptions;
@@ -403,14 +391,12 @@ export class FutarchyClient {
       proposalPda,
       proposal.vault,
       remainingAccounts
-    ).preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: MAX_COMPUTE_UNITS })]);
+    ).preInstructions(this.maybeAddComputeBudget(options));
 
-    const instruction = await builder.instruction();
-
-    return { builder, instruction };
+    return { builder };
   }
 
-  async redeemLiquidity(signer: PublicKey, proposalPda: PublicKey) {
+  async redeemLiquidity(creator: PublicKey, proposalPda: PublicKey, options?: TxOptions) {
     const proposal = await this.fetchProposal(proposalPda);
     const vault = await this.vault.fetchVault(proposal.vault);
     const numOptions = proposal.numOptions;
@@ -426,64 +412,54 @@ export class FutarchyClient {
     const [reserveB] = deriveReservePDA(winningPool, vault.condBaseMints[winningIdx], this.amm.programId);
 
     // User's winning conditional token ATAs
-    const signerCondQuoteAta = getAssociatedTokenAddressSync(vault.condQuoteMints[winningIdx], signer);
-    const signerCondBaseAta = getAssociatedTokenAddressSync(vault.condBaseMints[winningIdx], signer);
+    const creatorCondQuoteAta = getAssociatedTokenAddressSync(vault.condQuoteMints[winningIdx], creator);
+    const creatorCondBaseAta = getAssociatedTokenAddressSync(vault.condBaseMints[winningIdx], creator);
 
     // Build remaining accounts (see redeem_liquidity.rs)
     const remainingAccounts: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[] = [
       // remove_liquidity accounts (0-3)
       { pubkey: reserveA, isSigner: false, isWritable: true },
       { pubkey: reserveB, isSigner: false, isWritable: true },
-      { pubkey: signerCondQuoteAta, isSigner: false, isWritable: true },
-      { pubkey: signerCondBaseAta, isSigner: false, isWritable: true },
+      { pubkey: creatorCondQuoteAta, isSigner: false, isWritable: true },
+      { pubkey: creatorCondBaseAta, isSigner: false, isWritable: true },
 
       // redeem_winnings base fixed accounts (4-6)
-      { pubkey: vault.baseMint, isSigner: false, isWritable: false },
-      { pubkey: getAssociatedTokenAddressSync(vault.baseMint, proposal.vault, true), isSigner: false, isWritable: true },
-      { pubkey: getAssociatedTokenAddressSync(vault.baseMint, signer), isSigner: false, isWritable: true },
+      { pubkey: vault.baseMint.address, isSigner: false, isWritable: false },
+      { pubkey: getAssociatedTokenAddressSync(vault.baseMint.address, proposal.vault, true), isSigner: false, isWritable: true },
+      { pubkey: getAssociatedTokenAddressSync(vault.baseMint.address, creator), isSigner: false, isWritable: true },
     ];
 
     // redeem_winnings base remaining (7..7+2N): [cond_base_mint_i, user_cond_base_ata_i]
     for (let i = 0; i < numOptions; i++) {
       remainingAccounts.push({ pubkey: vault.condBaseMints[i], isSigner: false, isWritable: true });
-      remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.condBaseMints[i], signer), isSigner: false, isWritable: true });
+      remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.condBaseMints[i], creator), isSigner: false, isWritable: true });
     }
 
     // redeem_winnings quote fixed accounts
-    remainingAccounts.push({ pubkey: vault.quoteMint, isSigner: false, isWritable: false });
-    remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.quoteMint, proposal.vault, true), isSigner: false, isWritable: true });
-    remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.quoteMint, signer), isSigner: false, isWritable: true });
+    remainingAccounts.push({ pubkey: vault.quoteMint.address, isSigner: false, isWritable: false });
+    remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.quoteMint.address, proposal.vault, true), isSigner: false, isWritable: true });
+    remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.quoteMint.address, creator), isSigner: false, isWritable: true });
 
     // redeem_winnings quote remaining: [cond_quote_mint_i, user_cond_quote_ata_i]
     for (let i = 0; i < numOptions; i++) {
       remainingAccounts.push({ pubkey: vault.condQuoteMints[i], isSigner: false, isWritable: true });
-      remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.condQuoteMints[i], signer), isSigner: false, isWritable: true });
+      remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.condQuoteMints[i], creator), isSigner: false, isWritable: true });
     }
 
     const builder = redeemLiquidity(
       this.program,
-      signer,
+      creator,
       proposalPda,
       proposal.vault,
       winningPool,
       remainingAccounts
-    ).preInstructions([ComputeBudgetProgram.setComputeUnitLimit({ units: MAX_COMPUTE_UNITS })]);
+    ).preInstructions(this.maybeAddComputeBudget(options));
 
-    const instruction = await builder.instruction();
-
-    return { builder, instruction };
+    return { builder };
   }
 
-  // ===========================================================================
-  // Address Lookup Table
-  // ===========================================================================
+  /* Address Lookup Table */
 
-  /**
-   * Creates an Address Lookup Table for a proposal.
-   * This method handles creating and extending the ALT atomically to avoid stale slot issues.
-   *
-   * @returns The ALT address after creation and extension
-   */
   async createProposalALT(
     creator: PublicKey,
     moderatorPda: PublicKey,
@@ -600,5 +576,157 @@ export class FutarchyClient {
     }).compileToV0Message([alt]);
 
     return new VersionedTransaction(message);
+  }
+
+  /* DAO Methods */
+
+  deriveMintCreateKeyPDA(daoPda: PublicKey, name: string): [PublicKey, number] {
+    return deriveMintCreateKeyPDA(daoPda, name, this.programId);
+  }
+
+  private async fetchSquadsProgramConfig() {
+    const [programConfigPda] = multisig.getProgramConfigPda({
+      programId: SQUADS_PROGRAM_ID,
+    });
+    const programConfig = await multisig.accounts.ProgramConfig.fromAccountAddress(
+      this.program.provider.connection,
+      programConfigPda
+    );
+    return {
+      programConfig: programConfigPda,
+      programConfigTreasury: programConfig.treasury,
+    };
+  }
+
+  private deriveMultisigPda(createKey: PublicKey): PublicKey {
+    const [multisigPda] = multisig.getMultisigPda({
+      createKey,
+      programId: SQUADS_PROGRAM_ID,
+    });
+    return multisigPda;
+  }
+
+  async initializeParentDAO(
+    admin: PublicKey,
+    parentAdmin: PublicKey,
+    name: string,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    treasuryCosigner: PublicKey,
+    pool: PublicKey,
+    poolType: PoolType,
+    options?: TxOptions
+  ) {
+    const [daoPda] = this.deriveDAOPDA(name);
+    const [moderatorPda] = this.deriveModeratorPDA(name);
+    const [mintCreateKeyPda] = this.deriveMintCreateKeyPDA(daoPda, name);
+
+    // Derive Squads accounts (single RPC call)
+    const squadsConfig = await this.fetchSquadsProgramConfig();
+    const treasuryMultisigPda = this.deriveMultisigPda(daoPda);
+    const mintMultisigPda = this.deriveMultisigPda(mintCreateKeyPda);
+
+    const builder = initializeParentDAO(
+      this.program,
+      admin,
+      parentAdmin,
+      daoPda,
+      moderatorPda,
+      baseMint,
+      quoteMint,
+      squadsConfig.programConfig,
+      squadsConfig.programConfigTreasury,
+      treasuryMultisigPda,
+      mintMultisigPda,
+      mintCreateKeyPda,
+      SQUADS_PROGRAM_ID,
+      name,
+      treasuryCosigner,
+      pool,
+      poolType
+    ).preInstructions(this.maybeAddComputeBudget(options));
+
+    return {
+      builder,
+      daoPda,
+      moderatorPda,
+      treasuryMultisig: treasuryMultisigPda,
+      mintMultisig: mintMultisigPda,
+    };
+  }
+
+  async initializeChildDAO(
+    admin: PublicKey,
+    parentAdmin: PublicKey,
+    parentDaoName: string,
+    name: string,
+    tokenMint: PublicKey,
+    treasuryCosigner: PublicKey,
+    options?: TxOptions
+  ) {
+    const [daoPda] = this.deriveDAOPDA(name);
+    const [parentDaoPda] = this.deriveDAOPDA(parentDaoName);
+    const [mintCreateKeyPda] = this.deriveMintCreateKeyPDA(daoPda, name);
+
+    // Derive Squads accounts (single RPC call)
+    const squadsConfig = await this.fetchSquadsProgramConfig();
+    const treasuryMultisigPda = this.deriveMultisigPda(daoPda);
+    const mintMultisigPda = this.deriveMultisigPda(mintCreateKeyPda);
+
+    const builder = initializeChildDAO(
+      this.program,
+      admin,
+      parentAdmin,
+      daoPda,
+      parentDaoPda,
+      tokenMint,
+      squadsConfig.programConfig,
+      squadsConfig.programConfigTreasury,
+      treasuryMultisigPda,
+      mintMultisigPda,
+      mintCreateKeyPda,
+      SQUADS_PROGRAM_ID,
+      name,
+      treasuryCosigner
+    ).preInstructions(this.maybeAddComputeBudget(options));
+
+    return {
+      builder,
+      daoPda,
+      parentDaoPda,
+      treasuryMultisig: treasuryMultisigPda,
+      mintMultisig: mintMultisigPda,
+    };
+  }
+
+  async upgradeDAO(
+    admin: PublicKey,
+    parentAdmin: PublicKey,
+    daoName: string,
+    parentDaoName: string,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    pool: PublicKey,
+    poolType: PoolType,
+    options?: TxOptions
+  ) {
+    const [daoPda] = this.deriveDAOPDA(daoName);
+    const [parentDaoPda] = this.deriveDAOPDA(parentDaoName);
+    const [moderatorPda] = this.deriveModeratorPDA(daoName);
+
+    const builder = upgradeDAO(
+      this.program,
+      admin,
+      parentAdmin,
+      daoPda,
+      parentDaoPda,
+      moderatorPda,
+      baseMint,
+      quoteMint,
+      pool,
+      poolType
+    ).preInstructions(this.maybeAddComputeBudget(options));
+
+    return { builder, daoPda, moderatorPda };
   }
 }

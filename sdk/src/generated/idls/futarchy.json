@@ -326,6 +326,34 @@
           "writable": true
         },
         {
+          "name": "mint_create_key",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "dao"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116,
+                  95,
+                  107,
+                  101,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
           "name": "squads_program"
         },
         {
@@ -494,6 +522,34 @@
         {
           "name": "mint_multisig",
           "writable": true
+        },
+        {
+          "name": "mint_create_key",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "dao"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116,
+                  95,
+                  107,
+                  101,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
         },
         {
           "name": "squads_program"
@@ -1681,6 +1737,11 @@
       "name": "MAX_OPTIONS",
       "type": "u8",
       "value": "6"
+    },
+    {
+      "name": "MINT_CREATE_KEY_SEED",
+      "type": "bytes",
+      "value": "[109, 105, 110, 116, 95, 107, 101, 121]"
     },
     {
       "name": "MIN_OPTIONS",

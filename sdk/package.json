@@ -14,13 +14,25 @@
     "url": "git+https://github.com/zcombinatorio/programs.git",
     "directory": "programs/sdk"
   },
-  "keywords": ["solana", "sdk", "anchor", "vault", "amm", "futarchy"],
-  "files": ["dist", "src", "README.md"],
+  "keywords": [
+    "solana",
+    "sdk",
+    "anchor",
+    "vault",
+    "amm",
+    "futarchy"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
   "license": "AGPL-3.0",
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/spl-token": "^0.4.14",
-    "@solana/web3.js": "^1.98.0"
+    "@solana/web3.js": "^1.98.0",
+    "@sqds/multisig": "^2.1.4"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

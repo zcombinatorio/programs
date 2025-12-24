@@ -1,24 +1,31 @@
+/*
+ * Utility functions for the Futarchy program.
+ * Includes PDA derivation, parsers, and fetch helpers.
+ */
+
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { GLOBAL_CONFIG_SEED, MODERATOR_SEED, PROPOSAL_SEED, PROGRAM_ID } from "./constants";
-import { Futarchy, GlobalConfig, ModeratorAccount, ProposalAccount, ProposalState } from "./types";
+import { DAO_SEED, MODERATOR_SEED, PROPOSAL_SEED, MINT_CREATE_KEY_SEED, PROGRAM_ID } from "./constants";
+import { Futarchy, DAOAccount, ModeratorAccount, ProposalAccount, ProposalState } from "./types";
 
-// =============================================================================
-// PDA Derivation
-// =============================================================================
+/* PDA Derivation */
 
-export function deriveGlobalConfigPDA(
-  programId: PublicKey = PROGRAM_ID
-): [PublicKey, number] {
-  return PublicKey.findProgramAddressSync([GLOBAL_CONFIG_SEED], programId);
-}
-
-export function deriveModeratorPDA(
-  moderatorId: number,
+export function deriveDAOPDA(
+  name: string,
   programId: PublicKey = PROGRAM_ID
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [MODERATOR_SEED, Buffer.from(new Uint32Array([moderatorId]).buffer)],
+    [DAO_SEED, Buffer.from(name)],
+    programId
+  );
+}
+
+export function deriveModeratorPDA(
+  name: string,
+  programId: PublicKey = PROGRAM_ID
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [MODERATOR_SEED, Buffer.from(name)],
     programId
   );
 }
@@ -36,9 +43,18 @@ export function deriveProposalPDA(
   );
 }
 
-// =============================================================================
-// Parsers
-// =============================================================================
+export function deriveMintCreateKeyPDA(
+  daoPda: PublicKey,
+  name: string,
+  programId: PublicKey = PROGRAM_ID
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [daoPda.toBuffer(), MINT_CREATE_KEY_SEED, Buffer.from(name)],
+    programId
+  );
+}
+
+/* Parsers */
 
 export function parseProposalState(state: any): { state: ProposalState; winningIdx: number | null } {
   if ("setup" in state) {
@@ -54,16 +70,13 @@ export function parseProposalState(state: any): { state: ProposalState; winningI
   throw new Error("Unknown proposal state");
 }
 
-// =============================================================================
-// Fetch
-// =============================================================================
+/* Fetchers */
 
-export async function fetchGlobalConfig(
+export async function fetchDAOAccount(
   program: Program<Futarchy>,
-  programId: PublicKey = PROGRAM_ID
-): Promise<GlobalConfig> {
-  const [globalConfigPda] = deriveGlobalConfigPDA(programId);
-  return program.account.globalConfig.fetch(globalConfigPda);
+  daoPda: PublicKey
+): Promise<DAOAccount> {
+  return program.account.daoAccount.fetch(daoPda);
 }
 
 export async function fetchModeratorAccount(
@@ -80,20 +93,16 @@ export async function fetchProposalAccount(
   return program.account.proposalAccount.fetch(proposalPda);
 }
 
-/**
- * Check if a proposal has expired and is ready for finalization
- */
+/* Proposal Helpers */
+
 export function isProposalExpired(proposal: ProposalAccount, currentTime?: number): boolean {
   const now = currentTime ?? Math.floor(Date.now() / 1000);
-  const endTime = proposal.createdAt.toNumber() + proposal.length;
+  const endTime = proposal.createdAt.toNumber() + proposal.config.length;
   return now >= endTime;
 }
 
-/**
- * Get the time remaining until proposal expiration (in seconds)
- */
 export function getTimeRemaining(proposal: ProposalAccount, currentTime?: number): number {
   const now = currentTime ?? Math.floor(Date.now() / 1000);
-  const endTime = proposal.createdAt.toNumber() + proposal.length;
+  const endTime = proposal.createdAt.toNumber() + proposal.config.length;
   return Math.max(0, endTime - now);
 }

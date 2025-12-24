@@ -332,6 +332,34 @@ export type Futarchy = {
           "writable": true
         },
         {
+          "name": "mintCreateKey",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "dao"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116,
+                  95,
+                  107,
+                  101,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
           "name": "squadsProgram"
         },
         {
@@ -500,6 +528,34 @@ export type Futarchy = {
         {
           "name": "mintMultisig",
           "writable": true
+        },
+        {
+          "name": "mintCreateKey",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "dao"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116,
+                  95,
+                  107,
+                  101,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
         },
         {
           "name": "squadsProgram"
@@ -1687,6 +1743,11 @@ export type Futarchy = {
       "name": "maxOptions",
       "type": "u8",
       "value": "6"
+    },
+    {
+      "name": "mintCreateKeySeed",
+      "type": "bytes",
+      "value": "[109, 105, 110, 116, 95, 107, 101, 121]"
     },
     {
       "name": "minOptions",

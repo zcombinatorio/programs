@@ -1,22 +1,24 @@
+/*
+ * Low-level instruction builders for the Futarchy program.
+ * These are thin wrappers around the program methods - use FutarchyClient for higher-level operations.
+ */
+
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { Futarchy, TWAPConfig } from "./types";
+import { Futarchy, ProposalParams, PoolType } from "./types";
 
-// =============================================================================
-// Instruction Builders
-// =============================================================================
+/* Instruction Builders */
 
 export function initializeModerator(
   program: Program<Futarchy>,
-  signer: PublicKey,
-  globalConfig: PublicKey,
+  admin: PublicKey,
   baseMint: PublicKey,
   quoteMint: PublicKey,
-  moderator: PublicKey
+  moderator: PublicKey,
+  name: string
 ) {
-  return program.methods.initializeModerator().accountsPartial({
-    signer,
-    globalConfig,
+  return program.methods.initializeModerator(name).accountsPartial({
+    admin,
     baseMint,
     quoteMint,
     moderator,
@@ -25,18 +27,17 @@ export function initializeModerator(
 
 export function initializeProposal(
   program: Program<Futarchy>,
-  signer: PublicKey,
+  creator: PublicKey,
   moderator: PublicKey,
   proposal: PublicKey,
-  length: number,
-  fee: number,
-  twapConfig: TWAPConfig,
+  proposalParams: ProposalParams,
+  metadata: string | null,
   remainingAccounts: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[]
 ) {
   return program.methods
-    .initializeProposal(length, fee, twapConfig)
+    .initializeProposal(proposalParams, metadata)
     .accountsPartial({
-      signer,
+      creator,
       moderator,
       proposal,
     })
@@ -45,14 +46,14 @@ export function initializeProposal(
 
 export function addOption(
   program: Program<Futarchy>,
-  signer: PublicKey,
+  creator: PublicKey,
   proposal: PublicKey,
   remainingAccounts: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[]
 ) {
   return program.methods
     .addOption()
     .accountsPartial({
-      signer,
+      creator,
       proposal,
     })
     .remainingAccounts(remainingAccounts);
@@ -60,7 +61,7 @@ export function addOption(
 
 export function launchProposal(
   program: Program<Futarchy>,
-  signer: PublicKey,
+  creator: PublicKey,
   proposal: PublicKey,
   vault: PublicKey,
   baseAmount: BN | number,
@@ -73,7 +74,7 @@ export function launchProposal(
   return program.methods
     .launchProposal(baseAmountBN, quoteAmountBN)
     .accountsPartial({
-      signer,
+      creator,
       proposal,
       vault,
     })
@@ -99,7 +100,7 @@ export function finalizeProposal(
 
 export function redeemLiquidity(
   program: Program<Futarchy>,
-  signer: PublicKey,
+  creator: PublicKey,
   proposal: PublicKey,
   vault: PublicKey,
   pool: PublicKey,
@@ -108,7 +109,7 @@ export function redeemLiquidity(
   return program.methods
     .redeemLiquidity()
     .accountsPartial({
-      signer,
+      creator,
       proposal,
       vault,
       pool,
@@ -118,7 +119,7 @@ export function redeemLiquidity(
 
 export function addHistoricalProposal(
   program: Program<Futarchy>,
-  signer: PublicKey,
+  admin: PublicKey,
   moderator: PublicKey,
   proposal: PublicKey,
   numOptions: number,
@@ -130,8 +131,105 @@ export function addHistoricalProposal(
   return program.methods
     .addHistoricalProposal(numOptions, winningIdx, length, createdAtBN)
     .accountsPartial({
-      signer,
+      admin,
       moderator,
       proposal,
+    });
+}
+
+/* DAO Instruction Builders */
+
+export function initializeParentDAO(
+  program: Program<Futarchy>,
+  admin: PublicKey,
+  parentAdmin: PublicKey,
+  dao: PublicKey,
+  moderator: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
+  programConfig: PublicKey,
+  programConfigTreasury: PublicKey,
+  treasuryMultisig: PublicKey,
+  mintMultisig: PublicKey,
+  mintCreateKey: PublicKey,
+  squadsProgram: PublicKey,
+  name: string,
+  treasuryCosigner: PublicKey,
+  pool: PublicKey,
+  poolType: PoolType
+) {
+  return program.methods
+    .initializeParentDao(name, treasuryCosigner, pool, poolType)
+    .accountsPartial({
+      admin,
+      parentAdmin,
+      dao,
+      moderator,
+      baseMint,
+      quoteMint,
+      programConfig,
+      programConfigTreasury,
+      treasuryMultisig,
+      mintMultisig,
+      mintCreateKey,
+      squadsProgram,
+    });
+}
+
+export function initializeChildDAO(
+  program: Program<Futarchy>,
+  admin: PublicKey,
+  parentAdmin: PublicKey,
+  dao: PublicKey,
+  parentDao: PublicKey,
+  tokenMint: PublicKey,
+  programConfig: PublicKey,
+  programConfigTreasury: PublicKey,
+  treasuryMultisig: PublicKey,
+  mintMultisig: PublicKey,
+  mintCreateKey: PublicKey,
+  squadsProgram: PublicKey,
+  name: string,
+  treasuryCosigner: PublicKey
+) {
+  return program.methods
+    .initializeChildDao(name, treasuryCosigner)
+    .accountsPartial({
+      admin,
+      parentAdmin,
+      dao,
+      parentDao,
+      tokenMint,
+      programConfig,
+      programConfigTreasury,
+      treasuryMultisig,
+      mintMultisig,
+      mintCreateKey,
+      squadsProgram,
+    });
+}
+
+export function upgradeDAO(
+  program: Program<Futarchy>,
+  admin: PublicKey,
+  parentAdmin: PublicKey,
+  dao: PublicKey,
+  parentDao: PublicKey,
+  moderator: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
+  pool: PublicKey,
+  poolType: PoolType
+) {
+  return program.methods
+    .upgradeDao(pool, poolType)
+    .accountsPartial({
+      admin,
+      parentAdmin,
+      dao,
+      parentDao,
+      moderator,
+      baseMint,
+      quoteMint,
     });
 }
