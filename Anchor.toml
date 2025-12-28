@@ -6,20 +6,25 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-amm = "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
-futarchy = "FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC"
-vault = "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
+amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
+futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
+vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
+
+[programs.devnet]
+amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
+futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
+vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 
 [programs.mainnet]
-amm = "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
-futarchy = "FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC"
-vault = "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
+amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
+futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
+vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = ".keys/authority.json"
 
 [scripts]
@@ -28,3 +33,4 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
 test-amm = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/amm/**/*.ts\""
 test-fut = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/futarchy/**/*.ts\""
 test-vault = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/vault/**/*.ts\""
+test-dao = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/dao/**/*.ts\""

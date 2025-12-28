@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/futarchy.json`.
  */
 export type Futarchy = {
-  "address": "FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC",
+  "address": "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea",
   "metadata": {
     "name": "futarchy",
     "version": "0.1.0",
@@ -168,11 +168,11 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
+          "address": "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
         },
         {
           "name": "ammProgram",
-          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
+          "address": "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
         },
         {
           "name": "tokenProgram",
@@ -242,11 +242,11 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
+          "address": "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
         },
         {
           "name": "ammProgram",
-          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
+          "address": "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
         }
       ],
       "args": []
@@ -668,11 +668,11 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
+          "address": "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
         },
         {
           "name": "ammProgram",
-          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
+          "address": "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
         },
         {
           "name": "tokenProgram",
@@ -763,11 +763,11 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
+          "address": "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
         },
         {
           "name": "ammProgram",
-          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
+          "address": "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
         },
         {
           "name": "tokenProgram",
@@ -850,11 +850,11 @@ export type Futarchy = {
         },
         {
           "name": "vaultProgram",
-          "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC"
+          "address": "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
         },
         {
           "name": "ammProgram",
-          "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC"
+          "address": "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
         },
         {
           "name": "tokenProgram",

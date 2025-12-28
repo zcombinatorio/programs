@@ -11,7 +11,7 @@ pub use errors::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("FUT2Nd1EdJGZLgKdNkNeyTGS3nX76PRTQa4Wx9YcDfZC");
+declare_id!("FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea");
 
 #[program]
 pub mod futarchy {

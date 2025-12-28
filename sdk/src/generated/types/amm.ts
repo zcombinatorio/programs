@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/amm.json`.
  */
 export type Amm = {
-  "address": "AMMAMtHtLPKwDgkDEyccLD8Sd7AtaemgawsNTC9ccQZC",
+  "address": "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx",
   "metadata": {
     "name": "amm",
     "version": "0.1.0",

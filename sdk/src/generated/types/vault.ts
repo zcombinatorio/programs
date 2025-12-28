@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/vault.json`.
  */
 export type Vault = {
-  "address": "VLTDn5Rst9FL8Wg84SNCLHuouFD8KTDxw1AMRZgTFZC",
+  "address": "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU",
   "metadata": {
     "name": "vault",
     "version": "0.1.0",
