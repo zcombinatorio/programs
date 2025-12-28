@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{instruction::{Instruction, AccountMeta}, program::invoke};
+use anchor_lang::solana_program::{instruction::{Instruction, AccountMeta}, program::invoke_signed};
 use crate::constants::*;
 
 #[derive(Clone)]
@@ -42,14 +42,15 @@ impl SquadsMultisig {
         system_program: AccountInfo<'info>,
         squads_program: AccountInfo<'info>,
         args: MultisigCreateArgsV2,
+        signer_seeds: &[&[u8]],
     ) -> Result<()> {
-        // Discriminator for "multisig_create_v2" 
+        // Discriminator for "multisig_create_v2"
         // sha256("global:multisig_create_v2")[0..8]
         let discriminator: [u8; 8] = [50, 221, 199, 93, 40, 245, 139, 233];
-    
+
         let mut data = discriminator.to_vec();
         args.serialize(&mut data)?;
-    
+
         let ix = Instruction {
             program_id: SquadsMultisig::id(),
             accounts: vec![
@@ -62,8 +63,8 @@ impl SquadsMultisig {
             ],
             data,
         };
-    
-        invoke(
+
+        invoke_signed(
             &ix,
             &[
                 program_config,
@@ -74,8 +75,9 @@ impl SquadsMultisig {
                 system_program,
                 squads_program,
             ],
+            &[signer_seeds],
         )?;
-    
+
         Ok(())
     }
 

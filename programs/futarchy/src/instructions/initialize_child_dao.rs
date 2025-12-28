@@ -81,6 +81,9 @@ pub fn initialize_child_dao_handler(
 
     let dao = &mut ctx.accounts.dao;
 
+    // Signer seeds for dao PDA (used as create_key for treasury multisig)
+    let dao_seeds: &[&[u8]] = &[DAO_SEED, name.as_bytes(), &[ctx.bumps.dao]];
+
     // Create treasury multisig
     SquadsMultisig::create_squads_multisig(
         ctx.accounts.program_config.to_account_info(),     // program_config
@@ -94,7 +97,17 @@ pub fn initialize_child_dao_handler(
             treasury_cosigner,
             Some(ctx.accounts.treasury_multisig.key())
         ),
+        dao_seeds,
     )?;
+
+    // Signer seeds for mint_create_key PDA (used as create_key for mint multisig)
+    let dao_key = dao.key();
+    let mint_create_key_seeds: &[&[u8]] = &[
+        dao_key.as_ref(),
+        MINT_CREATE_KEY_SEED,
+        name.as_bytes(),
+        &[ctx.bumps.mint_create_key],
+    ];
 
     // Create mint multisig (uses mint_create_key PDA to differentiate from treasury multisig)
     SquadsMultisig::create_squads_multisig(
@@ -108,6 +121,7 @@ pub fn initialize_child_dao_handler(
         SquadsMultisig::mint_multisig_create_args(
             Some(ctx.accounts.mint_multisig.key())
         ),
+        mint_create_key_seeds,
     )?;
 
     // Initialize DAO
