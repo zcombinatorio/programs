@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface;
-
 use crate::errors::FutarchyError;
+use anchor_spl::{token::ID as TOKEN_PROGRAM_ID, token_2022::ID as TOKEN_2022_PROGRAM_ID};
 use crate::state::dao::*;
 use crate::squads::*;
 
@@ -40,7 +39,10 @@ pub struct InitializeChildDAO<'info> {
 
     /// CHECK: checked via owner
     #[account(
-        owner = token_interface::ID @ FutarchyError::InvalidMint
+        constraint = (
+            *token_mint.owner == TOKEN_PROGRAM_ID || 
+            *token_mint.owner == TOKEN_2022_PROGRAM_ID
+        ) @ FutarchyError::InvalidMint
     )]
     pub token_mint: UncheckedAccount<'info>,
 
