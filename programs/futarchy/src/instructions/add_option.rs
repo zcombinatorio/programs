@@ -101,7 +101,7 @@ pub fn add_option_handler<'info>(
     vault::cpi::add_option(add_option_ctx)?;
 
     // Create pool
-    let create_pool_ctx = CpiContext::new(
+    let create_pool_ctx = CpiContext::new_with_signer(
         ctx.accounts.amm_program.to_account_info(),
         CreatePool {
             payer: ctx.accounts.creator.to_account_info(),
@@ -116,6 +116,7 @@ pub fn add_option_handler<'info>(
             system_program: ctx.accounts.system_program.to_account_info(),
             token_program: ctx.accounts.token_program.to_account_info(),
         },
+        signer_seeds
     );
 
     amm::cpi::create_pool(

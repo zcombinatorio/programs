@@ -163,7 +163,7 @@ pub fn initialize_proposal_handler<'info>(
     vault::cpi::initialize(init_vault_ctx, proposal_id)?;
 
     // Create pool 0
-    let create_pool_0_ctx = CpiContext::new(
+    let create_pool_0_ctx = CpiContext::new_with_signer(
         ctx.accounts.amm_program.to_account_info(),
         CreatePool {
             payer: ctx.accounts.creator.to_account_info(),
@@ -178,6 +178,7 @@ pub fn initialize_proposal_handler<'info>(
             system_program: ctx.accounts.system_program.to_account_info(),
             token_program: ctx.accounts.token_program.to_account_info(),
         },
+        signer_seeds
     );
 
     amm::cpi::create_pool(
@@ -190,7 +191,7 @@ pub fn initialize_proposal_handler<'info>(
     )?;
 
     // Create pool 1
-    let create_pool_1_ctx = CpiContext::new(
+    let create_pool_1_ctx = CpiContext::new_with_signer(
         ctx.accounts.amm_program.to_account_info(),
         CreatePool {
             payer: ctx.accounts.creator.to_account_info(),
@@ -205,6 +206,7 @@ pub fn initialize_proposal_handler<'info>(
             system_program: ctx.accounts.system_program.to_account_info(),
             token_program: ctx.accounts.token_program.to_account_info(),
         },
+        signer_seeds
     );
 
     amm::cpi::create_pool(
