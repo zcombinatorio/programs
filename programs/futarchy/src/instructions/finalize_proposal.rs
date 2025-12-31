@@ -94,10 +94,8 @@ pub fn finalize_proposal_handler<'info>(
 
         // Get TWAP from CPI return data
         let (_, data) = get_return_data().ok_or(FutarchyError::TwapNotReady)?;
-        let twap: Option<u128> = AnchorDeserialize::deserialize(&mut &data[..])
+        let twap: u128 = AnchorDeserialize::deserialize(&mut &data[..])
             .map_err(|_| FutarchyError::TwapNotReady)?;
-        // Should never be None - proposal length > warmup duration
-        let twap = twap.ok_or(FutarchyError::TwapNotReady)?;
         twaps.push(twap);
     }
 
