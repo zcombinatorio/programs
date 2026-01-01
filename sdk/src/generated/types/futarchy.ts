@@ -608,6 +608,7 @@ export type Futarchy = {
         },
         {
           "name": "moderator",
+          "writable": true,
           "pda": {
             "seeds": [
               {

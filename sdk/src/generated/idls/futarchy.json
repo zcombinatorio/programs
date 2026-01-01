@@ -602,6 +602,7 @@
         },
         {
           "name": "moderator",
+          "writable": true,
           "pda": {
             "seeds": [
               {
