@@ -15,7 +15,12 @@ import {
   TransactionMessage,
   VersionedTransaction,
 } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  getAssociatedTokenAddressSync,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
+} from "@solana/spl-token";
 import { PROGRAM_ID, SQUADS_PROGRAM_ID } from "./constants";
 import {
   Futarchy,
@@ -298,6 +303,14 @@ export class FutarchyClient {
     // Slice arrays to numOptions (fixed-size arrays from Rust include empty slots)
     const condBaseMints = vault.condBaseMints.slice(0, numOptions);
     const condQuoteMints = vault.condQuoteMints.slice(0, numOptions);
+
+    // Pre-create conditional ATAs for 3+ options to avoid exceeding the
+    // 64 instruction trace limit. Each ATA creation via vault deposit adds
+    // 5 inner instructions; with 4 options that's 40 extra instructions.
+    const shouldEnsureATAs = options?.ensureATAs ?? (numOptions >= 3);
+    if (shouldEnsureATAs) {
+      await this._createConditionalATAs(creator, condBaseMints, condQuoteMints);
+    }
     const pools = proposal.pools.slice(0, numOptions);
 
     // Derive all user conditional token ATAs
@@ -365,6 +378,69 @@ export class FutarchyClient {
     ).preInstructions(this.maybeAddComputeBudget(options));
 
     return { builder };
+  }
+
+  /**
+   * Pre-creates all conditional token ATAs for a user before launching a proposal.
+   *
+   * This is REQUIRED for proposals with 3+ options to avoid exceeding Solana's
+   * max instruction trace length limit (64 instructions). The vault's deposit CPI
+   * creates ATAs on-the-fly, each requiring 5 inner instructions. For 4 options:
+   * 8 ATAs × 5 = 40 extra instructions, pushing the total over 64.
+   *
+   * Pre-creating ATAs eliminates this overhead, reducing the trace to ~32 instructions.
+   *
+   * @param creator - The user who will receive conditional tokens
+   * @param proposalPda - The proposal PDA (must be initialized but not launched)
+   * @returns Transaction signature
+   */
+  async ensureConditionalATAs(
+    creator: PublicKey,
+    proposalPda: PublicKey,
+  ): Promise<string> {
+    const proposal = await this.fetchProposal(proposalPda);
+    const vault = await this.vault.fetchVault(proposal.vault);
+    const condBaseMints = vault.condBaseMints.slice(0, proposal.numOptions);
+    const condQuoteMints = vault.condQuoteMints.slice(0, proposal.numOptions);
+    return this._createConditionalATAs(creator, condBaseMints, condQuoteMints);
+  }
+
+  /**
+   * Internal helper to create conditional ATAs given mint arrays.
+   * Used by both ensureConditionalATAs and launchProposal to avoid redundant fetches.
+   */
+  private async _createConditionalATAs(
+    creator: PublicKey,
+    condBaseMints: PublicKey[],
+    condQuoteMints: PublicKey[],
+  ): Promise<string> {
+    const provider = this.program.provider as AnchorProvider;
+
+    // Build ATA creation instructions (idempotent - won't fail if exists)
+    const instructions: TransactionInstruction[] = [];
+    for (let i = 0; i < condBaseMints.length; i++) {
+      const userCondBaseAta = getAssociatedTokenAddressSync(condBaseMints[i], creator);
+      const userCondQuoteAta = getAssociatedTokenAddressSync(condQuoteMints[i], creator);
+
+      instructions.push(
+        createAssociatedTokenAccountIdempotentInstruction(
+          creator,
+          userCondBaseAta,
+          creator,
+          condBaseMints[i]
+        ),
+        createAssociatedTokenAccountIdempotentInstruction(
+          creator,
+          userCondQuoteAta,
+          creator,
+          condQuoteMints[i]
+        )
+      );
+    }
+
+    // Send transaction
+    const tx = new Transaction().add(...instructions);
+    return provider.sendAndConfirm(tx);
   }
 
   async finalizeProposal(signer: PublicKey, proposalPda: PublicKey, options?: TxOptions) {
@@ -455,7 +531,206 @@ export class FutarchyClient {
       remainingAccounts
     ).preInstructions(this.maybeAddComputeBudget(options));
 
-    return { builder };
+    return { builder, numOptions };
+  }
+
+  /**
+   * Creates an Address Lookup Table for redemption operations.
+   * Required for proposals with 3+ options to avoid exceeding transaction size limits.
+   *
+   * @param creator - The user redeeming (creator of proposal or liquidity provider)
+   * @param proposalPda - The proposal PDA
+   * @returns ALT address
+   */
+  async createRedemptionALT(
+    creator: PublicKey,
+    proposalPda: PublicKey,
+  ): Promise<{ altAddress: PublicKey }> {
+    const provider = this.program.provider as AnchorProvider;
+    const proposal = await this.fetchProposal(proposalPda);
+    const vault = await this.vault.fetchVault(proposal.vault);
+    const numOptions = proposal.numOptions;
+
+    const { winningIdx } = parseProposalState(proposal.state);
+    if (winningIdx === null) {
+      throw new Error("Proposal not finalized");
+    }
+
+    const addresses: PublicKey[] = [
+      // Programs
+      this.programId,
+      this.vault.programId,
+      this.amm.programId,
+      SystemProgram.programId,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      // Core accounts
+      proposalPda,
+      proposal.vault,
+      proposal.moderator,
+      vault.baseMint.address,
+      vault.quoteMint.address,
+      // Winning pool and reserves
+      proposal.pools[winningIdx],
+      // Vault token accounts
+      getAssociatedTokenAddressSync(vault.baseMint.address, proposal.vault, true),
+      getAssociatedTokenAddressSync(vault.quoteMint.address, proposal.vault, true),
+      // Creator's base/quote ATAs
+      getAssociatedTokenAddressSync(vault.baseMint.address, creator),
+      getAssociatedTokenAddressSync(vault.quoteMint.address, creator),
+    ];
+
+    // Winning pool reserves
+    const [reserveA] = deriveReservePDA(proposal.pools[winningIdx], vault.condQuoteMints[winningIdx], this.amm.programId);
+    const [reserveB] = deriveReservePDA(proposal.pools[winningIdx], vault.condBaseMints[winningIdx], this.amm.programId);
+    addresses.push(reserveA, reserveB);
+
+    // Per-option accounts (conditional mints and user ATAs)
+    for (let i = 0; i < numOptions; i++) {
+      addresses.push(
+        vault.condBaseMints[i],
+        vault.condQuoteMints[i],
+        getAssociatedTokenAddressSync(vault.condBaseMints[i], creator),
+        getAssociatedTokenAddressSync(vault.condQuoteMints[i], creator),
+      );
+    }
+
+    // Get recent slot for ALT creation
+    const slot = await provider.connection.getSlot("finalized");
+
+    const [createIx, altAddress] = AddressLookupTableProgram.createLookupTable({
+      authority: creator,
+      payer: creator,
+      recentSlot: slot,
+    });
+
+    // Create ALT
+    const createTx = new Transaction().add(createIx);
+    createTx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+    createTx.feePayer = creator;
+    const signedTx = await provider.wallet.signTransaction(createTx);
+    const sig = await provider.connection.sendRawTransaction(signedTx.serialize(), {
+      skipPreflight: true,
+    });
+    await provider.connection.confirmTransaction(sig, "confirmed");
+
+    // Extend ALT with addresses
+    const CHUNK_SIZE = 20;
+    for (let i = 0; i < addresses.length; i += CHUNK_SIZE) {
+      const chunk = addresses.slice(i, i + CHUNK_SIZE);
+      const extendIx = AddressLookupTableProgram.extendLookupTable({
+        payer: creator,
+        authority: creator,
+        lookupTable: altAddress,
+        addresses: chunk,
+      });
+      const extendTx = new Transaction().add(extendIx);
+      await provider.sendAndConfirm(extendTx);
+    }
+
+    return { altAddress };
+  }
+
+  /**
+   * Builds a versioned transaction for redeeming liquidity with ALT.
+   * Required for proposals with 3+ options to avoid exceeding transaction size limits.
+   *
+   * @param creator - The user redeeming
+   * @param proposalPda - The proposal PDA
+   * @param altAddress - Optional ALT address (will be created if not provided for 3+ options)
+   * @returns Unsigned versioned transaction, ALT address, and number of options
+   */
+  async redeemLiquidityVersioned(
+    creator: PublicKey,
+    proposalPda: PublicKey,
+    altAddress?: PublicKey,
+  ): Promise<{ versionedTx: VersionedTransaction; altAddress: PublicKey; numOptions: number }> {
+    const provider = this.program.provider as AnchorProvider;
+    const { builder, numOptions } = await this.redeemLiquidity(creator, proposalPda);
+
+    // Create ALT if not provided and needed
+    let altPubkey = altAddress;
+    let verifiedALT: AddressLookupTableAccount | null = null;
+
+    if (!altPubkey && numOptions >= 3) {
+      console.log(`  Creating redemption ALT for ${numOptions} options...`);
+      const result = await this.createRedemptionALT(creator, proposalPda);
+      altPubkey = result.altAddress;
+      console.log(`  ✓ Redemption ALT created: ${altPubkey.toBase58()}`);
+
+      // Wait for ALT to be fully available with all addresses
+      // Use longer delays after extending to ensure propagation
+      console.log(`  Waiting for ALT propagation...`);
+      const expectedAddresses = 18 + (numOptions * 4); // Base accounts + per-option accounts
+      let attempts = 0;
+
+      // Initial delay after extension
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      while (attempts < 30) {
+        const altAccount = await provider.connection.getAddressLookupTable(altPubkey, {
+          commitment: 'confirmed',
+        });
+        if (altAccount.value) {
+          const addressCount = altAccount.value.state.addresses.length;
+          console.log(`  Attempt ${attempts + 1}: ALT has ${addressCount}/${expectedAddresses} addresses`);
+          if (addressCount >= expectedAddresses) {
+            verifiedALT = altAccount.value;
+            console.log(`  ✓ ALT verified with ${addressCount} addresses`);
+            break;
+          }
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+
+      if (!verifiedALT) {
+        throw new Error(`ALT failed to populate with expected ${expectedAddresses} addresses after ${attempts} attempts`);
+      }
+    }
+
+    if (!altPubkey) {
+      throw new Error("ALT address required for multi-option redemption");
+    }
+
+    // Fetch ALT if we don't have it verified already
+    if (!verifiedALT) {
+      verifiedALT = await this.fetchALT(altPubkey);
+    }
+
+    // Build instruction
+    const instruction = await builder.instruction();
+    const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 });
+
+    // Get fresh blockhash
+    const { blockhash } = await provider.connection.getLatestBlockhash();
+
+    // Build versioned transaction using the verified ALT (no re-fetch)
+    const versionedTx = this.buildVersionedTxWithALT(
+      creator,
+      [computeBudgetIx, instruction],
+      verifiedALT,
+      blockhash,
+    );
+
+    // Return the versioned transaction for the caller to sign and send
+    // This allows the caller to use their own signing mechanism (e.g., keypair.sign)
+    return { versionedTx, altAddress: altPubkey, numOptions };
+  }
+
+  /**
+   * Helper to send a signed versioned transaction.
+   */
+  async sendVersionedTransaction(
+    signedTx: VersionedTransaction,
+  ): Promise<string> {
+    const provider = this.program.provider as AnchorProvider;
+    const signature = await provider.connection.sendTransaction(signedTx, {
+      skipPreflight: false,
+      preflightCommitment: 'confirmed',
+    });
+    await provider.connection.confirmTransaction(signature, 'confirmed');
+    return signature;
   }
 
   /* Address Lookup Table */
@@ -566,12 +841,21 @@ export class FutarchyClient {
     instructions: TransactionInstruction[],
     altAddress: PublicKey,
   ): Promise<VersionedTransaction> {
+    const provider = this.program.provider as AnchorProvider;
     const alt = await this.fetchALT(altAddress);
-    const blockhash = await this.program.provider.connection.getLatestBlockhash();
+    const { blockhash } = await provider.connection.getLatestBlockhash();
+    return this.buildVersionedTxWithALT(payer, instructions, alt, blockhash);
+  }
 
+  buildVersionedTxWithALT(
+    payer: PublicKey,
+    instructions: TransactionInstruction[],
+    alt: AddressLookupTableAccount,
+    blockhash: string,
+  ): VersionedTransaction {
     const message = new TransactionMessage({
       payerKey: payer,
-      recentBlockhash: blockhash.blockhash,
+      recentBlockhash: blockhash,
       instructions,
     }).compileToV0Message([alt]);
 
