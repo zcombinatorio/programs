@@ -57,5 +57,6 @@ export type AMMEvent =
 /* Options */
 
 export interface AmmActionOptions extends TxOptions {
-  autoWrapUnwrap?: boolean; // Auto wrap/unwrap native SOL (default: true)
+  autoWrapUnwrap?: boolean; // Auto wrap/unwrap native SOL (default: true) - for liquidity operations
+  autoCreateTokenAccounts?: boolean; // Auto create token accounts (default: true) - for swaps
 }

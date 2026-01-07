@@ -330,7 +330,7 @@ export class AMMClient {
     minOutputAmount: BN | number,
     options?: AmmActionOptions
   ) {
-    const { autoWrapUnwrap = true, includeCuBudget = true, computeUnits } = options ?? {};
+    const { autoCreateTokenAccounts = true, includeCuBudget = true, computeUnits } = options ?? {};
 
     const pool = await this.fetchPool(poolPda);
     const [reserveA] = this.deriveReservePDA(poolPda, pool.mintA);
@@ -340,7 +340,6 @@ export class AMMClient {
     const traderAccountB = getAssociatedTokenAddressSync(pool.mintB, trader);
 
     const preIxs: TransactionInstruction[] = [];
-    const postIxs: TransactionInstruction[] = [];
 
     if (includeCuBudget) {
       preIxs.push(
@@ -350,13 +349,7 @@ export class AMMClient {
       );
     }
 
-    const inputMint = swapAToB ? pool.mintA : pool.mintB;
-    const outputMint = swapAToB ? pool.mintB : pool.mintA;
-    const inputAta = swapAToB ? traderAccountA : traderAccountB;
-    const outputAta = swapAToB ? traderAccountB : traderAccountA;
-
-    if (autoWrapUnwrap) {
-      // Create ATAs idempotently
+    if (autoCreateTokenAccounts) {
       preIxs.push(
         createAssociatedTokenAccountIdempotentInstruction(
           trader,
@@ -371,24 +364,6 @@ export class AMMClient {
           pool.mintB
         )
       );
-
-      // Wrap input SOL if needed
-      if (inputMint.equals(NATIVE_MINT)) {
-        const input = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
-        preIxs.push(
-          SystemProgram.transfer({
-            fromPubkey: trader,
-            toPubkey: inputAta,
-            lamports: BigInt(input.toString()),
-          }),
-          createSyncNativeInstruction(inputAta)
-        );
-      }
-
-      // Unwrap output SOL if needed
-      if (outputMint.equals(NATIVE_MINT)) {
-        postIxs.push(createCloseAccountInstruction(outputAta, trader, trader));
-      }
     }
 
     let builder = swapIx(
@@ -407,9 +382,6 @@ export class AMMClient {
 
     if (preIxs.length > 0) {
       builder = builder.preInstructions(preIxs);
-    }
-    if (postIxs.length > 0) {
-      builder = builder.postInstructions(postIxs);
     }
 
     return builder;
@@ -434,8 +406,7 @@ export class AMMClient {
    * - Fetches current reserves and computes quote
    * - Calculates minOutput based on slippage tolerance
    * - Adds compute budget instruction (if includeCuBudget is true)
-   * - Creates token accounts if they don't exist (if autoWrapUnwrap is true)
-   * - Handles WSOL wrapping/unwrapping if needed (if autoWrapUnwrap is true)
+   * - Creates token accounts if they don't exist (if autoCreateTokenAccounts is true)
    */
   async swapWithSlippage(
     trader: PublicKey,
@@ -445,7 +416,7 @@ export class AMMClient {
     slippagePercent: number = 0.5,
     options?: AmmActionOptions
   ) {
-    const { autoWrapUnwrap = true, includeCuBudget = true, computeUnits } = options ?? {};
+    const { autoCreateTokenAccounts = true, includeCuBudget = true, computeUnits } = options ?? {};
 
     const pool = await this.fetchPool(poolPda);
     const input = typeof inputAmount === "number" ? new BN(inputAmount) : inputAmount;
@@ -476,7 +447,6 @@ export class AMMClient {
     );
 
     const preIxs: TransactionInstruction[] = [];
-    const postIxs: TransactionInstruction[] = [];
 
     if (includeCuBudget) {
       preIxs.push(
@@ -486,7 +456,7 @@ export class AMMClient {
       );
     }
 
-    if (autoWrapUnwrap) {
+    if (autoCreateTokenAccounts) {
       preIxs.push(
         createAssociatedTokenAccountIdempotentInstruction(
           trader,
@@ -503,34 +473,8 @@ export class AMMClient {
       );
     }
 
-    // Handle WSOL for input/output tokens
-    const inputMint = swapAToB ? pool.mintA : pool.mintB;
-    const outputMint = swapAToB ? pool.mintB : pool.mintA;
-    const inputAta = swapAToB ? traderAccountA : traderAccountB;
-    const outputAta = swapAToB ? traderAccountB : traderAccountA;
-
-    if (autoWrapUnwrap && inputMint.equals(NATIVE_MINT)) {
-      // Wrap SOL before swap
-      preIxs.push(
-        SystemProgram.transfer({
-          fromPubkey: trader,
-          toPubkey: inputAta,
-          lamports: BigInt(input.toString()),
-        }),
-        createSyncNativeInstruction(inputAta)
-      );
-    }
-
-    if (autoWrapUnwrap && outputMint.equals(NATIVE_MINT)) {
-      // Unwrap SOL after swap
-      postIxs.push(createCloseAccountInstruction(outputAta, trader, trader));
-    }
-
     if (preIxs.length > 0) {
       builder = builder.preInstructions(preIxs);
-    }
-    if (postIxs.length > 0) {
-      builder = builder.postInstructions(postIxs);
     }
 
     return {
