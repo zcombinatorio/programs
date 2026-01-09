@@ -615,6 +615,8 @@ export class FutarchyClient {
     await provider.connection.confirmTransaction(sig, "confirmed");
 
     // Extend ALT with addresses
+    // Use skipPreflight to avoid race condition where simulation sees stale state
+    // before previous extend has propagated (same pattern as CREATE above)
     const CHUNK_SIZE = 20;
     for (let i = 0; i < addresses.length; i += CHUNK_SIZE) {
       const chunk = addresses.slice(i, i + CHUNK_SIZE);
@@ -625,7 +627,13 @@ export class FutarchyClient {
         addresses: chunk,
       });
       const extendTx = new Transaction().add(extendIx);
-      await provider.sendAndConfirm(extendTx);
+      extendTx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+      extendTx.feePayer = creator;
+      const signedExtendTx = await provider.wallet.signTransaction(extendTx);
+      const extendSig = await provider.connection.sendRawTransaction(signedExtendTx.serialize(), {
+        skipPreflight: true,
+      });
+      await provider.connection.confirmTransaction(extendSig, "confirmed");
     }
 
     return { altAddress };
@@ -812,6 +820,8 @@ export class FutarchyClient {
 
     // Split addresses into chunks to avoid transaction size limits
     // Each address is 32 bytes, ~20 addresses per extend instruction is safe
+    // Use skipPreflight to avoid race condition where simulation sees stale state
+    // before previous extend has propagated (same pattern as CREATE above)
     const CHUNK_SIZE = 20;
     for (let i = 0; i < addresses.length; i += CHUNK_SIZE) {
       const chunk = addresses.slice(i, i + CHUNK_SIZE);
@@ -822,7 +832,13 @@ export class FutarchyClient {
         addresses: chunk,
       });
       const extendTx = new Transaction().add(extendIx);
-      await provider.sendAndConfirm(extendTx);
+      extendTx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+      extendTx.feePayer = creator;
+      const signedExtendTx = await provider.wallet.signTransaction(extendTx);
+      const extendSig = await provider.connection.sendRawTransaction(signedExtendTx.serialize(), {
+        skipPreflight: true,
+      });
+      await provider.connection.confirmTransaction(extendSig, "confirmed");
     }
 
     return { altAddress };
