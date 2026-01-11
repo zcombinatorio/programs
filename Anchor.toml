@@ -5,19 +5,22 @@ package_manager = "yarn"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
-futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
-vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
-
 [programs.devnet]
 amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
 futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
+svault = "SVLTnMmZLkY5bCJbRgYdSABQNW14qfy5ZWhmEcASGx3"
+vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
+
+[programs.localnet]
+amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
+futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
+svault = "SVLTnMmZLkY5bCJbRgYdSABQNW14qfy5ZWhmEcASGx3"
 vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 
 [programs.mainnet]
 amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
 futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
+svault = "SVLTnMmZLkY5bCJbRgYdSABQNW14qfy5ZWhmEcASGx3"
 vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 
 [registry]
@@ -31,6 +34,6 @@ wallet = ".keys/authority.json"
 prop = "./scripts/sync-idl.sh"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
 test-amm = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/amm/**/*.ts\""
+test-dao = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/dao/**/*.ts\""
 test-fut = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/futarchy/**/*.ts\""
 test-vault = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/vault/**/*.ts\""
-test-dao = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/dao/**/*.ts\""
