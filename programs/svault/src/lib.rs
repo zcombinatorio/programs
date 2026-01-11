@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 
+pub mod instructions;
 pub mod state;
+
+use instructions::*;
 
 declare_id!("2DM31xJgZUPRP8bSwHgFv9S7iWhdiGVAndCjtkqeiRyJ");
 
@@ -8,11 +11,11 @@ declare_id!("2DM31xJgZUPRP8bSwHgFv9S7iWhdiGVAndCjtkqeiRyJ");
 pub mod svault {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
-        Ok(())
+    pub fn initialize_staking_vault(
+        ctx: Context<InitializeStakingVault>,
+        unstaking_period: u64,
+        volume_window: u64,
+    ) -> Result<()> {
+        initialize::initialize_handler(ctx, unstaking_period, volume_window)
     }
 }
-
-#[derive(Accounts)]
-pub struct Initialize {}

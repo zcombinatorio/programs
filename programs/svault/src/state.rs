@@ -6,11 +6,17 @@ pub const STAKING_CONFIG_SEED: &[u8] = b"staking_config";
 pub const USER_STAKE_SEED: &[u8] = b"user_stake";
 #[constant]
 pub const REWARD_EPOCH_SEED: &[u8] = b"reward_epoch";
+#[constant]
+pub const STAKE_VAULT_SEED: &[u8] = b"stake_vault";
+#[constant]
+pub const REWARD_VAULT_SEED: &[u8] = b"reward_vault";
 
 /// Seeds: [STAKING_CONFIG_SEED, token_mint]
 /// Unique per token mint
 #[account]
+#[derive(InitSpace)]
 pub struct StakingConfig {
+    pub bump: u8,
     pub admin: Pubkey,
     pub token_mint: Pubkey,
     pub unstaking_period: u64, // n days in seconds
@@ -23,6 +29,7 @@ pub struct StakingConfig {
 /// Seeds: [USER_STAKE_SEED, staking_config, user]
 /// Unique per user per staking config
 #[account]
+#[derive(InitSpace)]
 pub struct UserStake {
     pub user: Pubkey,
     // Staking
@@ -37,6 +44,7 @@ pub struct UserStake {
 /// Seeds: [REWARD_EPOCH_SEED, staking_config, &day.to_le_bytes()]
 /// Unique per day per staking config
 #[account]
+#[derive(InitSpace)]
 pub struct RewardEpoch {
     pub day: u64,
     pub merkle_root: [u8; 32],
