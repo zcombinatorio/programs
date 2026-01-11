@@ -156,14 +156,14 @@ impl TwapOracle {
         Ok(twap)
     }
 
-    /// Computes the time-weighted average price since warmup completed.
+    /// Computes the time-weighted average price
     pub fn fetch_twap(&self) -> Result<u128> {
         let accumulation_start = self
             .created_at_unix_time
             .checked_add(self.warmup_duration as i64)
             .ok_or(AmmError::MathOverflow)?;
 
-        if self.last_update_unix_time < accumulation_start {
+        if self.last_update_unix_time <= accumulation_start {
             // Still in warmup
             return Ok(self.starting_observation);
         }
