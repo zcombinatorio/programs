@@ -81,7 +81,7 @@ impl TwapOracle {
     }
 
     /// Records a new price sample and updates the TWAP accumulator.
-    /// Returns the current TWAP if available (None during warmup).
+    /// Returns the current TWAP
     pub fn crank_twap(&mut self, reserves_a: u64, reserves_b: u64) -> Result<u128> {
         let clock = Clock::get()?;
         let now = clock.unix_timestamp;
@@ -156,14 +156,17 @@ impl TwapOracle {
         Ok(twap)
     }
 
-    /// Computes the time-weighted average price since warmup completed.
+    /// Computes the time-weighted average price
     pub fn fetch_twap(&self) -> Result<u128> {
         let accumulation_start = self
             .created_at_unix_time
             .checked_add(self.warmup_duration as i64)
             .ok_or(AmmError::MathOverflow)?;
 
-        require_gt!(self.last_update_unix_time, accumulation_start);
+        if self.last_update_unix_time <= accumulation_start {
+            // Still in warmup
+            return Ok(self.starting_observation);
+        }
         
         let elapsed = (self.last_update_unix_time - accumulation_start) as u128;
 

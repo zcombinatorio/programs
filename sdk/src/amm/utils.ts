@@ -244,7 +244,7 @@ export function calculateTwap(oracle: TwapOracle): BN | null {
   const warmupEnd = oracle.createdAtUnixTime.add(new BN(oracle.warmupDuration));
 
   if (oracle.lastUpdateUnixTime.lte(warmupEnd)) {
-    return null;
+    return oracle.startingObservation;
   }
 
   const elapsed = oracle.lastUpdateUnixTime.sub(warmupEnd);
