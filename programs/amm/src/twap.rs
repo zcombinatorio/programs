@@ -81,17 +81,26 @@ impl TwapOracle {
     }
 
     /// Records a new price sample and updates the TWAP accumulator.
-    /// Returns the current TWAP if available (None during warmup).
+    /// Returns the current TWAP if available (0 during warmup).
     pub fn crank_twap(&mut self, reserves_a: u64, reserves_b: u64) -> Result<u128> {
         let clock = Clock::get()?;
         let now = clock.unix_timestamp;
+
+        let warmup_end = self
+            .created_at_unix_time
+            .checked_add(self.warmup_duration as i64)
+            .ok_or(AmmError::MathOverflow)?;
+
+        // During warmup, allow swaps but don't accumulate TWAP
+        let in_warmup = now <= warmup_end;
 
         // Early exit: rate limit or no liquidity
         if now < self.last_update_unix_time + self.min_recording_interval
             || reserves_a == 0
             || reserves_b == 0
         {
-            return self.fetch_twap();
+            // During warmup, return 0 instead of calling fetch_twap (which would fail)
+            return if in_warmup { Ok(0) } else { self.fetch_twap() };
         }
 
         let curr_price = (reserves_a as u128)
@@ -108,12 +117,7 @@ impl TwapOracle {
             .min(prev_obs.saturating_add(delta));
 
         // Accumulate weighted observation after warmup
-        let warmup_end = self
-            .created_at_unix_time
-            .checked_add(self.warmup_duration as i64)
-            .ok_or(AmmError::MathOverflow)?;
-
-        if now > warmup_end {
+        if !in_warmup {
             let base_time = self.last_update_unix_time.max(warmup_end);
 
             // Should never panic since now > warmup_end here
@@ -142,8 +146,8 @@ impl TwapOracle {
             Ordering::Equal => require_eq!(new_obs, curr_price),
         }
 
-        // Get final twap
-        let twap = self.fetch_twap()?;
+        // Get final twap (0 during warmup)
+        let twap = if in_warmup { 0 } else { self.fetch_twap()? };
 
         emit!(TWAPUpdate {
             unix_time: now,
