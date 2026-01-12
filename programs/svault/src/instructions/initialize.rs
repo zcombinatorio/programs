@@ -67,6 +67,8 @@ pub fn initialize_handler(
         reward_vault: ctx.accounts.reward_vault.key(),
         stake_vault: ctx.accounts.stake_vault.key(),
         total_staked: 0,
+        current_merkle_root: [0u8; 32],
+        last_updated_at: 0,
     });
 
     emit!(StakingVaultInitialized {

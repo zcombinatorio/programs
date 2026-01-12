@@ -12,4 +12,10 @@ pub enum ErrorCode {
     NoPendingUnstake,
     #[msg("Unstaking period has not elapsed")]
     UnstakingPeriodNotElapsed,
+    #[msg("Unauthorized")]
+    Unauthorized,
+    #[msg("Invalid merkle proof")]
+    InvalidMerkleProof,
+    #[msg("Nothing to claim")]
+    NothingToClaim,
 }

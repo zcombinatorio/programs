@@ -64,6 +64,7 @@ pub fn stake_handler(ctx: Context<Stake>, amount: u64) -> Result<()> {
             staked_amount: 0,
             pending_unstake: 0,
             unstake_initiated_at: 0,
+            total_claimed: 0,
         });
     }
 

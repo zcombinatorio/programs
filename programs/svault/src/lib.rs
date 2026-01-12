@@ -32,4 +32,20 @@ pub mod svault {
     pub fn withdraw(ctx: Context<Withdraw>) -> Result<()> {
         withdraw::withdraw_handler(ctx)
     }
+
+    pub fn post_rewards(
+        ctx: Context<PostRewards>,
+        merkle_root: [u8; 32],
+        total_amount: u64,
+    ) -> Result<()> {
+        post_rewards::post_rewards_handler(ctx, merkle_root, total_amount)
+    }
+
+    pub fn claim_rewards(
+        ctx: Context<ClaimRewards>,
+        cumulative_amount: u64,
+        proof: Vec<[u8; 32]>,
+    ) -> Result<()> {
+        claim_rewards::claim_rewards_handler(ctx, cumulative_amount, proof)
+    }
 }
