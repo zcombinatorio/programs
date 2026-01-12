@@ -18,4 +18,6 @@ pub enum ErrorCode {
     InvalidMerkleProof,
     #[msg("Nothing to claim")]
     NothingToClaim,
+    #[msg("Invalid basis points (must be 0-10000)")]
+    InvalidBasisPoints,
 }

@@ -48,4 +48,16 @@ pub mod svault {
     ) -> Result<()> {
         claim_rewards::claim_rewards_handler(ctx, cumulative_amount, proof)
     }
+
+    pub fn set_config(
+        ctx: Context<SetConfig>,
+        unstaking_period: Option<u64>,
+        volume_window: Option<u64>,
+    ) -> Result<()> {
+        set_config::set_config_handler(ctx, unstaking_period, volume_window)
+    }
+
+    pub fn slash(ctx: Context<Slash>, basis_points: u16) -> Result<()> {
+        slash::slash_handler(ctx, basis_points)
+    }
 }
