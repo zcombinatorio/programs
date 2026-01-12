@@ -10,4 +10,4 @@ sdk/dist/
 .sentinel
 .keys/
 .blinker/
-.claude
+.deploy-cache/
