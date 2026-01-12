@@ -36,9 +36,6 @@ pub struct UserStake {
     pub staked_amount: u64,
     pub pending_unstake: u64,
     pub unstake_initiated_at: i64, // 0 if not unstaking
-    // Volume tracking
-    pub daily_volumes: [u64; 30],
-    pub last_updated_day: u64, // day index for rotation
 }
 
 /// Seeds: [REWARD_EPOCH_SEED, staking_config, &day.to_le_bytes()]

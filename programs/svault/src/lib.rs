@@ -1,11 +1,13 @@
 use anchor_lang::prelude::*;
 
+pub mod error;
 pub mod instructions;
 pub mod state;
+pub mod utils;
 
 use instructions::*;
 
-declare_id!("2DM31xJgZUPRP8bSwHgFv9S7iWhdiGVAndCjtkqeiRyJ");
+declare_id!("SVLTnMmZLkY5bCJbRgYdSABQNW14qfy5ZWhmEcASGx3");
 
 #[program]
 pub mod svault {
@@ -17,5 +19,9 @@ pub mod svault {
         volume_window: u64,
     ) -> Result<()> {
         initialize::initialize_handler(ctx, unstaking_period, volume_window)
+    }
+
+    pub fn stake(ctx: Context<Stake>, amount: u64) -> Result<()> {
+        stake::stake_handler(ctx, amount)
     }
 }
