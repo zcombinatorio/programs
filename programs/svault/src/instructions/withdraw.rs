@@ -57,9 +57,12 @@ pub fn withdraw_handler(ctx: Context<Withdraw>) -> Result<()> {
 
     // Check unstaking period has elapsed
     let now = Clock::get()?.unix_timestamp;
+    let unstaking_period = (config.unstaking_period as i64)
+        .checked_mul(86400) // 60 * 60 * 24 = seconds per day
+        .ok_or(ErrorCode::Overflow)?;
     let unlock_time = user_stake
         .unstake_initiated_at
-        .checked_add(config.unstaking_period as i64)
+        .checked_add(unstaking_period)
         .ok_or(ErrorCode::Overflow)?;
     require!(now >= unlock_time, ErrorCode::UnstakingPeriodNotElapsed);
 
