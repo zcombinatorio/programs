@@ -24,4 +24,8 @@ pub mod svault {
     pub fn stake(ctx: Context<Stake>, amount: u64) -> Result<()> {
         stake::stake_handler(ctx, amount)
     }
+
+    pub fn initiate_unstake(ctx: Context<InitiateUnstake>, amount: u64) -> Result<()> {
+        initiate_unstake::initiate_unstake_handler(ctx, amount)
+    }
 }

@@ -6,4 +6,6 @@ pub enum ErrorCode {
     InvalidAmount,
     #[msg("Arithmetic overflow")]
     Overflow,
+    #[msg("Insufficient staked amount")]
+    InsufficientStake,
 }
