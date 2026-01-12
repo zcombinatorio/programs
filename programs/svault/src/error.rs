@@ -8,4 +8,8 @@ pub enum ErrorCode {
     Overflow,
     #[msg("Insufficient staked amount")]
     InsufficientStake,
+    #[msg("No pending unstake to withdraw")]
+    NoPendingUnstake,
+    #[msg("Unstaking period has not elapsed")]
+    UnstakingPeriodNotElapsed,
 }

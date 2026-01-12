@@ -28,4 +28,8 @@ pub mod svault {
     pub fn initiate_unstake(ctx: Context<InitiateUnstake>, amount: u64) -> Result<()> {
         initiate_unstake::initiate_unstake_handler(ctx, amount)
     }
+
+    pub fn withdraw(ctx: Context<Withdraw>) -> Result<()> {
+        withdraw::withdraw_handler(ctx)
+    }
 }
