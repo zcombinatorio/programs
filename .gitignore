@@ -11,3 +11,4 @@ sdk/dist/
 .keys/
 .blinker/
 .deploy-cache/
+.claude/
