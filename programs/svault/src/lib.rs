@@ -60,4 +60,12 @@ pub mod svault {
     pub fn slash(ctx: Context<Slash>, basis_points: u16) -> Result<()> {
         slash::slash_handler(ctx, basis_points)
     }
+
+    pub fn add_delegate(ctx: Context<AddDelegate>) -> Result<()> {
+        add_delegate::add_delegate_handler(ctx)
+    }
+
+    pub fn remove_delegate(ctx: Context<RemoveDelegate>) -> Result<()> {
+        remove_delegate::remove_delegate_handler(ctx)
+    }
 }

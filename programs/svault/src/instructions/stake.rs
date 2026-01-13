@@ -1,8 +1,8 @@
-use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::error::ErrorCode;
 use crate::state::*;
 use crate::utils::transfer_checked_ctx;
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[event]
 pub struct Staked {
@@ -60,6 +60,7 @@ pub fn stake_handler(ctx: Context<Stake>, amount: u64) -> Result<()> {
     let user_stake = &mut ctx.accounts.user_stake;
     if user_stake.user == Pubkey::default() {
         user_stake.set_inner(UserStake {
+            staking_config: ctx.accounts.config.key(),
             user: ctx.accounts.user.key(),
             staked_amount: 0,
             pending_unstake: 0,

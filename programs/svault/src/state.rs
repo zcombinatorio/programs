@@ -18,7 +18,7 @@ pub struct StakingConfig {
     pub admin: Pubkey,
     pub token_mint: Pubkey,
     pub unstaking_period: u64, // n days
-    pub volume_window: u64, // w days (14 default)
+    pub volume_window: u64,    // w days (14 default)
     pub reward_vault: Pubkey,
     pub stake_vault: Pubkey,
     pub total_staked: u64,
@@ -32,6 +32,7 @@ pub struct StakingConfig {
 #[account]
 #[derive(InitSpace)]
 pub struct UserStake {
+    pub staking_config: Pubkey,
     pub user: Pubkey,
     // Staking
     pub staked_amount: u64,
@@ -39,4 +40,15 @@ pub struct UserStake {
     pub unstake_initiated_at: i64, // 0 if not unstaking
     // Rewards
     pub total_claimed: u64,
+}
+
+/// Seeds: [USER_STAKE_SEED, staking_config, delegate]
+/// Uses same seed prefix as UserStake to prevent delegate from also being a staker
+#[account]
+#[derive(InitSpace)]
+pub struct Delegate {
+    pub delegate: Pubkey,
+    pub staker: Pubkey,
+    pub staker_stake: Pubkey,
+    pub staking_config: Pubkey,
 }

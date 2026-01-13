@@ -1,9 +1,9 @@
-use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use solana_program::hash::hashv;
 use crate::error::ErrorCode;
 use crate::state::*;
 use crate::utils::transfer_checked_signed;
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use solana_program::hash::hashv;
 
 #[event]
 pub struct RewardsClaimed {
@@ -77,11 +77,8 @@ pub fn claim_rewards_handler(
 
     // Transfer rewards from vault to user (PDA-signed via config)
     let token_mint_key = ctx.accounts.token_mint.key();
-    let signer_seeds: &[&[&[u8]]] = &[&[
-        STAKING_CONFIG_SEED,
-        token_mint_key.as_ref(),
-        &[config.bump],
-    ]];
+    let signer_seeds: &[&[&[u8]]] =
+        &[&[STAKING_CONFIG_SEED, token_mint_key.as_ref(), &[config.bump]]];
 
     transfer_checked_signed(
         ctx.accounts.reward_vault.to_account_info(),
