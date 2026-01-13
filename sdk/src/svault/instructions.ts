@@ -5,7 +5,7 @@
 
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Svault } from "./types";
 import {
   deriveStakingConfigPDA,
@@ -41,6 +41,7 @@ export function initializeStakingVault(
       config: configPda,
       stakeVault,
       rewardVault,
+      tokenProgram: TOKEN_PROGRAM_ID,
     });
 }
 
@@ -65,6 +66,7 @@ export function stake(
     userStake: userStakePda,
     stakeVault,
     userTokenAccount,
+    tokenProgram: TOKEN_PROGRAM_ID,
   });
 }
 
@@ -106,6 +108,7 @@ export function withdraw(
     userStake: userStakePda,
     stakeVault,
     userTokenAccount,
+    tokenProgram: TOKEN_PROGRAM_ID,
   });
 }
 
@@ -132,6 +135,7 @@ export function postRewards(
       config: configPda,
       rewardVault,
       adminTokenAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
     });
 }
 
@@ -159,6 +163,7 @@ export function claimRewards(
       userStake: userStakePda,
       rewardVault,
       userTokenAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
     });
 }
 
@@ -211,6 +216,7 @@ export function slash(
     userStake: userStakePda,
     stakeVault,
     feeVault,
+    tokenProgram: TOKEN_PROGRAM_ID,
   });
 }
 
