@@ -37,3 +37,4 @@ test-amm = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/amm/**/*.ts\
 test-dao = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/dao/**/*.ts\""
 test-fut = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/futarchy/**/*.ts\""
 test-vault = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/vault/**/*.ts\""
+test-svault = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/svault/**/*.ts\""
