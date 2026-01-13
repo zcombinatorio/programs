@@ -62,6 +62,11 @@ export type Svault = {
                 "kind": "account",
                 "path": "config.token_mint",
                 "account": "stakingConfig"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "stakingConfig"
               }
             ]
           }
@@ -181,6 +186,11 @@ export type Svault = {
               {
                 "kind": "account",
                 "path": "tokenMint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "stakingConfig"
               }
             ]
           }
@@ -405,6 +415,10 @@ export type Svault = {
               {
                 "kind": "account",
                 "path": "tokenMint"
+              },
+              {
+                "kind": "arg",
+                "path": "nonce"
               }
             ]
           }
@@ -482,6 +496,10 @@ export type Svault = {
         {
           "name": "volumeWindow",
           "type": "u64"
+        },
+        {
+          "name": "nonce",
+          "type": "u16"
         }
       ]
     },
@@ -533,6 +551,11 @@ export type Svault = {
               {
                 "kind": "account",
                 "path": "tokenMint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "stakingConfig"
               }
             ]
           }
@@ -624,6 +647,11 @@ export type Svault = {
               {
                 "kind": "account",
                 "path": "tokenMint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "stakingConfig"
               }
             ]
           }
@@ -812,6 +840,11 @@ export type Svault = {
                 "kind": "account",
                 "path": "config.token_mint",
                 "account": "stakingConfig"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "stakingConfig"
               }
             ]
           }
@@ -899,6 +932,11 @@ export type Svault = {
                 "kind": "account",
                 "path": "config.token_mint",
                 "account": "stakingConfig"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "stakingConfig"
               }
             ]
           }
@@ -969,6 +1007,11 @@ export type Svault = {
               {
                 "kind": "account",
                 "path": "tokenMint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "stakingConfig"
               }
             ]
           }
@@ -1218,6 +1261,11 @@ export type Svault = {
               {
                 "kind": "account",
                 "path": "tokenMint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "stakingConfig"
               }
             ]
           }
@@ -1433,6 +1481,11 @@ export type Svault = {
               {
                 "kind": "account",
                 "path": "tokenMint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "stakingConfig"
               }
             ]
           }
@@ -1973,8 +2026,8 @@ export type Svault = {
     {
       "name": "stakingConfig",
       "docs": [
-        "Seeds: [STAKING_CONFIG_SEED, token_mint]",
-        "Unique per token mint"
+        "Seeds: [STAKING_CONFIG_SEED, token_mint, nonce]",
+        "Unique per token mint + nonce combination"
       ],
       "type": {
         "kind": "struct",
@@ -1982,6 +2035,10 @@ export type Svault = {
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "nonce",
+            "type": "u16"
           },
           {
             "name": "admin",

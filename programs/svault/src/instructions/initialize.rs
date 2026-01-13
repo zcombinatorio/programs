@@ -10,7 +10,7 @@ pub struct StakingVaultInitialized {
 }
 
 #[derive(Accounts)]
-#[instruction(unstaking_period: u64, volume_window: u64)]
+#[instruction(unstaking_period: u64, volume_window: u64, nonce: u16)]
 pub struct InitializeStakingVault<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -24,6 +24,7 @@ pub struct InitializeStakingVault<'info> {
         seeds = [
             STAKING_CONFIG_SEED,
             token_mint.key().as_ref(),
+            &nonce.to_le_bytes(),
         ],
         bump,
     )]
@@ -57,9 +58,11 @@ pub fn initialize_handler(
     ctx: Context<InitializeStakingVault>,
     unstaking_period: u64,
     volume_window: u64,
+    nonce: u16,
 ) -> Result<()> {
     ctx.accounts.config.set_inner(StakingConfig {
         bump: ctx.bumps.config,
+        nonce,
         admin: ctx.accounts.admin.key(),
         token_mint: ctx.accounts.token_mint.key(),
         unstaking_period,

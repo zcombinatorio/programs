@@ -58,8 +58,8 @@ export class SVaultClient {
 
   /* PDA Helpers */
 
-  deriveStakingConfigPDA(tokenMint: PublicKey): [PublicKey, number] {
-    return deriveStakingConfigPDA(tokenMint, this.programId);
+  deriveStakingConfigPDA(tokenMint: PublicKey, nonce: number): [PublicKey, number] {
+    return deriveStakingConfigPDA(tokenMint, nonce, this.programId);
   }
 
   deriveUserStakePDA(
@@ -99,24 +99,26 @@ export class SVaultClient {
   }
 
   /**
-   * Convenience method: Derive staking config PDA from mint, then fetch user stake.
+   * Convenience method: Derive staking config PDA from mint + nonce, then fetch user stake.
    */
   async fetchUserStakeByMint(
     tokenMint: PublicKey,
+    nonce: number,
     user: PublicKey
   ): Promise<UserStakeAccount> {
-    const [configPda] = this.deriveStakingConfigPDA(tokenMint);
+    const [configPda] = this.deriveStakingConfigPDA(tokenMint, nonce);
     const [userStakePda] = this.deriveUserStakePDA(configPda, user);
     return this.fetchUserStake(userStakePda);
   }
 
   /**
-   * Convenience method: Derive staking config PDA from mint, then fetch config.
+   * Convenience method: Derive staking config PDA from mint + nonce, then fetch config.
    */
   async fetchStakingConfigByMint(
-    tokenMint: PublicKey
+    tokenMint: PublicKey,
+    nonce: number
   ): Promise<StakingConfigAccount> {
-    const [configPda] = this.deriveStakingConfigPDA(tokenMint);
+    const [configPda] = this.deriveStakingConfigPDA(tokenMint, nonce);
     return this.fetchStakingConfig(configPda);
   }
 
@@ -127,6 +129,7 @@ export class SVaultClient {
     tokenMint: PublicKey,
     unstakingPeriod: BN | number,
     volumeWindow: BN | number,
+    nonce: number,
     options?: SVaultTxOptions
   ) {
     const { includeCuBudget = true, computeUnits } = options ?? {};
@@ -136,7 +139,8 @@ export class SVaultClient {
       admin,
       tokenMint,
       unstakingPeriod,
-      volumeWindow
+      volumeWindow,
+      nonce
     );
 
     if (includeCuBudget) {
@@ -147,19 +151,20 @@ export class SVaultClient {
       ]);
     }
 
-    const [configPda] = this.deriveStakingConfigPDA(tokenMint);
+    const [configPda] = this.deriveStakingConfigPDA(tokenMint, nonce);
     return { builder, configPda };
   }
 
   stake(
     user: PublicKey,
     tokenMint: PublicKey,
+    nonce: number,
     amount: BN | number,
     options?: SVaultTxOptions
   ) {
     const { includeCuBudget = true, computeUnits } = options ?? {};
 
-    let builder = stake(this.program, user, tokenMint, amount);
+    let builder = stake(this.program, user, tokenMint, nonce, amount);
 
     if (includeCuBudget) {
       builder = builder.preInstructions([
@@ -175,12 +180,13 @@ export class SVaultClient {
   initiateUnstake(
     user: PublicKey,
     tokenMint: PublicKey,
+    nonce: number,
     amount: BN | number,
     options?: SVaultTxOptions
   ) {
     const { includeCuBudget = true, computeUnits } = options ?? {};
 
-    let builder = initiateUnstake(this.program, user, tokenMint, amount);
+    let builder = initiateUnstake(this.program, user, tokenMint, nonce, amount);
 
     if (includeCuBudget) {
       builder = builder.preInstructions([
@@ -193,10 +199,15 @@ export class SVaultClient {
     return builder;
   }
 
-  withdraw(user: PublicKey, tokenMint: PublicKey, options?: SVaultTxOptions) {
+  withdraw(
+    user: PublicKey,
+    tokenMint: PublicKey,
+    nonce: number,
+    options?: SVaultTxOptions
+  ) {
     const { includeCuBudget = true, computeUnits } = options ?? {};
 
-    let builder = withdraw(this.program, user, tokenMint);
+    let builder = withdraw(this.program, user, tokenMint, nonce);
 
     if (includeCuBudget) {
       builder = builder.preInstructions([
@@ -212,6 +223,7 @@ export class SVaultClient {
   postRewards(
     admin: PublicKey,
     tokenMint: PublicKey,
+    nonce: number,
     merkleRoot: number[],
     totalAmount: BN | number,
     options?: SVaultTxOptions
@@ -222,6 +234,7 @@ export class SVaultClient {
       this.program,
       admin,
       tokenMint,
+      nonce,
       merkleRoot,
       totalAmount
     );
@@ -240,6 +253,7 @@ export class SVaultClient {
   claimRewards(
     user: PublicKey,
     tokenMint: PublicKey,
+    nonce: number,
     cumulativeAmount: BN | number,
     proof: number[][],
     options?: SVaultTxOptions
@@ -250,6 +264,7 @@ export class SVaultClient {
       this.program,
       user,
       tokenMint,
+      nonce,
       cumulativeAmount,
       proof
     );
@@ -268,6 +283,7 @@ export class SVaultClient {
   setConfig(
     admin: PublicKey,
     tokenMint: PublicKey,
+    nonce: number,
     params: { unstakingPeriod?: BN | number; volumeWindow?: BN | number },
     options?: SVaultTxOptions
   ) {
@@ -277,6 +293,7 @@ export class SVaultClient {
       this.program,
       admin,
       tokenMint,
+      nonce,
       params.unstakingPeriod ?? null,
       params.volumeWindow ?? null
     );
@@ -295,6 +312,7 @@ export class SVaultClient {
   slash(
     admin: PublicKey,
     tokenMint: PublicKey,
+    nonce: number,
     userToSlash: PublicKey,
     basisPoints: number,
     options?: SVaultTxOptions
@@ -302,13 +320,14 @@ export class SVaultClient {
     const { includeCuBudget = true, computeUnits } = options ?? {};
 
     // Derive user stake PDA from user pubkey
-    const [configPda] = this.deriveStakingConfigPDA(tokenMint);
+    const [configPda] = this.deriveStakingConfigPDA(tokenMint, nonce);
     const [userStakePda] = this.deriveUserStakePDA(configPda, userToSlash);
 
     let builder = slash(
       this.program,
       admin,
       tokenMint,
+      nonce,
       userStakePda,
       basisPoints
     );
@@ -328,6 +347,7 @@ export class SVaultClient {
     staker: PublicKey,
     delegateWallet: PublicKey,
     tokenMint: PublicKey,
+    nonce: number,
     options?: SVaultTxOptions
   ) {
     const { includeCuBudget = true, computeUnits } = options ?? {};
@@ -336,7 +356,8 @@ export class SVaultClient {
       this.program,
       staker,
       delegateWallet,
-      tokenMint
+      tokenMint,
+      nonce
     );
 
     if (includeCuBudget) {
@@ -354,6 +375,7 @@ export class SVaultClient {
     staker: PublicKey,
     delegateWallet: PublicKey,
     tokenMint: PublicKey,
+    nonce: number,
     options?: SVaultTxOptions
   ) {
     const { includeCuBudget = true, computeUnits } = options ?? {};
@@ -362,7 +384,8 @@ export class SVaultClient {
       this.program,
       staker,
       delegateWallet,
-      tokenMint
+      tokenMint,
+      nonce
     );
 
     if (includeCuBudget) {

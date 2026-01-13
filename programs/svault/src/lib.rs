@@ -17,8 +17,9 @@ pub mod svault {
         ctx: Context<InitializeStakingVault>,
         unstaking_period: u64,
         volume_window: u64,
+        nonce: u16,
     ) -> Result<()> {
-        initialize::initialize_handler(ctx, unstaking_period, volume_window)
+        initialize::initialize_handler(ctx, unstaking_period, volume_window, nonce)
     }
 
     pub fn stake(ctx: Context<Stake>, amount: u64) -> Result<()> {

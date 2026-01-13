@@ -8,7 +8,7 @@ pub struct SetConfig<'info> {
     #[account(
         mut,
         has_one = admin,
-        seeds = [STAKING_CONFIG_SEED, config.token_mint.as_ref()],
+        seeds = [STAKING_CONFIG_SEED, config.token_mint.as_ref(), &config.nonce.to_le_bytes()],
         bump = config.bump,
     )]
     pub config: Account<'info, StakingConfig>,

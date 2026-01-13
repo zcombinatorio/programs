@@ -25,7 +25,7 @@ pub struct Slash<'info> {
 
     #[account(
         has_one = admin,
-        seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref()],
+        seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref(), &config.nonce.to_le_bytes()],
         bump = config.bump,
     )]
     pub config: Account<'info, StakingConfig>,
@@ -93,9 +93,11 @@ pub fn slash_handler(ctx: Context<Slash>, basis_points: u16) -> Result<()> {
 
     // Transfer slashed tokens from vault to fee vault
     let token_mint_key = ctx.accounts.token_mint.key();
+    let nonce_bytes = config.nonce.to_le_bytes();
     let signer_seeds: &[&[&[u8]]] = &[&[
         STAKING_CONFIG_SEED,
         token_mint_key.as_ref(),
+        &nonce_bytes,
         &[config.bump],
     ]];
 

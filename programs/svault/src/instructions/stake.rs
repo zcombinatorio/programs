@@ -21,7 +21,7 @@ pub struct Stake<'info> {
 
     #[account(
         mut,
-        seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref()],
+        seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref(), &config.nonce.to_le_bytes()],
         bump = config.bump,
     )]
     pub config: Account<'info, StakingConfig>,

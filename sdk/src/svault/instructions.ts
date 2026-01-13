@@ -23,17 +23,18 @@ export function initializeStakingVault(
   admin: PublicKey,
   tokenMint: PublicKey,
   unstakingPeriod: BN | number,
-  volumeWindow: BN | number
+  volumeWindow: BN | number,
+  nonce: number
 ) {
   const unstakingPeriodBN = typeof unstakingPeriod === "number" ? new BN(unstakingPeriod) : unstakingPeriod;
   const volumeWindowBN = typeof volumeWindow === "number" ? new BN(volumeWindow) : volumeWindow;
 
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
   const [stakeVault] = deriveStakeVaultPDA(configPda, program.programId);
   const [rewardVault] = deriveRewardVaultPDA(configPda, program.programId);
 
   return program.methods
-    .initializeStakingVault(unstakingPeriodBN, volumeWindowBN)
+    .initializeStakingVault(unstakingPeriodBN, volumeWindowBN, nonce)
     .accountsPartial({
       admin,
       tokenMint,
@@ -47,11 +48,12 @@ export function stake(
   program: Program<Svault>,
   user: PublicKey,
   tokenMint: PublicKey,
+  nonce: number,
   amount: BN | number
 ) {
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
 
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
   const [userStakePda] = deriveUserStakePDA(configPda, user, program.programId);
   const [stakeVault] = deriveStakeVaultPDA(configPda, program.programId);
   const userTokenAccount = getAssociatedTokenAddressSync(tokenMint, user);
@@ -70,11 +72,12 @@ export function initiateUnstake(
   program: Program<Svault>,
   user: PublicKey,
   tokenMint: PublicKey,
+  nonce: number,
   amount: BN | number
 ) {
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
 
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
   const [userStakePda] = deriveUserStakePDA(configPda, user, program.programId);
 
   return program.methods.initiateUnstake(amountBN).accountsPartial({
@@ -88,9 +91,10 @@ export function initiateUnstake(
 export function withdraw(
   program: Program<Svault>,
   user: PublicKey,
-  tokenMint: PublicKey
+  tokenMint: PublicKey,
+  nonce: number
 ) {
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
   const [userStakePda] = deriveUserStakePDA(configPda, user, program.programId);
   const [stakeVault] = deriveStakeVaultPDA(configPda, program.programId);
   const userTokenAccount = getAssociatedTokenAddressSync(tokenMint, user);
@@ -109,13 +113,14 @@ export function postRewards(
   program: Program<Svault>,
   admin: PublicKey,
   tokenMint: PublicKey,
+  nonce: number,
   merkleRoot: number[],
   totalAmount: BN | number
 ) {
   const merkleRootArray = merkleRoot as number[];
   const totalAmountBN = typeof totalAmount === "number" ? new BN(totalAmount) : totalAmount;
 
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
   const [rewardVault] = deriveRewardVaultPDA(configPda, program.programId);
   const adminTokenAccount = getAssociatedTokenAddressSync(tokenMint, admin);
 
@@ -134,12 +139,13 @@ export function claimRewards(
   program: Program<Svault>,
   user: PublicKey,
   tokenMint: PublicKey,
+  nonce: number,
   cumulativeAmount: BN | number,
   proof: number[][]
 ) {
   const cumulativeAmountBN = typeof cumulativeAmount === "number" ? new BN(cumulativeAmount) : cumulativeAmount;
 
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
   const [userStakePda] = deriveUserStakePDA(configPda, user, program.programId);
   const [rewardVault] = deriveRewardVaultPDA(configPda, program.programId);
   const userTokenAccount = getAssociatedTokenAddressSync(tokenMint, user);
@@ -160,6 +166,7 @@ export function setConfig(
   program: Program<Svault>,
   admin: PublicKey,
   tokenMint: PublicKey,
+  nonce: number,
   unstakingPeriod: BN | number | null,
   volumeWindow: BN | number | null
 ) {
@@ -175,7 +182,7 @@ export function setConfig(
       ? new BN(volumeWindow)
       : volumeWindow;
 
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
 
   return program.methods
     .setConfig(unstakingPeriodArg, volumeWindowArg)
@@ -189,10 +196,11 @@ export function slash(
   program: Program<Svault>,
   admin: PublicKey,
   tokenMint: PublicKey,
+  nonce: number,
   userStakePda: PublicKey,
   basisPoints: number
 ) {
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
   const [stakeVault] = deriveStakeVaultPDA(configPda, program.programId);
   const feeVault = getAssociatedTokenAddressSync(tokenMint, FEE_AUTHORITY);
 
@@ -210,9 +218,10 @@ export function addDelegate(
   program: Program<Svault>,
   staker: PublicKey,
   delegateWallet: PublicKey,
-  tokenMint: PublicKey
+  tokenMint: PublicKey,
+  nonce: number
 ) {
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
   const [userStakePda] = deriveUserStakePDA(configPda, staker, program.programId);
   const [delegatePda] = deriveDelegatePDA(configPda, delegateWallet, program.programId);
 
@@ -229,9 +238,10 @@ export function removeDelegate(
   program: Program<Svault>,
   staker: PublicKey,
   delegateWallet: PublicKey,
-  tokenMint: PublicKey
+  tokenMint: PublicKey,
+  nonce: number
 ) {
-  const [configPda] = deriveStakingConfigPDA(tokenMint, program.programId);
+  const [configPda] = deriveStakingConfigPDA(tokenMint, nonce, program.programId);
   const [delegatePda] = deriveDelegatePDA(configPda, delegateWallet, program.programId);
 
   return program.methods.removeDelegate().accountsPartial({

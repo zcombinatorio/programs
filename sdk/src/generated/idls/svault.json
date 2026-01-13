@@ -56,6 +56,11 @@
                 "kind": "account",
                 "path": "config.token_mint",
                 "account": "StakingConfig"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "StakingConfig"
               }
             ]
           }
@@ -175,6 +180,11 @@
               {
                 "kind": "account",
                 "path": "token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "StakingConfig"
               }
             ]
           }
@@ -399,6 +409,10 @@
               {
                 "kind": "account",
                 "path": "token_mint"
+              },
+              {
+                "kind": "arg",
+                "path": "nonce"
               }
             ]
           }
@@ -476,6 +490,10 @@
         {
           "name": "volume_window",
           "type": "u64"
+        },
+        {
+          "name": "nonce",
+          "type": "u16"
         }
       ]
     },
@@ -527,6 +545,11 @@
               {
                 "kind": "account",
                 "path": "token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "StakingConfig"
               }
             ]
           }
@@ -618,6 +641,11 @@
               {
                 "kind": "account",
                 "path": "token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "StakingConfig"
               }
             ]
           }
@@ -806,6 +834,11 @@
                 "kind": "account",
                 "path": "config.token_mint",
                 "account": "StakingConfig"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "StakingConfig"
               }
             ]
           }
@@ -893,6 +926,11 @@
                 "kind": "account",
                 "path": "config.token_mint",
                 "account": "StakingConfig"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "StakingConfig"
               }
             ]
           }
@@ -963,6 +1001,11 @@
               {
                 "kind": "account",
                 "path": "token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "StakingConfig"
               }
             ]
           }
@@ -1212,6 +1255,11 @@
               {
                 "kind": "account",
                 "path": "token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "StakingConfig"
               }
             ]
           }
@@ -1427,6 +1475,11 @@
               {
                 "kind": "account",
                 "path": "token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "config.nonce",
+                "account": "StakingConfig"
               }
             ]
           }
@@ -1967,8 +2020,8 @@
     {
       "name": "StakingConfig",
       "docs": [
-        "Seeds: [STAKING_CONFIG_SEED, token_mint]",
-        "Unique per token mint"
+        "Seeds: [STAKING_CONFIG_SEED, token_mint, nonce]",
+        "Unique per token mint + nonce combination"
       ],
       "type": {
         "kind": "struct",
@@ -1976,6 +2029,10 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "nonce",
+            "type": "u16"
           },
           {
             "name": "admin",
