@@ -46,6 +46,7 @@ ANCHOR_ARGS=()
 DEPLOYED=0
 SKIPPED=0
 FAILED=0
+TOTAL_ESTIMATED_COST=0
 
 # Programs that need deployment (filled during analysis phase)
 PROGRAMS_TO_DEPLOY=()
@@ -139,6 +140,53 @@ resolve_cluster() {
             echo "$input"
             ;;
     esac
+}
+
+# Get wallet balance in SOL
+get_wallet_balance() {
+    local balance_output
+    if balance_output=$(solana balance 2>&1); then
+        # Extract just the number (e.g., "5.123 SOL" -> "5.123")
+        echo "$balance_output" | grep -oE '[0-9]+\.?[0-9]*' | head -1
+    else
+        echo ""
+    fi
+}
+
+# Get deployment cost estimate for a program (rent-exempt minimum)
+get_deploy_cost() {
+    local program=$1
+    local local_so="$DEPLOY_DIR/$program.so"
+
+    if [[ ! -f "$local_so" ]]; then
+        echo ""
+        return
+    fi
+
+    # Get file size in bytes
+    local file_size
+    if [[ "$(uname)" == "Darwin" ]]; then
+        file_size=$(stat -f%z "$local_so" 2>/dev/null)
+    else
+        file_size=$(stat -c%s "$local_so" 2>/dev/null)
+    fi
+
+    if [[ -z "$file_size" ]]; then
+        echo ""
+        return
+    fi
+
+    # Program accounts need additional overhead (~45 bytes for metadata)
+    local total_size=$((file_size + 45))
+
+    # Get rent-exempt amount from solana CLI
+    local rent_output
+    if rent_output=$(solana rent "$total_size" 2>&1); then
+        # Extract SOL amount (e.g., "Rent-exempt minimum: 1.234 SOL" -> "1.234")
+        echo "$rent_output" | grep -oE '[0-9]+\.?[0-9]*' | head -1
+    else
+        echo ""
+    fi
 }
 
 # Get program ID from Anchor.toml for a given program and cluster
@@ -246,8 +294,16 @@ analyze_program() {
     elif [[ $exit_code -eq 1 ]]; then
         # Program changed or not deployed yet
         if [[ "$COMPARE_IS_NEW" == true ]]; then
-            echo -e "  ${YELLOW}+${NC} New program"
-            set_deploy_info "$program" "new"
+            local deploy_cost=$(get_deploy_cost "$program")
+            if [[ -n "$deploy_cost" ]]; then
+                echo -e "  ${YELLOW}+${NC} New program ${DIM}(~${deploy_cost} SOL)${NC}"
+                set_deploy_info "$program" "new ~${deploy_cost} SOL"
+                # Add to total (using awk for floating point)
+                TOTAL_ESTIMATED_COST=$(echo "$TOTAL_ESTIMATED_COST $deploy_cost" | awk '{printf "%.4f", $1 + $2}')
+            else
+                echo -e "  ${YELLOW}+${NC} New program"
+                set_deploy_info "$program" "new"
+            fi
         else
             echo -e "  ${YELLOW}*${NC} Changed"
             set_deploy_info "$program" "changed"
@@ -371,6 +427,9 @@ if [[ "$has_cluster_arg" == false ]]; then
     ANCHOR_ARGS+=("--provider.cluster" "$CLUSTER")
 fi
 
+# Get wallet balance
+WALLET_BALANCE=$(get_wallet_balance)
+
 # Header
 echo ""
 echo -e "$LINE_H"
@@ -378,6 +437,11 @@ echo -e "${CYAN}${BOLD}Smart Deploy${NC}"
 echo -e "$LINE_H"
 echo ""
 echo -e "  Cluster:  ${CLUSTER_COLOR}${BOLD}$CLUSTER${NC}"
+if [[ -n "$WALLET_BALANCE" ]]; then
+    echo -e "  Wallet:   ${BOLD}$WALLET_BALANCE SOL${NC}"
+else
+    echo -e "  Wallet:   ${DIM}(unable to fetch balance)${NC}"
+fi
 if [[ "$DRY_RUN" == true ]]; then
     echo -e "  Mode:     ${YELLOW}DRY RUN${NC}"
 fi
