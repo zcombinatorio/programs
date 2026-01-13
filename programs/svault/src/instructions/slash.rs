@@ -26,7 +26,7 @@ pub struct Slash<'info> {
     #[account(
         has_one = admin,
         seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref(), &config.nonce.to_le_bytes()],
-        bump = config.bump,
+        bump = config.bumps.config,
     )]
     pub config: Account<'info, StakingConfig>,
 
@@ -40,7 +40,7 @@ pub struct Slash<'info> {
     #[account(
         mut,
         seeds = [STAKE_VAULT_SEED, config.key().as_ref()],
-        bump,
+        bump = config.bumps.stake_vault,
     )]
     pub stake_vault: InterfaceAccount<'info, TokenAccount>,
 
@@ -98,7 +98,7 @@ pub fn slash_handler(ctx: Context<Slash>, basis_points: u16) -> Result<()> {
         STAKING_CONFIG_SEED,
         token_mint_key.as_ref(),
         &nonce_bytes,
-        &[config.bump],
+        &[config.bumps.config],
     ]];
 
     transfer_checked_signed(

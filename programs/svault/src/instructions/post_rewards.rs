@@ -21,7 +21,7 @@ pub struct PostRewards<'info> {
     #[account(
         mut,
         seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref(), &config.nonce.to_le_bytes()],
-        bump = config.bump,
+        bump = config.bumps.config,
         constraint = config.admin == admin.key() @ ErrorCode::Unauthorized,
     )]
     pub config: Account<'info, StakingConfig>,
@@ -29,7 +29,7 @@ pub struct PostRewards<'info> {
     #[account(
         mut,
         seeds = [REWARD_VAULT_SEED, config.key().as_ref()],
-        bump,
+        bump = config.bumps.reward_vault,
     )]
     pub reward_vault: InterfaceAccount<'info, TokenAccount>,
 

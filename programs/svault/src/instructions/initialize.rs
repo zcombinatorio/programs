@@ -61,7 +61,11 @@ pub fn initialize_handler(
     nonce: u16,
 ) -> Result<()> {
     ctx.accounts.config.set_inner(StakingConfig {
-        bump: ctx.bumps.config,
+        bumps: VaultBumps {
+            config: ctx.bumps.config,
+            stake_vault: ctx.bumps.stake_vault,
+            reward_vault: ctx.bumps.reward_vault,
+        },
         nonce,
         admin: ctx.accounts.admin.key(),
         token_mint: ctx.accounts.token_mint.key(),

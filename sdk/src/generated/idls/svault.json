@@ -2027,8 +2027,12 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "bump",
-            "type": "u8"
+            "name": "bumps",
+            "type": {
+              "defined": {
+                "name": "VaultBumps"
+              }
+            }
           },
           {
             "name": "nonce",
@@ -2154,6 +2158,26 @@
           {
             "name": "total_claimed",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultBumps",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "u8"
+          },
+          {
+            "name": "stake_vault",
+            "type": "u8"
+          },
+          {
+            "name": "reward_vault",
+            "type": "u8"
           }
         ]
       }

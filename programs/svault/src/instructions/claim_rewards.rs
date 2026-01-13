@@ -22,7 +22,7 @@ pub struct ClaimRewards<'info> {
 
     #[account(
         seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref(), &config.nonce.to_le_bytes()],
-        bump = config.bump,
+        bump = config.bumps.config,
     )]
     pub config: Account<'info, StakingConfig>,
 
@@ -37,7 +37,7 @@ pub struct ClaimRewards<'info> {
     #[account(
         mut,
         seeds = [REWARD_VAULT_SEED, config.key().as_ref()],
-        bump,
+        bump = config.bumps.reward_vault,
     )]
     pub reward_vault: InterfaceAccount<'info, TokenAccount>,
 
@@ -79,7 +79,7 @@ pub fn claim_rewards_handler(
     let token_mint_key = ctx.accounts.token_mint.key();
     let nonce_bytes = config.nonce.to_le_bytes();
     let signer_seeds: &[&[&[u8]]] =
-        &[&[STAKING_CONFIG_SEED, token_mint_key.as_ref(), &nonce_bytes, &[config.bump]]];
+        &[&[STAKING_CONFIG_SEED, token_mint_key.as_ref(), &nonce_bytes, &[config.bumps.config]]];
 
     transfer_checked_signed(
         ctx.accounts.reward_vault.to_account_info(),

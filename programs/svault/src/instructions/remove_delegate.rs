@@ -15,7 +15,7 @@ pub struct RemoveDelegate<'info> {
 
     #[account(
         seeds = [STAKING_CONFIG_SEED, config.token_mint.as_ref(), &config.nonce.to_le_bytes()],
-        bump = config.bump,
+        bump = config.bumps.config,
     )]
     pub config: Account<'info, StakingConfig>,
 

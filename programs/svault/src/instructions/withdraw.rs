@@ -20,7 +20,7 @@ pub struct Withdraw<'info> {
 
     #[account(
         seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref(), &config.nonce.to_le_bytes()],
-        bump = config.bump,
+        bump = config.bumps.config,
     )]
     pub config: Account<'info, StakingConfig>,
 
@@ -35,7 +35,7 @@ pub struct Withdraw<'info> {
     #[account(
         mut,
         seeds = [STAKE_VAULT_SEED, config.key().as_ref()],
-        bump,
+        bump = config.bumps.stake_vault,
     )]
     pub stake_vault: InterfaceAccount<'info, TokenAccount>,
 
@@ -73,7 +73,7 @@ pub fn withdraw_handler(ctx: Context<Withdraw>) -> Result<()> {
     let signer_seeds: &[&[&[u8]]] = &[&[
         STAKE_VAULT_SEED,
         config_key.as_ref(),
-        &[ctx.bumps.stake_vault],
+        &[config.bumps.stake_vault],
     ]];
 
     transfer_checked_signed(

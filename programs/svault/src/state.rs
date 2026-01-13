@@ -9,12 +9,19 @@ pub const STAKE_VAULT_SEED: &[u8] = b"stake_vault";
 #[constant]
 pub const REWARD_VAULT_SEED: &[u8] = b"reward_vault";
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
+pub struct VaultBumps {
+    pub config: u8,
+    pub stake_vault: u8,
+    pub reward_vault: u8,
+}
+
 /// Seeds: [STAKING_CONFIG_SEED, token_mint, nonce]
 /// Unique per token mint + nonce combination
 #[account]
 #[derive(InitSpace)]
 pub struct StakingConfig {
-    pub bump: u8,
+    pub bumps: VaultBumps,
     pub nonce: u16,
     pub admin: Pubkey,
     pub token_mint: Pubkey,

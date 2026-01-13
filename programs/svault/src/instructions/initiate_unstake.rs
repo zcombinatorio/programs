@@ -21,7 +21,7 @@ pub struct InitiateUnstake<'info> {
     #[account(
         mut,
         seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref(), &config.nonce.to_le_bytes()],
-        bump = config.bump,
+        bump = config.bumps.config,
     )]
     pub config: Account<'info, StakingConfig>,
 

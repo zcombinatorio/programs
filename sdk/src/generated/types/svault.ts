@@ -2033,8 +2033,12 @@ export type Svault = {
         "kind": "struct",
         "fields": [
           {
-            "name": "bump",
-            "type": "u8"
+            "name": "bumps",
+            "type": {
+              "defined": {
+                "name": "vaultBumps"
+              }
+            }
           },
           {
             "name": "nonce",
@@ -2160,6 +2164,26 @@ export type Svault = {
           {
             "name": "totalClaimed",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "vaultBumps",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "u8"
+          },
+          {
+            "name": "stakeVault",
+            "type": "u8"
+          },
+          {
+            "name": "rewardVault",
+            "type": "u8"
           }
         ]
       }
