@@ -68,19 +68,21 @@ pub fn withdraw_handler(ctx: Context<Withdraw>) -> Result<()> {
 
     let amount = user_stake.pending_unstake;
 
-    // Transfer tokens from vault to user (PDA-signed)
-    let config_key = config.key();
+    // Transfer tokens from vault to user (PDA-signed by config)
+    let token_mint_key = ctx.accounts.token_mint.key();
+    let nonce_bytes = config.nonce.to_le_bytes();
     let signer_seeds: &[&[&[u8]]] = &[&[
-        STAKE_VAULT_SEED,
-        config_key.as_ref(),
-        &[config.bumps.stake_vault],
+        STAKING_CONFIG_SEED,
+        token_mint_key.as_ref(),
+        &nonce_bytes,
+        &[config.bumps.config],
     ]];
 
     transfer_checked_signed(
         ctx.accounts.stake_vault.to_account_info(),
         ctx.accounts.token_mint.to_account_info(),
         ctx.accounts.user_token_account.to_account_info(),
-        ctx.accounts.stake_vault.to_account_info(),
+        ctx.accounts.config.to_account_info(),
         ctx.accounts.token_program.to_account_info(),
         amount,
         ctx.accounts.token_mint.decimals,
