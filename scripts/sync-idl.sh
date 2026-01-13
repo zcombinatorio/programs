@@ -14,7 +14,7 @@ SDK_IDLS_DIR="$ROOT_DIR/sdk/src/generated/idls"
 SDK_TYPES_DIR="$ROOT_DIR/sdk/src/generated/types"
 
 # Programs to sync
-PROGRAMS=("amm" "futarchy" "vault")
+PROGRAMS=("amm" "futarchy" "vault" "svault")
 
 echo "Syncing IDL and types to SDK..."
 

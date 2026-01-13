@@ -112,10 +112,52 @@ export {
   MIN_OPTIONS as FUTARCHY_MIN_OPTIONS,
 } from "./futarchy";
 
+/* SVault Sub-SDK */
+
+export {
+  // Client
+  SVaultClient,
+  // Types
+  StakingConfigAccount,
+  UserStakeAccount,
+  DelegateAccount,
+  StakingVaultInitializedEvent,
+  StakedEvent,
+  UnstakeInitiatedEvent,
+  WithdrawnEvent,
+  RewardsPostedEvent,
+  RewardsClaimedEvent,
+  SlashedEvent,
+  DelegateAddedEvent,
+  DelegateRemovedEvent,
+  SVaultEvent,
+  SVaultTxOptions,
+  // Utils
+  deriveStakingConfigPDA,
+  deriveUserStakePDA,
+  deriveDelegatePDA,
+  deriveStakeVaultPDA,
+  deriveRewardVaultPDA,
+  fetchStakingConfigAccount,
+  fetchUserStakeAccount,
+  fetchDelegateAccount,
+  computeWithdrawAvailableAt,
+  isWithdrawAvailable,
+  getTimeUntilWithdraw,
+  // Constants
+  PROGRAM_ID as SVAULT_PROGRAM_ID,
+  STAKING_CONFIG_SEED,
+  USER_STAKE_SEED,
+  STAKE_VAULT_SEED,
+  REWARD_VAULT_SEED,
+  SECONDS_PER_DAY,
+} from "./svault";
+
 /* Sub-SDK Namespaces */
 
 import * as vault from "./vault";
 import * as amm from "./amm";
 import * as futarchy from "./futarchy";
+import * as svault from "./svault";
 
-export { vault, amm, futarchy };
+export { vault, amm, futarchy, svault };
