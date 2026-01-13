@@ -1,0 +1,58 @@
+use crate::state::*;
+use anchor_lang::prelude::*;
+
+#[event]
+pub struct DelegateAdded {
+    pub config: Pubkey,
+    pub staker: Pubkey,
+    pub delegate: Pubkey,
+}
+
+#[derive(Accounts)]
+pub struct AddDelegate<'info> {
+    #[account(mut)]
+    pub staker: Signer<'info>,
+
+    pub delegate_wallet: Signer<'info>,
+
+    #[account(
+        seeds = [STAKING_CONFIG_SEED, config.token_mint.as_ref(), &config.nonce.to_le_bytes()],
+        bump = config.bumps.config,
+    )]
+    pub config: Account<'info, StakingConfig>,
+
+    #[account(
+        seeds = [USER_STAKE_SEED, config.key().as_ref(), staker.key().as_ref()],
+        bump,
+        constraint = user_stake.user == staker.key(),
+    )]
+    pub user_stake: Account<'info, UserStake>,
+
+    #[account(
+        init,
+        payer = staker,
+        space = 8 + Delegate::INIT_SPACE,
+        seeds = [USER_STAKE_SEED, config.key().as_ref(), delegate_wallet.key().as_ref()],
+        bump,
+    )]
+    pub delegate: Account<'info, Delegate>,
+
+    pub system_program: Program<'info, System>,
+}
+
+pub fn add_delegate_handler(ctx: Context<AddDelegate>) -> Result<()> {
+    ctx.accounts.delegate.set_inner(Delegate {
+        delegate: ctx.accounts.delegate_wallet.key(),
+        staker: ctx.accounts.staker.key(),
+        staker_stake: ctx.accounts.user_stake.key(),
+        staking_config: ctx.accounts.config.key(),
+    });
+
+    emit!(DelegateAdded {
+        config: ctx.accounts.config.key(),
+        staker: ctx.accounts.staker.key(),
+        delegate: ctx.accounts.delegate_wallet.key(),
+    });
+
+    Ok(())
+}
