@@ -327,7 +327,12 @@ describe("Validation Errors", () => {
         newUserKeypair.publicKey,
         2 * LAMPORTS_PER_SOL
       );
-      await provider.connection.confirmTransaction(sig);
+      const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash('confirmed');
+      await provider.connection.confirmTransaction({
+        signature: sig,
+        blockhash,
+        lastValidBlockHeight,
+      }, 'confirmed');
 
       const newUserWallet = new anchor.Wallet(newUserKeypair);
       const newUserProvider = new anchor.AnchorProvider(

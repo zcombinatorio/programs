@@ -310,7 +310,7 @@ export async function sendVersionedTx(
   const provider = client.program.provider as anchor.AnchorProvider;
 
   // Build versioned transaction with ALT
-  const versionedTx = await client.buildVersionedTx(
+  const { versionedTx, blockhash, lastValidBlockHeight } = await client.buildVersionedTx(
     wallet.publicKey,
     instructions,
     altAddress
@@ -319,12 +319,16 @@ export async function sendVersionedTx(
   // Sign the transaction
   versionedTx.sign([wallet.payer]);
 
-  // Send and confirm
+  // Send and confirm with proper blockhash-based expiration detection
   const sig = await provider.connection.sendTransaction(versionedTx, {
     skipPreflight: false,
     preflightCommitment: "confirmed",
   });
-  await provider.connection.confirmTransaction(sig, "confirmed");
+  await provider.connection.confirmTransaction({
+    signature: sig,
+    blockhash,
+    lastValidBlockHeight,
+  }, "confirmed");
 
   if (logName) {
     const confirmedTx = await provider.connection.getTransaction(sig, {

@@ -69,7 +69,12 @@ export async function createFundedUser(
     keypair.publicKey,
     2 * LAMPORTS_PER_SOL
   );
-  await provider.connection.confirmTransaction(sig);
+  const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash('confirmed');
+  await provider.connection.confirmTransaction({
+    signature: sig,
+    blockhash,
+    lastValidBlockHeight,
+  }, 'confirmed');
 
   // Create ATA and fund with base tokens
   const baseAta = await getOrCreateAssociatedTokenAccount(

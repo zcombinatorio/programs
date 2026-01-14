@@ -606,13 +606,19 @@ export class FutarchyClient {
 
     // Create ALT
     const createTx = new Transaction().add(createIx);
-    createTx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+    const { blockhash: createBlockhash, lastValidBlockHeight: createLastValidBlockHeight } =
+      await provider.connection.getLatestBlockhash('confirmed');
+    createTx.recentBlockhash = createBlockhash;
     createTx.feePayer = creator;
     const signedTx = await provider.wallet.signTransaction(createTx);
     const sig = await provider.connection.sendRawTransaction(signedTx.serialize(), {
       skipPreflight: true,
     });
-    await provider.connection.confirmTransaction(sig, "confirmed");
+    await provider.connection.confirmTransaction({
+      signature: sig,
+      blockhash: createBlockhash,
+      lastValidBlockHeight: createLastValidBlockHeight,
+    }, "confirmed");
 
     // Extend ALT with addresses
     // Use skipPreflight to avoid race condition where simulation sees stale state
@@ -627,13 +633,19 @@ export class FutarchyClient {
         addresses: chunk,
       });
       const extendTx = new Transaction().add(extendIx);
-      extendTx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+      const { blockhash: extendBlockhash, lastValidBlockHeight: extendLastValidBlockHeight } =
+        await provider.connection.getLatestBlockhash('confirmed');
+      extendTx.recentBlockhash = extendBlockhash;
       extendTx.feePayer = creator;
       const signedExtendTx = await provider.wallet.signTransaction(extendTx);
       const extendSig = await provider.connection.sendRawTransaction(signedExtendTx.serialize(), {
         skipPreflight: true,
       });
-      await provider.connection.confirmTransaction(extendSig, "confirmed");
+      await provider.connection.confirmTransaction({
+        signature: extendSig,
+        blockhash: extendBlockhash,
+        lastValidBlockHeight: extendLastValidBlockHeight,
+      }, "confirmed");
     }
 
     return { altAddress };
@@ -646,13 +658,19 @@ export class FutarchyClient {
    * @param creator - The user redeeming
    * @param proposalPda - The proposal PDA
    * @param altAddress - Optional ALT address (will be created if not provided for 3+ options)
-   * @returns Unsigned versioned transaction, ALT address, and number of options
+   * @returns Unsigned versioned transaction, ALT address, number of options, and blockhash info for confirmation
    */
   async redeemLiquidityVersioned(
     creator: PublicKey,
     proposalPda: PublicKey,
     altAddress?: PublicKey,
-  ): Promise<{ versionedTx: VersionedTransaction; altAddress: PublicKey; numOptions: number }> {
+  ): Promise<{
+    versionedTx: VersionedTransaction;
+    altAddress: PublicKey;
+    numOptions: number;
+    blockhash: string;
+    lastValidBlockHeight: number;
+  }> {
     const provider = this.program.provider as AnchorProvider;
     const { builder, numOptions } = await this.redeemLiquidity(creator, proposalPda);
 
@@ -710,8 +728,8 @@ export class FutarchyClient {
     const instruction = await builder.instruction();
     const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 });
 
-    // Get fresh blockhash
-    const { blockhash } = await provider.connection.getLatestBlockhash();
+    // Get fresh blockhash with lastValidBlockHeight for confirmation tracking
+    const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash('confirmed');
 
     // Build versioned transaction using the verified ALT (no re-fetch)
     const versionedTx = this.buildVersionedTxWithALT(
@@ -721,23 +739,56 @@ export class FutarchyClient {
       blockhash,
     );
 
-    // Return the versioned transaction for the caller to sign and send
+    // Return the versioned transaction along with blockhash info for proper confirmation
     // This allows the caller to use their own signing mechanism (e.g., keypair.sign)
-    return { versionedTx, altAddress: altPubkey, numOptions };
+    return { versionedTx, altAddress: altPubkey, numOptions, blockhash, lastValidBlockHeight };
   }
 
   /**
-   * Helper to send a signed versioned transaction.
+   * Helper to send a signed versioned transaction with robust confirmation handling.
+   * Uses blockhash-based confirmation to properly detect transaction expiration
+   * instead of relying on a fixed timeout.
+   *
+   * @param signedTx - The signed versioned transaction to send
+   * @param confirmationInfo - Optional blockhash info from when the transaction was built.
+   *                          If not provided, a fresh blockhash will be fetched (less accurate).
    */
   async sendVersionedTransaction(
     signedTx: VersionedTransaction,
+    confirmationInfo?: { blockhash: string; lastValidBlockHeight: number },
   ): Promise<string> {
     const provider = this.program.provider as AnchorProvider;
+
+    // Use provided blockhash info or fetch fresh one
+    // Using the original blockhash is more accurate for detecting expiration
+    let blockhash: string;
+    let lastValidBlockHeight: number;
+
+    if (confirmationInfo) {
+      blockhash = confirmationInfo.blockhash;
+      lastValidBlockHeight = confirmationInfo.lastValidBlockHeight;
+    } else {
+      // Fallback: get fresh blockhash (may wait longer than necessary if tx already expired)
+      const latestBlockhash = await provider.connection.getLatestBlockhash('confirmed');
+      blockhash = latestBlockhash.blockhash;
+      lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
+    }
+
     const signature = await provider.connection.sendTransaction(signedTx, {
       skipPreflight: false,
       preflightCommitment: 'confirmed',
     });
-    await provider.connection.confirmTransaction(signature, 'confirmed');
+
+    // Use blockhash-based confirmation which waits until either:
+    // 1. Transaction is confirmed
+    // 2. Blockhash expires (lastValidBlockHeight passed)
+    // This is more robust than a fixed timeout on congested networks
+    await provider.connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight,
+    }, 'confirmed');
+
     return signature;
   }
 
@@ -810,13 +861,19 @@ export class FutarchyClient {
 
     // Send create transaction immediately, skip preflight to avoid slot timing issues
     const createTx = new Transaction().add(createIx);
-    createTx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+    const { blockhash: createBlockhash, lastValidBlockHeight: createLastValidBlockHeight } =
+      await provider.connection.getLatestBlockhash('confirmed');
+    createTx.recentBlockhash = createBlockhash;
     createTx.feePayer = creator;
     const signedTx = await provider.wallet.signTransaction(createTx);
     const sig = await provider.connection.sendRawTransaction(signedTx.serialize(), {
       skipPreflight: true,
     });
-    await provider.connection.confirmTransaction(sig, "confirmed");
+    await provider.connection.confirmTransaction({
+      signature: sig,
+      blockhash: createBlockhash,
+      lastValidBlockHeight: createLastValidBlockHeight,
+    }, "confirmed");
 
     // Split addresses into chunks to avoid transaction size limits
     // Each address is 32 bytes, ~20 addresses per extend instruction is safe
@@ -832,13 +889,19 @@ export class FutarchyClient {
         addresses: chunk,
       });
       const extendTx = new Transaction().add(extendIx);
-      extendTx.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+      const { blockhash: extendBlockhash, lastValidBlockHeight: extendLastValidBlockHeight } =
+        await provider.connection.getLatestBlockhash('confirmed');
+      extendTx.recentBlockhash = extendBlockhash;
       extendTx.feePayer = creator;
       const signedExtendTx = await provider.wallet.signTransaction(extendTx);
       const extendSig = await provider.connection.sendRawTransaction(signedExtendTx.serialize(), {
         skipPreflight: true,
       });
-      await provider.connection.confirmTransaction(extendSig, "confirmed");
+      await provider.connection.confirmTransaction({
+        signature: extendSig,
+        blockhash: extendBlockhash,
+        lastValidBlockHeight: extendLastValidBlockHeight,
+      }, "confirmed");
     }
 
     return { altAddress };
@@ -856,11 +919,16 @@ export class FutarchyClient {
     payer: PublicKey,
     instructions: TransactionInstruction[],
     altAddress: PublicKey,
-  ): Promise<VersionedTransaction> {
+  ): Promise<{
+    versionedTx: VersionedTransaction;
+    blockhash: string;
+    lastValidBlockHeight: number;
+  }> {
     const provider = this.program.provider as AnchorProvider;
     const alt = await this.fetchALT(altAddress);
-    const { blockhash } = await provider.connection.getLatestBlockhash();
-    return this.buildVersionedTxWithALT(payer, instructions, alt, blockhash);
+    const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash('confirmed');
+    const versionedTx = this.buildVersionedTxWithALT(payer, instructions, alt, blockhash);
+    return { versionedTx, blockhash, lastValidBlockHeight };
   }
 
   buildVersionedTxWithALT(

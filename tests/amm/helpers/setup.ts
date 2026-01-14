@@ -54,7 +54,12 @@ export async function ensureWalletFunded(
       wallet.publicKey,
       AIRDROP_AMOUNT
     );
-    await provider.connection.confirmTransaction(sig);
+    const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash('confirmed');
+    await provider.connection.confirmTransaction({
+      signature: sig,
+      blockhash,
+      lastValidBlockHeight,
+    }, 'confirmed');
   }
 }
 
@@ -93,7 +98,12 @@ export async function createFundedUser(
     keypair.publicKey,
     2 * LAMPORTS_PER_SOL
   );
-  await provider.connection.confirmTransaction(sig);
+  const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash('confirmed');
+  await provider.connection.confirmTransaction({
+    signature: sig,
+    blockhash,
+    lastValidBlockHeight,
+  }, 'confirmed');
 
   // Create ATA and fund with mint A tokens
   const mintAAta = await getOrCreateAssociatedTokenAccount(
