@@ -1,6 +1,6 @@
 {
   "name": "@zcomb/programs-sdk",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "SDK for ZCombinator Programs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,7 +24,6 @@
   ],
   "files": [
     "dist",
-    "src",
     "README.md"
   ],
   "license": "AGPL-3.0",
