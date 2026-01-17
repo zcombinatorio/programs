@@ -53,9 +53,6 @@ pub enum FutarchyError {
     #[msg("Invalid DAO account")]
     InvalidDAO,
 
-    #[msg("Invalid multisig account")]
-    InvalidMultisig,
-
     #[msg("Math overflow")]
     MathOverflow,
 
