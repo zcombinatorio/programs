@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::FutarchyError;
 use crate::state::moderator::*;
 use crate::state::dao::*;
+use crate::squads::SquadsMultisig;
 
 #[derive(Accounts)]
 #[instruction(name: String)]
@@ -34,10 +35,16 @@ pub struct AddHistoricalParentDAO<'info> {
     )]
     pub moderator: Box<Account<'info, ModeratorAccount>>,
 
-    /// CHECK: existing multisig, not validated
+    /// CHECK: validated by squads program owner
+    #[account(
+        owner = SquadsMultisig::id() @ FutarchyError::InvalidMultisig
+    )]
     pub treasury_multisig: UncheckedAccount<'info>,
 
-    /// CHECK: existing multisig, not validated
+    /// CHECK: validated by squads program owner
+    #[account(
+        owner = SquadsMultisig::id() @ FutarchyError::InvalidMultisig
+    )]
     pub mint_auth_multisig: UncheckedAccount<'info>,
 
     /// CHECK: validated by token program owner
