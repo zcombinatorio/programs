@@ -14,6 +14,114 @@ export type Futarchy = {
   },
   "instructions": [
     {
+      "name": "addHistoricalParentDao",
+      "discriminator": [
+        144,
+        217,
+        245,
+        231,
+        194,
+        127,
+        156,
+        56
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasuryMultisig"
+        },
+        {
+          "name": "mintAuthMultisig"
+        },
+        {
+          "name": "baseMint"
+        },
+        {
+          "name": "quoteMint"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "cosigner",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "poolType",
+          "type": {
+            "defined": {
+              "name": "poolType"
+            }
+          }
+        },
+        {
+          "name": "proposalIdCounter",
+          "type": "u16"
+        }
+      ]
+    },
+    {
       "name": "addHistoricalProposal",
       "discriminator": [
         125,
@@ -109,6 +217,10 @@ export type Futarchy = {
         {
           "name": "createdAt",
           "type": "i64"
+        },
+        {
+          "name": "metadata",
+          "type": "string"
         }
       ],
       "returns": "u16"

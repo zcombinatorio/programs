@@ -53,6 +53,7 @@ import {
   initializeParentDAO,
   initializeChildDAO,
   upgradeDAO,
+  addHistoricalParentDAO,
 } from "./instructions";
 import { TxOptions } from "../utils";
 
@@ -158,6 +159,7 @@ export class FutarchyClient {
     winningIdx: number,
     length: number,
     createdAt: BN | number,
+    metadata: string,
     options?: TxOptions
   ) {
     const moderator = await this.fetchModerator(moderatorPda);
@@ -172,7 +174,8 @@ export class FutarchyClient {
       numOptions,
       winningIdx,
       length,
-      createdAt
+      createdAt,
+      metadata
     ).preInstructions(this.maybeAddComputeBudget(options));
 
     return { builder, proposalPda, proposalId };
@@ -1096,5 +1099,44 @@ export class FutarchyClient {
     ).preInstructions(this.maybeAddComputeBudget(options));
 
     return { builder, daoPda, moderatorPda };
+  }
+
+  async addHistoricalParentDAO(
+    admin: PublicKey,
+    name: string,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    treasuryMultisig: PublicKey,
+    mintAuthMultisig: PublicKey,
+    cosigner: PublicKey,
+    pool: PublicKey,
+    poolType: PoolType,
+    proposalIdCounter: number,
+    options?: TxOptions
+  ) {
+    const [daoPda] = this.deriveDAOPDA(name);
+    const [moderatorPda] = this.deriveModeratorPDA(name);
+
+    const builder = addHistoricalParentDAO(
+      this.program,
+      admin,
+      daoPda,
+      moderatorPda,
+      treasuryMultisig,
+      mintAuthMultisig,
+      baseMint,
+      quoteMint,
+      name,
+      cosigner,
+      pool,
+      poolType,
+      proposalIdCounter
+    ).preInstructions(this.maybeAddComputeBudget(options));
+
+    return {
+      builder,
+      daoPda,
+      moderatorPda,
+    };
   }
 }

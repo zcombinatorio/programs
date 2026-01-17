@@ -8,6 +8,114 @@
   },
   "instructions": [
     {
+      "name": "add_historical_parent_dao",
+      "discriminator": [
+        144,
+        217,
+        245,
+        231,
+        194,
+        127,
+        156,
+        56
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury_multisig"
+        },
+        {
+          "name": "mint_auth_multisig"
+        },
+        {
+          "name": "base_mint"
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "cosigner",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool_type",
+          "type": {
+            "defined": {
+              "name": "PoolType"
+            }
+          }
+        },
+        {
+          "name": "proposal_id_counter",
+          "type": "u16"
+        }
+      ]
+    },
+    {
       "name": "add_historical_proposal",
       "discriminator": [
         125,
@@ -103,6 +211,10 @@
         {
           "name": "created_at",
           "type": "i64"
+        },
+        {
+          "name": "metadata",
+          "type": "string"
         }
       ],
       "returns": "u16"

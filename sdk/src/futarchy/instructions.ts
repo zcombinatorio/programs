@@ -125,11 +125,12 @@ export function addHistoricalProposal(
   numOptions: number,
   winningIdx: number,
   length: number,
-  createdAt: BN | number
+  createdAt: BN | number,
+  metadata: string
 ) {
   const createdAtBN = typeof createdAt === "number" ? new BN(createdAt) : createdAt;
   return program.methods
-    .addHistoricalProposal(numOptions, winningIdx, length, createdAtBN)
+    .addHistoricalProposal(numOptions, winningIdx, length, createdAtBN, metadata)
     .accountsPartial({
       admin,
       moderator,
@@ -229,6 +230,34 @@ export function upgradeDAO(
       dao,
       parentDao,
       moderator,
+      baseMint,
+      quoteMint,
+    });
+}
+
+export function addHistoricalParentDAO(
+  program: Program<Futarchy>,
+  admin: PublicKey,
+  dao: PublicKey,
+  moderator: PublicKey,
+  treasuryMultisig: PublicKey,
+  mintAuthMultisig: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
+  name: string,
+  cosigner: PublicKey,
+  pool: PublicKey,
+  poolType: PoolType,
+  proposalIdCounter: number
+) {
+  return program.methods
+    .addHistoricalParentDao(name, cosigner, pool, poolType, proposalIdCounter)
+    .accountsPartial({
+      admin,
+      dao,
+      moderator,
+      treasuryMultisig,
+      mintAuthMultisig,
       baseMint,
       quoteMint,
     });

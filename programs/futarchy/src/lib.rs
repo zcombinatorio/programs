@@ -63,6 +63,7 @@ pub mod futarchy {
         winning_idx: u8,
         length: u16,
         created_at: i64,
+        metadata: String,
     ) -> Result<u16> {
         instructions::add_historical_proposal_handler(
             ctx,
@@ -70,6 +71,7 @@ pub mod futarchy {
             winning_idx,
             length,
             created_at,
+            metadata,
         )
     }
 
@@ -107,5 +109,23 @@ pub mod futarchy {
         pool_type: PoolType,
     ) -> Result<()> {
         instructions::upgrade_dao::upgrade_dao_handler(ctx, pool, pool_type)
+    }
+
+    pub fn add_historical_parent_dao(
+        ctx: Context<AddHistoricalParentDAO>,
+        name: String,
+        cosigner: Pubkey,
+        pool: Pubkey,
+        pool_type: PoolType,
+        proposal_id_counter: u16,
+    ) -> Result<()> {
+        instructions::add_historical_parent_dao::add_historical_parent_dao_handler(
+            ctx,
+            name,
+            cosigner,
+            pool,
+            pool_type,
+            proposal_id_counter,
+        )
     }
 }

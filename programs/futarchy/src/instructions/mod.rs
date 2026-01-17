@@ -8,6 +8,7 @@ pub mod upgrade_dao;
 pub mod launch_proposal;
 pub mod redeem_liquidity;
 pub mod add_historical_proposal;
+pub mod add_historical_parent_dao;
 
 pub use add_option::*;
 pub use finalize_proposal::*;
@@ -19,3 +20,4 @@ pub use upgrade_dao::*;
 pub use launch_proposal::*;
 pub use redeem_liquidity::*;
 pub use add_historical_proposal::*;
+pub use add_historical_parent_dao::*;

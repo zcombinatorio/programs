@@ -46,11 +46,13 @@ pub fn add_historical_proposal_handler<'info>(
     winning_idx: u8,
     length: u16,
     created_at: i64,
+    metadata: String,
 ) -> Result<u16> {
     // Validate num_options bounds
     require!(num_options >= MIN_OPTIONS, FutarchyError::NotEnoughOptions);
     require!(num_options <= MAX_OPTIONS, FutarchyError::TooManyOptions);
     require!(winning_idx < num_options, FutarchyError::InvalidWinningIndex);
+    require!(metadata.len() <= 64, FutarchyError::MetadataTooLong);
 
     let moderator = &mut ctx.accounts.moderator;
     let proposal = &mut ctx.accounts.proposal;
@@ -72,6 +74,7 @@ pub fn add_historical_proposal_handler<'info>(
     proposal.bump = ctx.bumps.proposal;
     proposal.num_options = num_options;
     proposal.state = ProposalState::Resolved(winning_idx);
+    proposal.metadata = Some(metadata);
 
     // pools, vaults, amm configs are zeroed
 
