@@ -16,7 +16,7 @@ pub enum ProposalState {
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, Copy)]
 pub struct ProposalParams {
-    pub length: u16,                 // In seconds
+    pub length: u16,                 // In minutes
     pub starting_observation: u128,  // Initial TWAP value
     pub max_observation_delta: u128, // Max change per update
     pub warmup_duration: u32,        // Seconds before TWAP is valid
