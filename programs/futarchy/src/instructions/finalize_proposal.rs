@@ -62,7 +62,7 @@ pub fn finalize_proposal_handler<'info>(
 
     // Check that proposal time has elapsed
     let clock = Clock::get()?;
-    let end_time = proposal.created_at + (proposal.config.length * 60) as i64;
+    let end_time = proposal.created_at + proposal.config.length as i64 * 60;
     require!(
         clock.unix_timestamp >= end_time,
         FutarchyError::ProposalNotExpired

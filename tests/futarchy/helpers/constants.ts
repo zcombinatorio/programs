@@ -15,8 +15,8 @@ export const INITIAL_LIQUIDITY = 10_000_000; // 10 tokens (for each base/quote)
 export const FUNDING_AMOUNT = 100_000_000; // 100 tokens (for initial funding)
 
 // Proposal settings
-// MIN_RECORDING_INTERVAL in AMM is 60 seconds, so we need at least 70 seconds for TWAP warmup
-export const PROPOSAL_LENGTH = 70;
+// MIN_RECORDING_INTERVAL in AMM is 60 seconds, so we need at least 2 minutes for TWAP warmup
+export const PROPOSAL_LENGTH = 2; // In minutes
 export const DEFAULT_FEE = 30; // 30 basis points
 
 // Default TWAP config for testing

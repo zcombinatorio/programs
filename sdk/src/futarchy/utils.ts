@@ -97,12 +97,12 @@ export async function fetchProposalAccount(
 
 export function isProposalExpired(proposal: ProposalAccount, currentTime?: number): boolean {
   const now = currentTime ?? Math.floor(Date.now() / 1000);
-  const endTime = proposal.createdAt.toNumber() + proposal.config.length;
+  const endTime = proposal.createdAt.toNumber() + proposal.config.length * 60; // length is in minutes
   return now >= endTime;
 }
 
 export function getTimeRemaining(proposal: ProposalAccount, currentTime?: number): number {
   const now = currentTime ?? Math.floor(Date.now() / 1000);
-  const endTime = proposal.createdAt.toNumber() + proposal.config.length;
+  const endTime = proposal.createdAt.toNumber() + proposal.config.length * 60; // length is in minutes
   return Math.max(0, endTime - now);
 }

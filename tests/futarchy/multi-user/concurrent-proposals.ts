@@ -243,7 +243,7 @@ describe("Futarchy - Multi-User", () => {
         redemptionModerator,
         INITIAL_LIQUIDITY,
         INITIAL_LIQUIDITY,
-        { length: 1 }
+        { length: 1 } // 1 minute (minimum)
       );
 
       await waitForProposalExpiration(redemptionClient, proposal.proposalPda);

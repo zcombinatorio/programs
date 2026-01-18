@@ -29,8 +29,8 @@ impl ProposalParams {
         // Cap maximum gap at 100%
         require!(self.market_bias <= 10000, FutarchyError::InvalidProposalParams);
 
-        // Warm-up shouldn't last longer than proposal
-        require!(self.warmup_duration <= self.length as u32, FutarchyError::InvalidProposalParams);
+        // Warm-up shouldn't last longer than proposal (warmup is seconds, length is minutes)
+        require!(self.warmup_duration <= self.length as u32 * 60, FutarchyError::InvalidProposalParams);
 
         // Ensure updates can occur
         require!(self.max_observation_delta > 0, FutarchyError::InvalidProposalParams);

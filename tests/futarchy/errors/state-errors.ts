@@ -105,7 +105,7 @@ describe("Futarchy - State Errors", () => {
         moderatorCtx,
         INITIAL_LIQUIDITY,
         INITIAL_LIQUIDITY,
-        { length: 3600 } // 1 hour
+        { length: 60 } // 1 hour (in minutes)
       );
 
       const { builder } = await client.finalizeProposal(
