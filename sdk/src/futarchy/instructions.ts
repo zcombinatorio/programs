@@ -248,10 +248,11 @@ export function addHistoricalParentDAO(
   cosigner: PublicKey,
   pool: PublicKey,
   poolType: PoolType,
-  proposalIdCounter: number
+  proposalIdCounter: number,
+  adminPubkey: PublicKey
 ) {
   return program.methods
-    .addHistoricalParentDao(name, cosigner, pool, poolType, proposalIdCounter)
+    .addHistoricalParentDao(name, cosigner, pool, poolType, proposalIdCounter, adminPubkey)
     .accountsPartial({
       admin,
       dao,
@@ -260,5 +261,21 @@ export function addHistoricalParentDAO(
       mintAuthMultisig,
       baseMint,
       quoteMint,
+    });
+}
+
+export function transferAdmin(
+  program: Program<Futarchy>,
+  admin: PublicKey,
+  dao: PublicKey,
+  moderator: PublicKey,
+  newAdmin: PublicKey
+) {
+  return program.methods
+    .transferAdmin(newAdmin)
+    .accountsPartial({
+      admin,
+      dao,
+      moderator,
     });
 }

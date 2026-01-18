@@ -54,6 +54,7 @@ import {
   initializeChildDAO,
   upgradeDAO,
   addHistoricalParentDAO,
+  transferAdmin,
 } from "./instructions";
 import { TxOptions } from "../utils";
 
@@ -1112,6 +1113,7 @@ export class FutarchyClient {
     pool: PublicKey,
     poolType: PoolType,
     proposalIdCounter: number,
+    adminPubkey: PublicKey,
     options?: TxOptions
   ) {
     const [daoPda] = this.deriveDAOPDA(name);
@@ -1130,7 +1132,32 @@ export class FutarchyClient {
       cosigner,
       pool,
       poolType,
-      proposalIdCounter
+      proposalIdCounter,
+      adminPubkey
+    ).preInstructions(this.maybeAddComputeBudget(options));
+
+    return {
+      builder,
+      daoPda,
+      moderatorPda,
+    };
+  }
+
+  async transferAdmin(
+    admin: PublicKey,
+    name: string,
+    newAdmin: PublicKey,
+    options?: TxOptions
+  ) {
+    const [daoPda] = this.deriveDAOPDA(name);
+    const [moderatorPda] = this.deriveModeratorPDA(name);
+
+    const builder = transferAdmin(
+      this.program,
+      admin,
+      daoPda,
+      moderatorPda,
+      newAdmin
     ).preInstructions(this.maybeAddComputeBudget(options));
 
     return {

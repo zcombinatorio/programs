@@ -118,6 +118,7 @@ pub mod futarchy {
         pool: Pubkey,
         pool_type: PoolType,
         proposal_id_counter: u16,
+        admin_pubkey: Pubkey,
     ) -> Result<()> {
         instructions::add_historical_parent_dao::add_historical_parent_dao_handler(
             ctx,
@@ -126,6 +127,14 @@ pub mod futarchy {
             pool,
             pool_type,
             proposal_id_counter,
+            admin_pubkey,
         )
+    }
+
+    pub fn transfer_admin(
+        ctx: Context<TransferAdmin>,
+        new_admin: Pubkey,
+    ) -> Result<()> {
+        instructions::transfer_admin::transfer_admin_handler(ctx, new_admin)
     }
 }

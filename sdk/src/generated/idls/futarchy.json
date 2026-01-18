@@ -112,6 +112,10 @@
         {
           "name": "proposal_id_counter",
           "type": "u16"
+        },
+        {
+          "name": "admin_pubkey",
+          "type": "pubkey"
         }
       ]
     },
@@ -979,6 +983,79 @@
       "args": []
     },
     {
+      "name": "transfer_admin",
+      "discriminator": [
+        42,
+        242,
+        66,
+        106,
+        228,
+        10,
+        111,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "dao.name",
+                "account": "DAOAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "moderator.name",
+                "account": "ModeratorAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "upgrade_dao",
       "discriminator": [
         81,
@@ -1136,6 +1213,19 @@
     }
   ],
   "events": [
+    {
+      "name": "AdminTransferred",
+      "discriminator": [
+        255,
+        147,
+        182,
+        5,
+        199,
+        217,
+        38,
+        179
+      ]
+    },
     {
       "name": "DAOInitialized",
       "discriminator": [
@@ -1339,6 +1429,30 @@
     }
   ],
   "types": [
+    {
+      "name": "AdminTransferred",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dao",
+            "type": "pubkey"
+          },
+          {
+            "name": "moderator",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
     {
       "name": "DAOAccount",
       "docs": [

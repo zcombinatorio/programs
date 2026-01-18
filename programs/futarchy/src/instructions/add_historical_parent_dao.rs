@@ -62,6 +62,7 @@ pub fn add_historical_parent_dao_handler(
     pool: Pubkey,
     pool_type: PoolType,
     proposal_id_counter: u16,
+    admin_pubkey: Pubkey,
 ) -> Result<()> {
     require!(name.len() <= 32, FutarchyError::NameTooLong);
 
@@ -73,7 +74,7 @@ pub fn add_historical_parent_dao_handler(
         quote_mint: ctx.accounts.quote_mint.key(),
         base_mint: ctx.accounts.base_mint.key(),
         proposal_id_counter,
-        admin: ctx.accounts.admin.key(),
+        admin: admin_pubkey,
     });
 
     let dao_type = DAOType::Parent {
@@ -87,7 +88,7 @@ pub fn add_historical_parent_dao_handler(
         version: 0, // Historical marker
         bump: ctx.bumps.dao,
         name: name.clone(),
-        admin: ctx.accounts.admin.key(),
+        admin: admin_pubkey,
         token_mint: ctx.accounts.base_mint.key(),
         cosigner,
         treasury_multisig: ctx.accounts.treasury_multisig.key(),
@@ -107,7 +108,7 @@ pub fn add_historical_parent_dao_handler(
     emit!(DAOInitialized {
         version: 0,
         name,
-        admin: ctx.accounts.admin.key(),
+        admin: admin_pubkey,
         treasury_multisig: ctx.accounts.treasury_multisig.key(),
         mint_multisig: ctx.accounts.mint_auth_multisig.key(),
         dao_type,

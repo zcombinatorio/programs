@@ -118,6 +118,10 @@ export type Futarchy = {
         {
           "name": "proposalIdCounter",
           "type": "u16"
+        },
+        {
+          "name": "adminPubkey",
+          "type": "pubkey"
         }
       ]
     },
@@ -985,6 +989,79 @@ export type Futarchy = {
       "args": []
     },
     {
+      "name": "transferAdmin",
+      "discriminator": [
+        42,
+        242,
+        66,
+        106,
+        228,
+        10,
+        111,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "dao.name",
+                "account": "daoAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "moderator.name",
+                "account": "moderatorAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "newAdmin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "upgradeDao",
       "discriminator": [
         81,
@@ -1142,6 +1219,19 @@ export type Futarchy = {
     }
   ],
   "events": [
+    {
+      "name": "adminTransferred",
+      "discriminator": [
+        255,
+        147,
+        182,
+        5,
+        199,
+        217,
+        38,
+        179
+      ]
+    },
     {
       "name": "daoInitialized",
       "discriminator": [
@@ -1345,6 +1435,30 @@ export type Futarchy = {
     }
   ],
   "types": [
+    {
+      "name": "adminTransferred",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dao",
+            "type": "pubkey"
+          },
+          {
+            "name": "moderator",
+            "type": "pubkey"
+          },
+          {
+            "name": "oldAdmin",
+            "type": "pubkey"
+          },
+          {
+            "name": "newAdmin",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
     {
       "name": "daoAccount",
       "docs": [
