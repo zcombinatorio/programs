@@ -1,11 +1,12 @@
 {
   "name": "@zcomb/programs-sdk",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "description": "SDK for ZCombinator Programs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run minify",
+    "minify": "find dist -name '*.js' -exec terser {} -c -m --output {} \\;",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build"
   },
@@ -34,6 +35,7 @@
     "@sqds/multisig": "^2.1.4"
   },
   "devDependencies": {
+    "terser": "^5.46.0",
     "typescript": "^5.0.0"
   }
 }
