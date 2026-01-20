@@ -127,7 +127,11 @@ export class FutarchyClient {
     if (options?.includeCuBudget === false) {
       return [];
     }
-    return [ComputeBudgetProgram.setComputeUnitLimit({ units: this.getComputeUnits(options) })];
+    const instructions = [ComputeBudgetProgram.setComputeUnitLimit({ units: this.getComputeUnits(options) })];
+    if (options?.priorityFeeMicroLamports !== undefined && options.priorityFeeMicroLamports > 0) {
+      instructions.push(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: options.priorityFeeMicroLamports }));
+    }
+    return instructions;
   }
 
   /* Instruction Builders */
@@ -662,12 +666,14 @@ export class FutarchyClient {
    * @param creator - The user redeeming
    * @param proposalPda - The proposal PDA
    * @param altAddress - Optional ALT address (will be created if not provided for 3+ options)
+   * @param options - Optional transaction options (priority fee, compute units)
    * @returns Unsigned versioned transaction, ALT address, number of options, and blockhash info for confirmation
    */
   async redeemLiquidityVersioned(
     creator: PublicKey,
     proposalPda: PublicKey,
     altAddress?: PublicKey,
+    options?: TxOptions,
   ): Promise<{
     versionedTx: VersionedTransaction;
     altAddress: PublicKey;
@@ -732,13 +738,19 @@ export class FutarchyClient {
     const instruction = await builder.instruction();
     const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 });
 
+    // Build pre-instructions array with optional priority fee
+    const preInstructions = [computeBudgetIx];
+    if (options?.priorityFeeMicroLamports !== undefined && options.priorityFeeMicroLamports > 0) {
+      preInstructions.push(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: options.priorityFeeMicroLamports }));
+    }
+
     // Get fresh blockhash with lastValidBlockHeight for confirmation tracking
     const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash('confirmed');
 
     // Build versioned transaction using the verified ALT (no re-fetch)
     const versionedTx = this.buildVersionedTxWithALT(
       creator,
-      [computeBudgetIx, instruction],
+      [...preInstructions, instruction],
       verifiedALT,
       blockhash,
     );

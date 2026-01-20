@@ -9,6 +9,12 @@ export interface TxOptions {
   includeCuBudget?: boolean;  // Include compute budget instruction (default: true)
   computeUnits?: number;      // Override default compute units
   /**
+   * Priority fee in microlamports per compute unit.
+   * If provided, adds a setComputeUnitPrice instruction to the transaction.
+   * Higher values increase likelihood of inclusion during network congestion.
+   */
+  priorityFeeMicroLamports?: number;
+  /**
    * Pre-create conditional token ATAs before launch to avoid exceeding
    * Solana's 64 instruction trace limit. Default: true for 3+ options.
    * Set to false if you've already created ATAs or want to manage them manually.
