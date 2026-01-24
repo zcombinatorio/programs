@@ -24,6 +24,7 @@ pub struct Slash<'info> {
     pub token_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
+        mut,
         has_one = admin,
         seeds = [STAKING_CONFIG_SEED, token_mint.key().as_ref(), &config.nonce.to_le_bytes()],
         bump = config.bumps.config,
@@ -89,9 +90,15 @@ pub fn slash_handler(ctx: Context<Slash>, basis_points: u16) -> Result<()> {
         .ok_or(ErrorCode::Overflow)?;
 
     // Update total staked in config (only staked_slash, not pending)
-    let config = &ctx.accounts.config;
+    ctx.accounts.config.total_staked = ctx
+        .accounts
+        .config
+        .total_staked
+        .checked_sub(staked_slash)
+        .ok_or(ErrorCode::Overflow)?;
 
     // Transfer slashed tokens from vault to fee vault
+    let config = &ctx.accounts.config;
     let token_mint_key = ctx.accounts.token_mint.key();
     let nonce_bytes = config.nonce.to_le_bytes();
     let signer_seeds: &[&[&[u8]]] = &[&[
