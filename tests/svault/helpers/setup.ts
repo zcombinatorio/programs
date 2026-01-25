@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { PublicKey, Keypair, LAMPORTS_PER_SOL, SystemProgram, Transaction } from "@solana/web3.js";
 import {
   createMint,
   mintTo,
@@ -60,11 +60,15 @@ export async function createFundedUser(
   const keypair = Keypair.generate();
   const userWallet = new anchor.Wallet(keypair);
 
-  // Airdrop SOL for transaction fees
-  const sig = await provider.connection.requestAirdrop(
-    keypair.publicKey,
-    2 * LAMPORTS_PER_SOL
+  // Transfer SOL for transaction fees (avoids devnet airdrop rate limits)
+  const transferTx = new Transaction().add(
+    SystemProgram.transfer({
+      fromPubkey: wallet.publicKey,
+      toPubkey: keypair.publicKey,
+      lamports: 0.05 * LAMPORTS_PER_SOL, // 0.05 SOL is plenty for test fees
+    })
   );
+  const sig = await provider.sendAndConfirm(transferTx);
   await provider.connection.confirmTransaction(sig);
 
   // Create ATA and fund with tokens
