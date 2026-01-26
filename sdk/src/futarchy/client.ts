@@ -317,7 +317,7 @@ export class FutarchyClient {
     // 5 inner instructions; with 4 options that's 40 extra instructions.
     const shouldEnsureATAs = options?.ensureATAs ?? (numOptions >= 3);
     if (shouldEnsureATAs) {
-      await this._createConditionalATAs(creator, condBaseMints, condQuoteMints);
+      await this._createConditionalATAs(creator, condBaseMints, condQuoteMints, options?.priorityFeeMicroLamports);
     }
     const pools = proposal.pools.slice(0, numOptions);
 
@@ -400,17 +400,19 @@ export class FutarchyClient {
    *
    * @param creator - The user who will receive conditional tokens
    * @param proposalPda - The proposal PDA (must be initialized but not launched)
+   * @param options - Transaction options including priorityFeeMicroLamports
    * @returns Transaction signature
    */
   async ensureConditionalATAs(
     creator: PublicKey,
     proposalPda: PublicKey,
+    options?: TxOptions,
   ): Promise<string> {
     const proposal = await this.fetchProposal(proposalPda);
     const vault = await this.vault.fetchVault(proposal.vault);
     const condBaseMints = vault.condBaseMints.slice(0, proposal.numOptions);
     const condQuoteMints = vault.condQuoteMints.slice(0, proposal.numOptions);
-    return this._createConditionalATAs(creator, condBaseMints, condQuoteMints);
+    return this._createConditionalATAs(creator, condBaseMints, condQuoteMints, options?.priorityFeeMicroLamports);
   }
 
   /**
@@ -421,11 +423,20 @@ export class FutarchyClient {
     creator: PublicKey,
     condBaseMints: PublicKey[],
     condQuoteMints: PublicKey[],
+    priorityFeeMicroLamports?: number,
   ): Promise<string> {
     const provider = this.program.provider as AnchorProvider;
 
     // Build ATA creation instructions (idempotent - won't fail if exists)
     const instructions: TransactionInstruction[] = [];
+
+    // Add priority fee if specified
+    if (priorityFeeMicroLamports && priorityFeeMicroLamports > 0) {
+      instructions.push(
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFeeMicroLamports })
+      );
+    }
+
     for (let i = 0; i < condBaseMints.length; i++) {
       const userCondBaseAta = getAssociatedTokenAddressSync(condBaseMints[i], creator);
       const userCondQuoteAta = getAssociatedTokenAddressSync(condQuoteMints[i], creator);
@@ -553,6 +564,7 @@ export class FutarchyClient {
   async createRedemptionALT(
     creator: PublicKey,
     proposalPda: PublicKey,
+    priorityFee: number = 0,
   ): Promise<{ altAddress: PublicKey }> {
     const provider = this.program.provider as AnchorProvider;
     const proposal = await this.fetchProposal(proposalPda);
@@ -613,7 +625,11 @@ export class FutarchyClient {
     });
 
     // Create ALT
-    const createTx = new Transaction().add(createIx);
+    const createTx = new Transaction();
+    if (priorityFee > 0) {
+      createTx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }));
+    }
+    createTx.add(createIx);
     const { blockhash: createBlockhash, lastValidBlockHeight: createLastValidBlockHeight } =
       await provider.connection.getLatestBlockhash('confirmed');
     createTx.recentBlockhash = createBlockhash;
@@ -640,7 +656,11 @@ export class FutarchyClient {
         lookupTable: altAddress,
         addresses: chunk,
       });
-      const extendTx = new Transaction().add(extendIx);
+      const extendTx = new Transaction();
+      if (priorityFee > 0) {
+        extendTx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }));
+      }
+      extendTx.add(extendIx);
       const { blockhash: extendBlockhash, lastValidBlockHeight: extendLastValidBlockHeight } =
         await provider.connection.getLatestBlockhash('confirmed');
       extendTx.recentBlockhash = extendBlockhash;
@@ -814,6 +834,7 @@ export class FutarchyClient {
     creator: PublicKey,
     moderatorPda: PublicKey,
     numOptions: number = 2,
+    priorityFee: number = 0,
   ): Promise<{ altAddress: PublicKey }> {
     const provider = this.program.provider as AnchorProvider;
     const moderator = await this.fetchModerator(moderatorPda);
@@ -876,7 +897,11 @@ export class FutarchyClient {
     });
 
     // Send create transaction immediately, skip preflight to avoid slot timing issues
-    const createTx = new Transaction().add(createIx);
+    const createTx = new Transaction();
+    if (priorityFee > 0) {
+      createTx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }));
+    }
+    createTx.add(createIx);
     const { blockhash: createBlockhash, lastValidBlockHeight: createLastValidBlockHeight } =
       await provider.connection.getLatestBlockhash('confirmed');
     createTx.recentBlockhash = createBlockhash;
@@ -904,7 +929,11 @@ export class FutarchyClient {
         lookupTable: altAddress,
         addresses: chunk,
       });
-      const extendTx = new Transaction().add(extendIx);
+      const extendTx = new Transaction();
+      if (priorityFee > 0) {
+        extendTx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }));
+      }
+      extendTx.add(extendIx);
       const { blockhash: extendBlockhash, lastValidBlockHeight: extendLastValidBlockHeight } =
         await provider.connection.getLatestBlockhash('confirmed');
       extendTx.recentBlockhash = extendBlockhash;
