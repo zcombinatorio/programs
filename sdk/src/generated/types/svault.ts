@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/svault.json`.
  */
 export type Svault = {
-  "address": "SVLTnMmZLkY5bCJbRgYdSABQNW14qfy5ZWhmEcASGx3",
+  "address": "GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy",
   "metadata": {
     "name": "svault",
     "version": "0.1.0",
@@ -983,6 +983,7 @@ export type Svault = {
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1851,6 +1852,11 @@ export type Svault = {
       "code": 6008,
       "name": "invalidBasisPoints",
       "msg": "Invalid basis points (must be 0-10000)"
+    },
+    {
+      "code": 6009,
+      "name": "unstakePending",
+      "msg": "Cannot initiate unstake while another unstake is pending"
     }
   ],
   "types": [

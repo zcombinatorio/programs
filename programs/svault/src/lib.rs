@@ -7,7 +7,7 @@ pub mod utils;
 
 use instructions::*;
 
-declare_id!("SVLTnMmZLkY5bCJbRgYdSABQNW14qfy5ZWhmEcASGx3");
+declare_id!("GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy");
 
 #[program]
 pub mod svault {
