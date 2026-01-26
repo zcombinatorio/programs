@@ -1,6 +1,6 @@
 {
   "name": "@zcomb/programs-sdk",
-  "version": "1.11.1",
+  "version": "1.11.3",
   "description": "SDK for ZCombinator Programs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
