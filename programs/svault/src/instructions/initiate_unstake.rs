@@ -39,6 +39,7 @@ pub fn initiate_unstake_handler(ctx: Context<InitiateUnstake>, amount: u64) -> R
 
     let user_stake = &mut ctx.accounts.user_stake;
     require!(user_stake.staked_amount >= amount, ErrorCode::InsufficientStake);
+    require!(user_stake.pending_unstake == 0, ErrorCode::UnstakePending);
 
     // Subtract from staked amount
     user_stake.staked_amount = user_stake
@@ -46,7 +47,7 @@ pub fn initiate_unstake_handler(ctx: Context<InitiateUnstake>, amount: u64) -> R
         .checked_sub(amount)
         .ok_or(ErrorCode::Overflow)?;
 
-    // Add to pending unstake (stacking allowed)
+    // Set pending unstake amount
     user_stake.pending_unstake = user_stake
         .pending_unstake
         .checked_add(amount)

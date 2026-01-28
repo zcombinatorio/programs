@@ -1,5 +1,5 @@
 {
-  "address": "SVLTnMmZLkY5bCJbRgYdSABQNW14qfy5ZWhmEcASGx3",
+  "address": "GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy",
   "metadata": {
     "name": "svault",
     "version": "0.1.0",
@@ -977,6 +977,7 @@
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1845,6 +1846,11 @@
       "code": 6008,
       "name": "InvalidBasisPoints",
       "msg": "Invalid basis points (must be 0-10000)"
+    },
+    {
+      "code": 6009,
+      "name": "UnstakePending",
+      "msg": "Cannot initiate unstake while another unstake is pending"
     }
   ],
   "types": [

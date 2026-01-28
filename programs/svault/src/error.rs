@@ -20,4 +20,6 @@ pub enum ErrorCode {
     NothingToClaim,
     #[msg("Invalid basis points (must be 0-10000)")]
     InvalidBasisPoints,
+    #[msg("Cannot initiate unstake while another unstake is pending")]
+    UnstakePending,
 }

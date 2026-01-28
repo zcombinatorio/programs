@@ -25,3 +25,6 @@ import "./errors/state-errors";
 
 // Multi-User Tests
 import "./multi-user/concurrent-staking";
+
+// Integration Tests
+import "./integration/offchain-merkle";

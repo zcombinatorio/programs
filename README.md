@@ -5,7 +5,7 @@
 | futarchy | FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea | 0.1.0 | |
 | amm | AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx | 0.1.0 | |
 | vault | VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU | 0.1.0 | |
-| svault | SVLTnMmZLkY5bCJbRgYdSABQNW14qfy5ZWhmEcASGx3 | 0.1.0 | |
+| svault | GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy | 0.1.0 | |
 | vault | vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc | 0.0.0 | ❌ |
 
 Fee Authority: FEEnkcCNE2623LYCPtLf63LFzXpCFigBLTu4qZovRGZC
