@@ -20,6 +20,12 @@ export interface TxOptions {
    * Set to false if you've already created ATAs or want to manage them manually.
    */
   ensureATAs?: boolean;
+  /**
+   * Automatically unwrap wSOL to native SOL after redemption.
+   * Only applicable when the quote mint is native SOL (NATIVE_MINT).
+   * Adds a closeAccount instruction to convert wSOL ATA balance to native SOL.
+   */
+  unwrapSol?: boolean;
 }
 
 /*

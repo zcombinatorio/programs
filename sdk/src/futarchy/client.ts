@@ -20,6 +20,8 @@ import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountIdempotentInstruction,
+  createCloseAccountInstruction,
+  NATIVE_MINT,
 } from "@solana/spl-token";
 import { PROGRAM_ID, SQUADS_PROGRAM_ID } from "./constants";
 import {
@@ -541,7 +543,7 @@ export class FutarchyClient {
       remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.condQuoteMints[i], creator), isSigner: false, isWritable: true });
     }
 
-    const builder = redeemLiquidity(
+    let builder = redeemLiquidity(
       this.program,
       creator,
       proposalPda,
@@ -549,6 +551,14 @@ export class FutarchyClient {
       winningPool,
       remainingAccounts
     ).preInstructions(this.maybeAddComputeBudget(options));
+
+    // Add wSOL unwrap instruction if requested and quote mint is native SOL
+    if (options?.unwrapSol && vault.quoteMint.address.equals(NATIVE_MINT)) {
+      const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, creator);
+      builder = builder.postInstructions([
+        createCloseAccountInstruction(wsolAta, creator, creator)
+      ]);
+    }
 
     return { builder, numOptions };
   }
@@ -702,7 +712,13 @@ export class FutarchyClient {
     lastValidBlockHeight: number;
   }> {
     const provider = this.program.provider as AnchorProvider;
+    // Note: We don't pass options to redeemLiquidity here because builder.instruction()
+    // doesn't include postInstructions. We handle unwrapSol manually below.
     const { builder, numOptions } = await this.redeemLiquidity(creator, proposalPda);
+
+    // Fetch proposal and vault for unwrapSol check
+    const proposal = await this.fetchProposal(proposalPda);
+    const vault = await this.vault.fetchVault(proposal.vault);
 
     // Create ALT if not provided and needed
     let altPubkey = altAddress;
@@ -767,10 +783,19 @@ export class FutarchyClient {
     // Get fresh blockhash with lastValidBlockHeight for confirmation tracking
     const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash('confirmed');
 
+    // Build instructions array
+    const instructions = [...preInstructions, instruction];
+
+    // Add wSOL unwrap instruction if requested and quote mint is native SOL
+    if (options?.unwrapSol && vault.quoteMint.address.equals(NATIVE_MINT)) {
+      const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, creator);
+      instructions.push(createCloseAccountInstruction(wsolAta, creator, creator));
+    }
+
     // Build versioned transaction using the verified ALT (no re-fetch)
     const versionedTx = this.buildVersionedTxWithALT(
       creator,
-      [...preInstructions, instruction],
+      instructions,
       verifiedALT,
       blockhash,
     );
