@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::error::ErrorCode;
+use crate::oracle;
 use crate::state::*;
 
 // ============================================================================
@@ -97,8 +98,23 @@ pub fn handler(
     require!(ltv_bps < liquidation_threshold_bps, ErrorCode::InvalidLtvConfiguration);
     require!(loan_duration_seconds > 0, ErrorCode::InvalidAmount);
 
-    // TODO: Validate pool matches base/quote mints based on pool_type
-    // This requires CPI to read pool state - will implement with Meteora integration
+    // Validate pool matches base/quote mints based on pool_type
+    match pool_type {
+        PoolType::CpAmm => {
+            oracle::validate_cp_amm_pool_mints(
+                &ctx.accounts.pool.to_account_info(),
+                &ctx.accounts.base_mint.key(),
+                &ctx.accounts.quote_mint.key(),
+            )?;
+        }
+        PoolType::Dlmm => {
+            oracle::validate_dlmm_pool_mints(
+                &ctx.accounts.pool.to_account_info(),
+                &ctx.accounts.base_mint.key(),
+                &ctx.accounts.quote_mint.key(),
+            )?;
+        }
+    }
 
     let clock = Clock::get()?;
 
