@@ -107,14 +107,10 @@ pub fn handler(
     let base_price = match vault.pool_type {
         PoolType::CpAmm => oracle::get_cp_amm_price(
             &ctx.accounts.pool.to_account_info(),
-            vault.base_decimals,
-            vault.quote_decimals,
             vault.is_pool_base_token_a,
         )?,
         PoolType::Dlmm => oracle::get_dlmm_price(
             &ctx.accounts.pool.to_account_info(),
-            vault.base_decimals,
-            vault.quote_decimals,
             vault.is_pool_base_token_a,
         )?,
     };

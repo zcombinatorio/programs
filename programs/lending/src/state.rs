@@ -32,10 +32,6 @@ pub struct LendingVault {
     pub base_mint: Pubkey,
     /// Quote mint (what users deposit as collateral)
     pub quote_mint: Pubkey,
-    /// Base token decimals
-    pub base_decimals: u8,
-    /// Quote token decimals
-    pub quote_decimals: u8,
     /// Vault-owned ATA for base tokens (liquidity pool)
     pub base_vault: Pubkey,
     /// Vault-owned ATA for quote tokens (collateral storage)

@@ -228,8 +228,6 @@ pub fn handler_cp_amm(ctx: Context<LiquidateCpAmm>, min_amount_out: u64) -> Resu
     // Get price for health check (quote lamports per base lamport, scaled)
     let base_price = oracle::get_cp_amm_price(
         &ctx.accounts.pool.to_account_info(),
-        vault.base_decimals,
-        vault.quote_decimals,
         vault.is_pool_base_token_a,
     )?;
 
@@ -367,8 +365,6 @@ pub fn handler_dlmm<'a, 'b, 'c, 'info>(
     // Get price for health check (quote lamports per base lamport, scaled)
     let base_price = oracle::get_dlmm_price(
         &ctx.accounts.lb_pair.to_account_info(),
-        vault.base_decimals,
-        vault.quote_decimals,
         vault.is_pool_base_token_a,
     )?;
 
