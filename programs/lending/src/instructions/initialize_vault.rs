@@ -98,23 +98,23 @@ pub fn handler(
     require!(ltv_bps < liquidation_threshold_bps, ErrorCode::InvalidLtvConfiguration);
     require!(loan_duration_seconds > 0, ErrorCode::InvalidAmount);
 
-    // Validate pool matches base/quote mints based on pool_type
-    match pool_type {
+    // Validate pool matches base/quote mints and get token order
+    let is_pool_base_token_a = match pool_type {
         PoolType::CpAmm => {
             oracle::validate_cp_amm_pool_mints(
                 &ctx.accounts.pool.to_account_info(),
                 &ctx.accounts.base_mint.key(),
                 &ctx.accounts.quote_mint.key(),
-            )?;
+            )?
         }
         PoolType::Dlmm => {
             oracle::validate_dlmm_pool_mints(
                 &ctx.accounts.pool.to_account_info(),
                 &ctx.accounts.base_mint.key(),
                 &ctx.accounts.quote_mint.key(),
-            )?;
+            )?
         }
-    }
+    };
 
     let clock = Clock::get()?;
 
@@ -128,6 +128,7 @@ pub fn handler(
         quote_vault: ctx.accounts.quote_vault.key(),
         pool: ctx.accounts.pool.key(),
         pool_type,
+        is_pool_base_token_a,
         ltv_bps,
         liquidation_threshold_bps,
         loan_duration_seconds,

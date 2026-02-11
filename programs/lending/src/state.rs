@@ -42,6 +42,8 @@ pub struct LendingVault {
     pub pool: Pubkey,
     /// Pool type for CPI routing
     pub pool_type: PoolType,
+    /// True if pool's token A/X is the vault's base mint (false = need to invert price)
+    pub is_pool_base_token_a: bool,
     
     // === Risk Parameters ===
     /// Loan-to-Value ratio in basis points (max borrow ratio at entry)

@@ -104,41 +104,19 @@ pub fn handler(
     require!(borrow_amount <= available, ErrorCode::InsufficientLiquidity);
 
     // Get price from pool based on pool type
-    let (base_price, is_base_token_a) = match vault.pool_type {
-        PoolType::CpAmm => {
-            // CP-AMM uses sqrtPrice stored in pool state
-            let is_a_base = oracle::validate_cp_amm_pool_mints(
-                &ctx.accounts.pool.to_account_info(),
-                &vault.base_mint,
-                &vault.quote_mint,
-            )?;
-            
-            let price = oracle::get_cp_amm_price(&ctx.accounts.pool.to_account_info())?;
-            
-            (price, is_a_base)
-        }
-        PoolType::Dlmm => {
-            // DLMM just needs the lb_pair account
-            let is_x_base = oracle::validate_dlmm_pool_mints(
-                &ctx.accounts.pool.to_account_info(),
-                &vault.base_mint,
-                &vault.quote_mint,
-            )?;
-            
-            let price = oracle::get_dlmm_price(&ctx.accounts.pool.to_account_info())?;
-            
-            (price, is_x_base)
-        }
+    let raw_price = match vault.pool_type {
+        PoolType::CpAmm => oracle::get_cp_amm_price(&ctx.accounts.pool.to_account_info())?,
+        PoolType::Dlmm => oracle::get_dlmm_price(&ctx.accounts.pool.to_account_info())?,
     };
     
     // Adjust price if pool token order is opposite of vault order
     // base_price should be: how much quote per 1 base
-    let base_price = if is_base_token_a {
+    let base_price = if vault.is_pool_base_token_a {
         // Pool: A=base, B=quote. Price is B/A (quote per base). Correct.
-        base_price
+        raw_price
     } else {
         // Pool: A=quote, B=base. Price is B/A (base per quote). Need to invert.
-        oracle::invert_price(base_price)?
+        oracle::invert_price(raw_price)?
     };
 
     // Check LTV

@@ -226,18 +226,11 @@ pub fn handler_cp_amm(ctx: Context<LiquidateCpAmm>, min_amount_out: u64) -> Resu
     let position = &ctx.accounts.position;
 
     // Get price for health check
-    let is_a_base = oracle::validate_cp_amm_pool_mints(
-        &ctx.accounts.pool.to_account_info(),
-        &vault.base_mint,
-        &vault.quote_mint,
-    )?;
-    
-    let base_price = oracle::get_cp_amm_price(&ctx.accounts.pool.to_account_info())?;
-    
-    let base_price = if is_a_base {
-        base_price
+    let raw_price = oracle::get_cp_amm_price(&ctx.accounts.pool.to_account_info())?;
+    let base_price = if vault.is_pool_base_token_a {
+        raw_price
     } else {
-        oracle::invert_price(base_price)?
+        oracle::invert_price(raw_price)?
     };
 
     // Check liquidation conditions
@@ -372,18 +365,11 @@ pub fn handler_dlmm<'a, 'b, 'c, 'info>(
     let position = &ctx.accounts.position;
 
     // Get price for health check
-    let is_x_base = oracle::validate_dlmm_pool_mints(
-        &ctx.accounts.lb_pair.to_account_info(),
-        &vault.base_mint,
-        &vault.quote_mint,
-    )?;
-    
-    let base_price = oracle::get_dlmm_price(&ctx.accounts.lb_pair.to_account_info())?;
-    
-    let base_price = if is_x_base {
-        base_price
+    let raw_price = oracle::get_dlmm_price(&ctx.accounts.lb_pair.to_account_info())?;
+    let base_price = if vault.is_pool_base_token_a {
+        raw_price
     } else {
-        oracle::invert_price(base_price)?
+        oracle::invert_price(raw_price)?
     };
 
     // Check liquidation conditions
