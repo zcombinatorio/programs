@@ -5,80 +5,154 @@ use anchor_lang::prelude::*;
 // ============================================================================
 
 #[constant]
-pub const LENDING_CONFIG_SEED: &[u8] = b"lending_config";
+pub const VAULT_SEED: &[u8] = b"vault";
 #[constant]
-pub const LENDING_POOL_SEED: &[u8] = b"lending_pool";
+pub const VAULT_BASE_ATA_SEED: &[u8] = b"vault_base";
 #[constant]
-pub const USER_POSITION_SEED: &[u8] = b"user_position";
+pub const VAULT_QUOTE_ATA_SEED: &[u8] = b"vault_quote";
 #[constant]
-pub const COLLATERAL_VAULT_SEED: &[u8] = b"collateral_vault";
-#[constant]
-pub const LIQUIDITY_VAULT_SEED: &[u8] = b"liquidity_vault";
+pub const POSITION_SEED: &[u8] = b"position";
 
 // ============================================================================
-// Bumps
+// Vault State
 // ============================================================================
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
-pub struct ConfigBumps {
-    pub config: u8,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
-pub struct PoolBumps {
-    pub pool: u8,
-    pub collateral_vault: u8,
-    pub liquidity_vault: u8,
-}
-
-// ============================================================================
-// State Accounts
-// ============================================================================
-
-/// Global lending configuration
-/// Seeds: [LENDING_CONFIG_SEED, nonce]
 #[account]
 #[derive(InitSpace)]
-pub struct LendingConfig {
-    pub bumps: ConfigBumps,
+pub struct LendingVault {
+    /// Bump for PDA derivation
+    pub bump: u8,
+    /// Nonce for multiple vaults
     pub nonce: u16,
+    /// Admin who can manage the vault
     pub admin: Pubkey,
-    pub fee_authority: Pubkey,
-    pub protocol_fee_bps: u16,
+    
+    // === Token Configuration ===
+    /// Base mint (what users borrow)
+    pub base_mint: Pubkey,
+    /// Quote mint (what users deposit as collateral)
+    pub quote_mint: Pubkey,
+    /// Vault-owned ATA for base tokens (liquidity pool)
+    pub base_vault: Pubkey,
+    /// Vault-owned ATA for quote tokens (collateral storage)
+    pub quote_vault: Pubkey,
+    
+    // === Pool Configuration (for price + liquidation swaps) ===
+    /// AMM pool address (DAMM v2 or DLMM) - must be base/quote pair
+    pub pool: Pubkey,
+    /// Pool type for CPI routing
+    pub pool_type: PoolType,
+    
+    // === Risk Parameters ===
+    /// Loan-to-Value ratio in basis points (max borrow ratio at entry)
+    /// e.g., 5000 = 50% = can borrow up to 50% of collateral value
+    pub ltv_bps: u16,
+    /// Liquidation threshold in basis points
+    /// e.g., 8000 = 80% = liquidatable when loan/collateral >= 80%
+    pub liquidation_threshold_bps: u16,
+    /// Loan duration in seconds (time-based liquidation)
+    pub loan_duration_seconds: u64,
+    
+    // === Accounting ===
+    /// Total base tokens available for borrowing
+    pub total_base_liquidity: u64,
+    /// Total base tokens currently borrowed
+    pub total_base_borrowed: u64,
+    /// Total quote tokens held as collateral
+    pub total_quote_collateral: u64,
+    /// Number of open positions
+    pub open_positions: u32,
+    
+    // === Timestamps ===
     pub created_at: i64,
 }
 
-/// A lending pool for a specific token pair
-/// Seeds: [LENDING_POOL_SEED, config, collateral_mint, liquidity_mint]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace)]
+pub enum PoolType {
+    DammV2,
+    Dlmm,
+}
+
+// ============================================================================
+// Position State
+// ============================================================================
+
 #[account]
 #[derive(InitSpace)]
-pub struct LendingPool {
-    pub bumps: PoolBumps,
-    pub config: Pubkey,
-    pub collateral_mint: Pubkey,
-    pub liquidity_mint: Pubkey,
-    pub collateral_vault: Pubkey,
-    pub liquidity_vault: Pubkey,
-    // Pool parameters
-    pub ltv_bps: u16,              // Loan-to-value ratio in basis points
-    pub liquidation_threshold_bps: u16,
-    pub liquidation_penalty_bps: u16,
-    // Pool state
-    pub total_deposits: u64,
-    pub total_borrows: u64,
-    pub interest_rate_bps: u16,
-    pub last_update: i64,
+pub struct Position {
+    /// Bump for PDA derivation
+    pub bump: u8,
+    /// The vault this position belongs to
+    pub vault: Pubkey,
+    /// The user who owns this position
+    pub user: Pubkey,
+    
+    // === Position Data ===
+    /// Amount of quote tokens deposited as collateral
+    pub collateral_amount: u64,
+    /// Amount of base tokens borrowed
+    pub borrowed_amount: u64,
+    
+    // === Timestamps ===
+    /// When the position was opened
+    pub opened_at: i64,
+    
+    // === Status ===
     pub is_active: bool,
 }
 
-/// A user's position in a lending pool
-/// Seeds: [USER_POSITION_SEED, pool, user]
-#[account]
-#[derive(InitSpace)]
-pub struct UserPosition {
-    pub pool: Pubkey,
-    pub user: Pubkey,
-    pub collateral_amount: u64,
-    pub borrowed_amount: u64,
-    pub last_update: i64,
+impl Position {
+    /// Check if position is expired (time-based liquidation)
+    pub fn is_expired(&self, current_time: i64, loan_duration: u64) -> bool {
+        current_time > self.opened_at.saturating_add(loan_duration as i64)
+    }
+    
+    /// Calculate health factor in basis points
+    /// health = (collateral_value / borrowed_value) * 10000
+    /// Lower health = more risky, liquidatable when health < (10000 * 10000 / liquidation_threshold)
+    pub fn calculate_health_bps(
+        &self,
+        base_price: u64,  // price of 1 base in quote (scaled)
+        price_scale: u64, // scaling factor for price
+    ) -> Option<u64> {
+        if self.borrowed_amount == 0 {
+            return Some(u64::MAX); // No debt = infinite health
+        }
+        
+        // borrowed_value = borrowed_amount * base_price / price_scale
+        // health_bps = (collateral_amount * price_scale * 10000) / (borrowed_amount * base_price)
+        let numerator = (self.collateral_amount as u128)
+            .checked_mul(price_scale as u128)?
+            .checked_mul(10_000)?;
+        let denominator = (self.borrowed_amount as u128)
+            .checked_mul(base_price as u128)?;
+        
+        if denominator == 0 {
+            return Some(u64::MAX);
+        }
+        
+        Some((numerator / denominator) as u64)
+    }
+    
+    /// Check if position is liquidatable due to health
+    /// Liquidatable when: borrowed_value / collateral_value >= liquidation_threshold
+    /// Or equivalently: health_bps <= 10000 * 10000 / liquidation_threshold_bps
+    pub fn is_undercollateralized(
+        &self,
+        base_price: u64,
+        price_scale: u64,
+        liquidation_threshold_bps: u16,
+    ) -> bool {
+        if let Some(health_bps) = self.calculate_health_bps(base_price, price_scale) {
+            // liquidation_threshold_bps = 8000 means liquidate at 80% utilization
+            // health threshold = 10000 * 10000 / 8000 = 12500 bps (125% collateralization)
+            let health_threshold = 10_000u64
+                .saturating_mul(10_000)
+                .checked_div(liquidation_threshold_bps as u64)
+                .unwrap_or(0);
+            health_bps <= health_threshold
+        } else {
+            true // Overflow = assume liquidatable
+        }
+    }
 }
