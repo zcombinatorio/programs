@@ -4,6 +4,7 @@
 // This allows direct use in LTV calculations with lamport amounts.
 
 use anchor_lang::prelude::*;
+use ethnum::U256;
 use crate::cpi::{cp_amm, dlmm};
 use crate::error::ErrorCode;
 
@@ -33,61 +34,29 @@ pub fn get_cp_amm_price(
     }
     
     // Calculate price: sqrtPrice² / 2^128 * PRICE_SCALE
-    // 
-    // sqrtPrice is u128 in Q64.64 format
-    // We need: (sqrtPrice² / 2^128) * PRICE_SCALE
-    //
-    // Key insight: multiply by PRICE_SCALE before final shift to preserve precision
-    
-    let price_scaled = if sqrt_price < (1u128 << 32) {
-        // Very small: sqrt_price² * PRICE_SCALE fits easily
-        let squared = sqrt_price * sqrt_price;
-        (squared * (PRICE_SCALE as u128)) >> 128
-    } else if sqrt_price < (1u128 << 64) {
-        // Small-medium: sqrt_price² fits in u128
-        let squared = sqrt_price.checked_mul(sqrt_price).ok_or(ErrorCode::Overflow)?;
-        // (squared >> 96) * PRICE_SCALE >> 32 = squared * PRICE_SCALE >> 128
-        // But we do: (squared >> 32) * PRICE_SCALE >> 96 for better precision
-        let partial = squared >> 32;
-        partial.checked_mul(PRICE_SCALE as u128).ok_or(ErrorCode::Overflow)? >> 96
-    } else if sqrt_price < (1u128 << 80) {
-        // Medium: (sqrt_price >> 32)² fits in u128
-        let shifted = sqrt_price >> 32;
-        let squared = shifted.checked_mul(shifted).ok_or(ErrorCode::Overflow)?;
-        // squared = sqrt_price² >> 64, need >> 128 total = >> 64 more
-        // (squared >> 32) * PRICE_SCALE >> 32 preserves precision
-        let partial = squared >> 32;
-        partial.checked_mul(PRICE_SCALE as u128).ok_or(ErrorCode::Overflow)? >> 32
-    } else {
-        // Large: (sqrt_price >> 64)² is the price
-        let shifted = sqrt_price >> 64;
-        shifted.checked_mul(shifted).ok_or(ErrorCode::Overflow)?
-            .checked_mul(PRICE_SCALE as u128).ok_or(ErrorCode::Overflow)?
-    };
+    // Using U256 for clean, overflow-safe math
+    let sqrt = U256::from(sqrt_price);
+    let squared = sqrt * sqrt;                                // u256: no overflow possible
+    let price = squared >> 128;                               // divide by 2^128
+    let price_scaled: U256 = price * U256::from(PRICE_SCALE); // scale for precision
     
     // Handle inversion based on token order
-    let final_price = if is_a_base {
-        // Pool gives B/A, we want quote/base = B/A if A is base. Correct.
+    let final_price: U256 = if is_a_base {
         price_scaled
     } else {
-        // Pool gives B/A, but A is quote, B is base
-        // We want quote/base = A/B = 1/(B/A)
-        // inverted = PRICE_SCALE² / price
-        if price_scaled == 0 {
+        // Invert: PRICE_SCALE² / price
+        let scale_squared = U256::from(PRICE_SCALE) * U256::from(PRICE_SCALE);
+        if price_scaled == U256::ZERO {
             return Err(ErrorCode::InvalidOraclePrice.into());
         }
-        (PRICE_SCALE as u128)
-            .checked_mul(PRICE_SCALE as u128)
-            .ok_or(ErrorCode::Overflow)?
-            .checked_div(price_scaled)
-            .ok_or(ErrorCode::InvalidOraclePrice)?
+        scale_squared / price_scaled
     };
     
-    if final_price == 0 {
+    if final_price == U256::ZERO {
         return Ok(1); // Minimum representable price
     }
     
-    Ok(final_price as u64)
+    Ok(final_price.as_u64())
 }
 
 /// Get price from a DLMM pool using active bin
