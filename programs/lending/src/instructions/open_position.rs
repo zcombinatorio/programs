@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::error::ErrorCode;
 use crate::state::*;
 use crate::oracle::{self, PRICE_SCALE};
-use crate::utils::{transfer_checked, transfer_checked_signed, is_within_ltv};
+use crate::utils::{transfer_checked, transfer_checked_signed};
 
 // ============================================================================
 // Events
@@ -121,7 +121,7 @@ pub fn handler(
 
     // Check LTV
     require!(
-        is_within_ltv(collateral_amount, borrow_amount, vault.ltv_bps, base_price, PRICE_SCALE)?,
+        Position::is_within_ltv(collateral_amount, borrow_amount, vault.ltv_bps, base_price, PRICE_SCALE),
         ErrorCode::LtvExceeded
     );
 

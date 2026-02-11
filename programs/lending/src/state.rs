@@ -113,6 +113,38 @@ impl Position {
         current_time > self.opened_at.saturating_add(loan_duration as i64)
     }
     
+    /// Calculate max borrow amount given collateral and LTV
+    /// max_borrow = (collateral * ltv_bps / 10000) * price_scale / base_price
+    pub fn max_borrow_for_collateral(
+        collateral_amount: u64,
+        ltv_bps: u16,
+        base_price: u64,    // quote lamports per base lamport (scaled by price_scale)
+        price_scale: u64,
+    ) -> Option<u64> {
+        let max_value = (collateral_amount as u128)
+            .checked_mul(ltv_bps as u128)?
+            .checked_div(10_000)?;
+        
+        let max_borrow = max_value
+            .checked_mul(price_scale as u128)?
+            .checked_div(base_price as u128)?;
+        
+        u64::try_from(max_borrow).ok()
+    }
+    
+    /// Check if a borrow amount is within LTV limits for given collateral
+    pub fn is_within_ltv(
+        collateral_amount: u64,
+        borrow_amount: u64,
+        ltv_bps: u16,
+        base_price: u64,
+        price_scale: u64,
+    ) -> bool {
+        Self::max_borrow_for_collateral(collateral_amount, ltv_bps, base_price, price_scale)
+            .map(|max| borrow_amount <= max)
+            .unwrap_or(false)
+    }
+    
     /// Calculate health factor in basis points
     /// health = (collateral_value / borrowed_value) * 10000
     /// Lower health = more risky, liquidatable when health < (10000 * 10000 / liquidation_threshold)
