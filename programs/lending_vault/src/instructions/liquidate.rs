@@ -3,6 +3,8 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::error::ErrorCode;
 use crate::state::*;
+use crate::oracle::{self, PRICE_SCALE};
+// use crate::cpi::dynamic_amm; // TODO: uncomment when swap CPI is implemented
 
 // ============================================================================
 // Events
@@ -17,6 +19,7 @@ pub struct PositionLiquidated {
     pub collateral_amount: u64,
     pub borrowed_amount: u64,
     pub base_recovered: u64,
+    pub base_price: u64,
     pub liquidation_reason: LiquidationReason,
 }
 
@@ -70,15 +73,65 @@ pub struct Liquidate<'info> {
     #[account(mut)]
     pub quote_vault: InterfaceAccount<'info, TokenAccount>,
 
-    /// Pool for price check and swap
+    /// Pool for price oracle and swap
     /// CHECK: Validated against vault.pool
     pub pool: UncheckedAccount<'info>,
 
-    // === Additional accounts for swap CPI will be added here ===
-    // These will be needed for Meteora integration:
-    // pub pool_base_vault: ...
-    // pub pool_quote_vault: ...
-    // pub pool_program: ...
+    // === Dynamic AMM specific accounts (for price reading) ===
+    /// Pool's A vault LP token account
+    /// CHECK: Validated in handler if pool_type is DammV2
+    pub pool_a_vault_lp: Option<UncheckedAccount<'info>>,
+    
+    /// Pool's B vault LP token account
+    /// CHECK: Validated in handler if pool_type is DammV2
+    pub pool_b_vault_lp: Option<UncheckedAccount<'info>>,
+
+    // === Swap accounts (for liquidation) ===
+    // These will be needed when we implement the actual swap CPI
+    // For now, we just update accounting without the swap
+    
+    /// Pool's A vault
+    /// CHECK: Required for Dynamic AMM swap
+    #[account(mut)]
+    pub pool_a_vault: Option<UncheckedAccount<'info>>,
+    
+    /// Pool's B vault
+    /// CHECK: Required for Dynamic AMM swap
+    #[account(mut)]
+    pub pool_b_vault: Option<UncheckedAccount<'info>>,
+    
+    /// Pool's A token vault
+    /// CHECK: Required for Dynamic AMM swap
+    #[account(mut)]
+    pub pool_a_token_vault: Option<UncheckedAccount<'info>>,
+    
+    /// Pool's B token vault
+    /// CHECK: Required for Dynamic AMM swap
+    #[account(mut)]
+    pub pool_b_token_vault: Option<UncheckedAccount<'info>>,
+    
+    /// Pool's A vault LP mint
+    /// CHECK: Required for Dynamic AMM swap
+    #[account(mut)]
+    pub pool_a_vault_lp_mint: Option<UncheckedAccount<'info>>,
+    
+    /// Pool's B vault LP mint
+    /// CHECK: Required for Dynamic AMM swap
+    #[account(mut)]
+    pub pool_b_vault_lp_mint: Option<UncheckedAccount<'info>>,
+    
+    /// Protocol fee token account
+    /// CHECK: Required for Dynamic AMM swap
+    #[account(mut)]
+    pub protocol_token_fee: Option<UncheckedAccount<'info>>,
+    
+    /// Vault program (for Dynamic AMM)
+    /// CHECK: Required for Dynamic AMM swap
+    pub vault_program: Option<UncheckedAccount<'info>>,
+    
+    /// Dynamic AMM program
+    /// CHECK: Required for Dynamic AMM swap
+    pub dynamic_amm_program: Option<UncheckedAccount<'info>>,
 
     pub token_program: Interface<'info, TokenInterface>,
 }
@@ -92,17 +145,53 @@ pub fn handler(ctx: Context<Liquidate>) -> Result<()> {
     let vault = &ctx.accounts.vault;
     let position = &ctx.accounts.position;
 
+    // Get price from pool based on pool type
+    let (base_price, is_base_token_a) = match vault.pool_type {
+        PoolType::DammV2 => {
+            let a_vault_lp = ctx.accounts.pool_a_vault_lp.as_ref()
+                .ok_or(ErrorCode::InvalidPool)?;
+            let b_vault_lp = ctx.accounts.pool_b_vault_lp.as_ref()
+                .ok_or(ErrorCode::InvalidPool)?;
+            
+            let is_a_base = oracle::validate_dynamic_amm_pool_mints(
+                &ctx.accounts.pool.to_account_info(),
+                &vault.base_mint,
+                &vault.quote_mint,
+            )?;
+            
+            let price = oracle::get_dynamic_amm_price(
+                &ctx.accounts.pool.to_account_info(),
+                &a_vault_lp.to_account_info(),
+                &b_vault_lp.to_account_info(),
+            )?;
+            
+            (price, is_a_base)
+        }
+        PoolType::Dlmm => {
+            let is_x_base = oracle::validate_dlmm_pool_mints(
+                &ctx.accounts.pool.to_account_info(),
+                &vault.base_mint,
+                &vault.quote_mint,
+            )?;
+            
+            let price = oracle::get_dlmm_price(&ctx.accounts.pool.to_account_info())?;
+            
+            (price, is_x_base)
+        }
+    };
+    
+    // Adjust price if needed
+    let base_price = if is_base_token_a {
+        base_price
+    } else {
+        oracle::invert_price(base_price)?
+    };
+
     // Check if position is liquidatable
     let is_expired = position.is_expired(clock.unix_timestamp, vault.loan_duration_seconds);
-    
-    // TODO: Get price from pool via CPI for health check
-    // For now, placeholder - will be implemented with Meteora integration
-    let base_price: u64 = 1_000_000; // Placeholder: 1 base = 1 quote (6 decimals)
-    let price_scale: u64 = 1_000_000;
-    
     let is_undercollateralized = position.is_undercollateralized(
         base_price,
-        price_scale,
+        PRICE_SCALE,
         vault.liquidation_threshold_bps,
     );
 
@@ -120,17 +209,17 @@ pub fn handler(ctx: Context<Liquidate>) -> Result<()> {
     let collateral_amount = position.collateral_amount;
     let borrowed_amount = position.borrowed_amount;
 
-    // TODO: Swap collateral (quote) to base via pool CPI
-    // For now, we just account for the collateral as "recovered base"
-    // The actual swap will be implemented with Meteora integration
-    //
-    // The flow will be:
-    // 1. CPI to pool.swap(quote -> base)
-    // 2. Base goes back to base_vault
-    // 3. Track how much base was recovered (may be less than borrowed if price moved)
+    // TODO: Execute swap via pool CPI
+    // For now, we calculate expected recovery based on current price
+    // Actual swap implementation will be added next
     
-    // Placeholder: assume 1:1 swap for now
-    let base_recovered = collateral_amount; // Will be actual swap output
+    // Expected base recovered = collateral_amount * PRICE_SCALE / base_price
+    // (collateral is in quote, we're buying base)
+    let base_recovered = (collateral_amount as u128)
+        .checked_mul(PRICE_SCALE as u128)
+        .ok_or(ErrorCode::Overflow)?
+        .checked_div(base_price as u128)
+        .ok_or(ErrorCode::Overflow)? as u64;
 
     // Update vault accounting
     let vault = &mut ctx.accounts.vault;
@@ -147,26 +236,18 @@ pub fn handler(ctx: Context<Liquidate>) -> Result<()> {
         .checked_sub(1)
         .ok_or(ErrorCode::Overflow)?;
     
-    // Note: total_base_liquidity may increase or decrease depending on swap result
-    // If base_recovered > borrowed_amount: profit
-    // If base_recovered < borrowed_amount: loss (bad debt)
-    // For now, we accept the loss - the difference is the protocol's loss
-    
-    // Adjust liquidity based on recovery
-    // total_liquidity was reduced by borrowed_amount when position opened
-    // now we "return" base_recovered to the pool
+    // Adjust liquidity based on recovery vs borrowed
     if base_recovered >= borrowed_amount {
-        // Profit scenario: keep the profit in the vault
+        // Profit: add excess to liquidity
         vault.total_base_liquidity = vault
             .total_base_liquidity
             .checked_add(base_recovered.saturating_sub(borrowed_amount))
             .ok_or(ErrorCode::Overflow)?;
     } else {
-        // Loss scenario: reduce liquidity by the loss
+        // Loss (bad debt): reduce liquidity
         vault.total_base_liquidity = vault
             .total_base_liquidity
-            .checked_sub(borrowed_amount.saturating_sub(base_recovered))
-            .unwrap_or(0); // Floor at 0 if loss exceeds liquidity
+            .saturating_sub(borrowed_amount.saturating_sub(base_recovered));
     }
 
     emit!(PositionLiquidated {
@@ -177,6 +258,7 @@ pub fn handler(ctx: Context<Liquidate>) -> Result<()> {
         collateral_amount,
         borrowed_amount,
         base_recovered,
+        base_price,
         liquidation_reason,
     });
 

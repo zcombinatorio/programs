@@ -3,6 +3,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::error::ErrorCode;
 use crate::state::*;
+use crate::oracle::{self, PRICE_SCALE};
 use crate::utils::{transfer_checked, transfer_checked_signed, is_within_ltv};
 
 // ============================================================================
@@ -16,6 +17,7 @@ pub struct PositionOpened {
     pub user: Pubkey,
     pub collateral_amount: u64,
     pub borrowed_amount: u64,
+    pub base_price: u64,
     pub opened_at: i64,
 }
 
@@ -34,6 +36,7 @@ pub struct OpenPosition<'info> {
         has_one = quote_mint,
         has_one = base_vault,
         has_one = quote_vault,
+        has_one = pool,
     )]
     pub vault: Account<'info, LendingVault>,
 
@@ -71,10 +74,18 @@ pub struct OpenPosition<'info> {
     )]
     pub user_base_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// Pool for price oracle
+    /// Pool for price oracle (Dynamic AMM or DLMM)
     /// CHECK: Validated against vault.pool
-    #[account(address = vault.pool @ ErrorCode::InvalidPool)]
     pub pool: UncheckedAccount<'info>,
+
+    // === Dynamic AMM specific accounts (optional, for price reading) ===
+    /// Pool's A vault LP token account (only for Dynamic AMM)
+    /// CHECK: Validated in handler if pool_type is DammV2
+    pub pool_a_vault_lp: Option<UncheckedAccount<'info>>,
+    
+    /// Pool's B vault LP token account (only for Dynamic AMM)
+    /// CHECK: Validated in handler if pool_type is DammV2
+    pub pool_b_vault_lp: Option<UncheckedAccount<'info>>,
 
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -101,14 +112,57 @@ pub fn handler(
         .ok_or(ErrorCode::Overflow)?;
     require!(borrow_amount <= available, ErrorCode::InsufficientLiquidity);
 
-    // TODO: Get price from pool via CPI
-    // For now, placeholder - will be implemented with Meteora integration
-    let base_price: u64 = 1_000_000; // Placeholder: 1 base = 1 quote (6 decimals)
-    let price_scale: u64 = 1_000_000;
+    // Get price from pool based on pool type
+    let (base_price, is_base_token_a) = match vault.pool_type {
+        PoolType::DammV2 => {
+            // Dynamic AMM requires vault LP accounts for price
+            let a_vault_lp = ctx.accounts.pool_a_vault_lp.as_ref()
+                .ok_or(ErrorCode::InvalidPool)?;
+            let b_vault_lp = ctx.accounts.pool_b_vault_lp.as_ref()
+                .ok_or(ErrorCode::InvalidPool)?;
+            
+            // Validate pool mints and get order
+            let is_a_base = oracle::validate_dynamic_amm_pool_mints(
+                &ctx.accounts.pool.to_account_info(),
+                &vault.base_mint,
+                &vault.quote_mint,
+            )?;
+            
+            let price = oracle::get_dynamic_amm_price(
+                &ctx.accounts.pool.to_account_info(),
+                &a_vault_lp.to_account_info(),
+                &b_vault_lp.to_account_info(),
+            )?;
+            
+            (price, is_a_base)
+        }
+        PoolType::Dlmm => {
+            // DLMM just needs the lb_pair account
+            let is_x_base = oracle::validate_dlmm_pool_mints(
+                &ctx.accounts.pool.to_account_info(),
+                &vault.base_mint,
+                &vault.quote_mint,
+            )?;
+            
+            let price = oracle::get_dlmm_price(&ctx.accounts.pool.to_account_info())?;
+            
+            (price, is_x_base)
+        }
+    };
+    
+    // Adjust price if pool token order is opposite of vault order
+    // base_price should be: how much quote per 1 base
+    let base_price = if is_base_token_a {
+        // Pool: A=base, B=quote. Price is B/A (quote per base). Correct.
+        base_price
+    } else {
+        // Pool: A=quote, B=base. Price is B/A (base per quote). Need to invert.
+        oracle::invert_price(base_price)?
+    };
 
     // Check LTV
     require!(
-        is_within_ltv(collateral_amount, borrow_amount, vault.ltv_bps, base_price, price_scale)?,
+        is_within_ltv(collateral_amount, borrow_amount, vault.ltv_bps, base_price, PRICE_SCALE)?,
         ErrorCode::LtvExceeded
     );
 
@@ -178,6 +232,7 @@ pub fn handler(
         user: ctx.accounts.user.key(),
         collateral_amount,
         borrowed_amount: borrow_amount,
+        base_price,
         opened_at: clock.unix_timestamp,
     });
 
