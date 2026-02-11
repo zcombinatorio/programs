@@ -8,21 +8,21 @@ skip-lint = false
 [programs.devnet]
 amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
 futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
-lending_vault = "LEND7YMJZSudGFhVmx1xJCAahk8Vv62RQ9p4QkyeBH8"
+lending = "LEND7YMJZSudGFhVmx1xJCAahk8Vv62RQ9p4QkyeBH8"
 svault = "GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy"
 vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 
 [programs.localnet]
 amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
 futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
-lending_vault = "LEND7YMJZSudGFhVmx1xJCAahk8Vv62RQ9p4QkyeBH8"
+lending = "LEND7YMJZSudGFhVmx1xJCAahk8Vv62RQ9p4QkyeBH8"
 svault = "GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy"
 vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 
 [programs.mainnet]
 amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
 futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
-lending_vault = "LEND7YMJZSudGFhVmx1xJCAahk8Vv62RQ9p4QkyeBH8"
+lending = "LEND7YMJZSudGFhVmx1xJCAahk8Vv62RQ9p4QkyeBH8"
 svault = "GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy"
 vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 

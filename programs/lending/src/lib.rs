@@ -16,7 +16,7 @@ use state::PoolType;
 declare_id!("LEND7YMJZSudGFhVmx1xJCAahk8Vv62RQ9p4QkyeBH8");
 
 #[program]
-pub mod lending_vault {
+pub mod lending {
     use super::*;
 
     /// Initialize a new lending vault
