@@ -53,7 +53,7 @@ pub struct LiquidateCpAmm<'info> {
         has_one = pool,
         constraint = vault.pool_type == PoolType::CpAmm @ ErrorCode::InvalidPool,
     )]
-    pub vault: Account<'info, LendingVault>,
+    pub vault: Box<Account<'info, LendingVault>>,
 
     #[account(
         mut,
@@ -63,7 +63,7 @@ pub struct LiquidateCpAmm<'info> {
         bump = position.bump,
         close = user,
     )]
-    pub position: Account<'info, Position>,
+    pub position: Box<Account<'info, Position>>,
 
     pub base_mint: InterfaceAccount<'info, Mint>,
     pub quote_mint: InterfaceAccount<'info, Mint>,
@@ -144,7 +144,7 @@ pub struct LiquidateDlmm<'info> {
         constraint = vault.pool == lb_pair.key() @ ErrorCode::InvalidPool,
         constraint = vault.pool_type == PoolType::Dlmm @ ErrorCode::InvalidPool,
     )]
-    pub vault: Account<'info, LendingVault>,
+    pub vault: Box<Account<'info, LendingVault>>,
 
     #[account(
         mut,
@@ -154,7 +154,7 @@ pub struct LiquidateDlmm<'info> {
         bump = position.bump,
         close = user,
     )]
-    pub position: Account<'info, Position>,
+    pub position: Box<Account<'info, Position>>,
 
     pub base_mint: InterfaceAccount<'info, Mint>,
     pub quote_mint: InterfaceAccount<'info, Mint>,
