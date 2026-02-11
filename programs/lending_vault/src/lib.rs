@@ -35,7 +35,7 @@ pub mod lending_vault {
         loan_duration_seconds: u64,
         pool_type: PoolType,
     ) -> Result<()> {
-        initialize_vault::handler(ctx, nonce, ltv_bps, liquidation_threshold_bps, loan_duration_seconds, pool_type)
+        instructions::initialize_vault::handler(ctx, nonce, ltv_bps, liquidation_threshold_bps, loan_duration_seconds, pool_type)
     }
 
     /// Add base token liquidity to the vault (admin only)
@@ -43,7 +43,7 @@ pub mod lending_vault {
     /// # Arguments
     /// * `amount` - Amount of base tokens to deposit
     pub fn add_liquidity(ctx: Context<AddLiquidity>, amount: u64) -> Result<()> {
-        add_liquidity::handler(ctx, amount)
+        instructions::add_liquidity::handler(ctx, amount)
     }
 
     /// Remove base token liquidity from the vault (admin only)
@@ -52,7 +52,7 @@ pub mod lending_vault {
     /// # Arguments
     /// * `amount` - Amount of base tokens to withdraw
     pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, amount: u64) -> Result<()> {
-        remove_liquidity::handler(ctx, amount)
+        instructions::remove_liquidity::handler(ctx, amount)
     }
 
     /// Open a new borrowing position
@@ -66,24 +66,35 @@ pub mod lending_vault {
         collateral_amount: u64,
         borrow_amount: u64,
     ) -> Result<()> {
-        open_position::handler(ctx, collateral_amount, borrow_amount)
+        instructions::open_position::handler(ctx, collateral_amount, borrow_amount)
     }
 
     /// Repay a borrowing position
     /// User returns borrowed base tokens and receives collateral back
     /// Position is closed and account rent is returned
     pub fn repay(ctx: Context<Repay>) -> Result<()> {
-        repay::handler(ctx)
+        instructions::repay::handler(ctx)
     }
 
-    /// Liquidate an expired or undercollateralized position
+    /// Liquidate a position using Dynamic AMM (DAMM v2) swap
     /// Permissionless - anyone can call this
-    /// Collateral is swapped to base via the pool and returned to vault
     /// 
-    /// Position is liquidatable if:
-    /// - Time expired: current_time > opened_at + loan_duration
-    /// - Undercollateralized: borrowed_value / collateral_value >= liquidation_threshold
-    pub fn liquidate(ctx: Context<Liquidate>) -> Result<()> {
-        liquidate::handler(ctx)
+    /// # Arguments
+    /// * `min_amount_out` - Minimum base tokens expected from swap (slippage protection)
+    pub fn liquidate_damm_v2(ctx: Context<LiquidateDammV2>, min_amount_out: u64) -> Result<()> {
+        instructions::liquidate::handler_damm_v2(ctx, min_amount_out)
+    }
+
+    /// Liquidate a position using DLMM swap
+    /// Permissionless - anyone can call this
+    /// Bin arrays must be passed as remaining accounts
+    /// 
+    /// # Arguments
+    /// * `min_amount_out` - Minimum base tokens expected from swap (slippage protection)
+    pub fn liquidate_dlmm<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, LiquidateDlmm<'info>>,
+        min_amount_out: u64,
+    ) -> Result<()> {
+        instructions::liquidate::handler_dlmm(ctx, min_amount_out)
     }
 }
