@@ -1,4 +1,7 @@
 // Price oracle utilities for reading prices from Meteora pools
+//
+// Price convention: "quote lamports per base lamport" scaled by PRICE_SCALE
+// This allows direct use in LTV calculations with lamport amounts.
 
 use anchor_lang::prelude::*;
 use crate::cpi::{cp_amm, dlmm};
@@ -8,121 +11,195 @@ use crate::error::ErrorCode;
 pub const PRICE_SCALE: u64 = 1_000_000_000_000; // 1e12
 
 /// Get price from a CP-AMM (DAMM v2) pool
-/// Returns: price of token B in terms of token A (scaled by PRICE_SCALE)
 /// 
-/// CP-AMM stores sqrt_price as Q64.64 fixed-point: sqrt(price_b_in_a) * 2^64
-/// price = (sqrt_price / 2^64)^2 = sqrt_price^2 / 2^128
-pub fn get_cp_amm_price(pool_account: &AccountInfo) -> Result<u64> {
-    // Deserialize pool state
+/// CP-AMM stores sqrt_price as Q64.64 fixed-point.
+/// Formula from Meteora SDK:
+///   price_per_token = sqrtPrice² × 10^(tokenADecimal - tokenBDecimal) / 2^128
+/// 
+/// We convert to lamport-denominated price for direct use in calculations.
+/// 
+/// Returns: quote lamports per base lamport, scaled by PRICE_SCALE
+/// `is_a_base`: true if pool's token A is the base token
+pub fn get_cp_amm_price(
+    pool_account: &AccountInfo,
+    base_decimals: u8,
+    quote_decimals: u8,
+    is_a_base: bool,
+) -> Result<u64> {
     let pool_data = pool_account.try_borrow_data()?;
     let pool = cp_amm::accounts::Pool::try_deserialize(&mut &pool_data[..])?;
     
     let sqrt_price = pool.sqrt_price;
+    if sqrt_price == 0 {
+        return Err(ErrorCode::InvalidOraclePrice.into());
+    }
     
-    // Calculate price: (sqrt_price^2 * PRICE_SCALE) / 2^128
-    let price = calculate_price_from_sqrt(sqrt_price)?;
+    // Calculate price: sqrtPrice² / 2^128
+    // Using u256 simulation with two u128s to avoid overflow
+    let sqrt_u128 = sqrt_price;
     
-    Ok(price)
+    // Split sqrt_price to avoid overflow: sqrt_price = high * 2^64 + low
+    // price = sqrt_price² / 2^128
+    // We compute this as: (sqrt_price / 2^64)² = (sqrt_price >> 64)² when sqrt_price is large
+    // For better precision, we do: (sqrt_price² >> 128) with careful handling
+    
+    // Method: multiply in parts
+    // sqrt_price² = (sqrt_price * sqrt_price)
+    // We need the result >> 128
+    
+    // Use 128-bit arithmetic carefully
+    let price_raw = if sqrt_u128 <= u64::MAX as u128 {
+        // Small enough to square directly, then shift
+        let squared = sqrt_u128.checked_mul(sqrt_u128).ok_or(ErrorCode::Overflow)?;
+        // squared / 2^128 will be very small, need to scale first
+        // price = squared * PRICE_SCALE / 2^128
+        // But squared < 2^128, so squared * PRICE_SCALE / 2^128 could be < PRICE_SCALE
+        squared
+            .checked_mul(PRICE_SCALE as u128)
+            .ok_or(ErrorCode::Overflow)?
+            >> 128
+    } else {
+        // Large sqrt_price: shift first to avoid overflow
+        // price ≈ (sqrt_price >> 64)² / 2^0 = (sqrt_price >> 64)²
+        let shifted = sqrt_u128 >> 64;
+        let squared = shifted.checked_mul(shifted).ok_or(ErrorCode::Overflow)?;
+        // This gives us price in native units, scale it
+        squared
+            .checked_mul(PRICE_SCALE as u128)
+            .ok_or(ErrorCode::Overflow)?
+    };
+    
+    // Apply decimal adjustment
+    // If A is base, price is B/A (quote/base) - correct direction
+    // If A is quote, price is B/A (base/quote) - need to invert later
+    // 
+    // Decimal adjustment: multiply by 10^(base_decimals - quote_decimals)
+    // This converts from "per token" to "per lamport" basis
+    let decimal_diff = base_decimals as i16 - quote_decimals as i16;
+    
+    let adjusted = if decimal_diff >= 0 {
+        let multiplier = 10u128.pow(decimal_diff as u32);
+        price_raw.checked_mul(multiplier).ok_or(ErrorCode::Overflow)?
+    } else {
+        let divisor = 10u128.pow((-decimal_diff) as u32);
+        price_raw.checked_div(divisor).ok_or(ErrorCode::Overflow)?
+    };
+    
+    // Invert if token order doesn't match
+    let final_price = if is_a_base {
+        adjusted
+    } else {
+        // Need to invert: price was B/A but we want quote/base = A/B
+        // inverted = PRICE_SCALE² / price
+        (PRICE_SCALE as u128)
+            .checked_mul(PRICE_SCALE as u128)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(adjusted)
+            .ok_or(ErrorCode::InvalidOraclePrice)?
+    };
+    
+    if final_price == 0 {
+        return Ok(1); // Minimum representable price
+    }
+    
+    Ok(final_price as u64)
 }
 
 /// Get price from a DLMM pool using active bin
-/// Returns: price of token Y in terms of token X (scaled by PRICE_SCALE)
-pub fn get_dlmm_price(lb_pair_account: &AccountInfo) -> Result<u64> {
+/// 
+/// Formula from Meteora SDK:
+///   pricePerLamport = (1 + binStep/10000)^activeId
+///   pricePerToken = pricePerLamport × 10^(baseDecimal - quoteDecimal)
+/// 
+/// Note: activeId is a signed i32, can be negative (price < 1) or positive (price > 1)
+/// 
+/// Returns: quote lamports per base lamport, scaled by PRICE_SCALE
+/// `is_x_base`: true if pool's token X is the base token
+pub fn get_dlmm_price(
+    lb_pair_account: &AccountInfo,
+    base_decimals: u8,
+    quote_decimals: u8,
+    is_x_base: bool,
+) -> Result<u64> {
     let pair_data = lb_pair_account.try_borrow_data()?;
-    
-    // Deserialize LbPair state
     let lb_pair = dlmm::accounts::LbPair::try_deserialize(&mut &pair_data[..])?;
     
     let active_id = lb_pair.active_id;
     let bin_step = lb_pair.bin_step;
     
-    let price = calculate_dlmm_price(active_id, bin_step)?;
+    // Calculate (1 + binStep/10000)^activeId
+    // Use fixed-point arithmetic for precision
+    let price_raw = calculate_dlmm_bin_price(active_id, bin_step)?;
     
-    Ok(price)
-}
-
-/// Calculate price from sqrt_price (u128, Q64.64 format)
-/// price = (sqrt_price / 2^64)^2 * PRICE_SCALE
-fn calculate_price_from_sqrt(sqrt_price: u128) -> Result<u64> {
-    // sqrt_price is in Q64.64 format (64 integer bits, 64 fractional bits)
-    // price = sqrt_price^2 / 2^128
-    // 
-    // To avoid overflow and maintain precision:
-    // 1. Shift sqrt_price right to reduce magnitude
-    // 2. Square
-    // 3. Adjust for scale
+    // Apply decimal adjustment
+    let decimal_diff = base_decimals as i16 - quote_decimals as i16;
     
-    if sqrt_price == 0 {
-        return Err(ErrorCode::InvalidOraclePrice.into());
+    let adjusted = if decimal_diff >= 0 {
+        let multiplier = 10u128.pow(decimal_diff as u32);
+        (price_raw as u128).checked_mul(multiplier).ok_or(ErrorCode::Overflow)?
+    } else {
+        let divisor = 10u128.pow((-decimal_diff) as u32);
+        (price_raw as u128).checked_div(divisor).ok_or(ErrorCode::Overflow)?
+    };
+    
+    // Invert if token order doesn't match
+    let final_price = if is_x_base {
+        adjusted
+    } else {
+        (PRICE_SCALE as u128)
+            .checked_mul(PRICE_SCALE as u128)
+            .ok_or(ErrorCode::Overflow)?
+            .checked_div(adjusted)
+            .ok_or(ErrorCode::InvalidOraclePrice)?
+    };
+    
+    if final_price == 0 {
+        return Ok(1);
     }
     
-    // Split sqrt_price: keep top bits for precision
-    // sqrt_price >> 32 gives us a u96 range
-    let sqrt_shifted = sqrt_price >> 32;
+    Ok(final_price as u64)
+}
+
+/// Calculate DLMM price from bin ID and bin step
+/// price = (1 + binStep/10000)^binId × PRICE_SCALE
+/// 
+/// binId is signed: negative = price < PRICE_SCALE, positive = price > PRICE_SCALE
+fn calculate_dlmm_bin_price(bin_id: i32, bin_step: u16) -> Result<u64> {
+    // Base = 1 + binStep/10000 = (10000 + binStep) / 10000
+    let base_num = 10_000u64 + bin_step as u64;
+    let base_den = 10_000u64;
     
-    // Square it: (sqrt_price >> 32)^2 = sqrt_price^2 >> 64
-    // This is still in u128 range
-    let price_raw = sqrt_shifted
-        .checked_mul(sqrt_shifted)
-        .ok_or(ErrorCode::Overflow)?;
+    // Start with PRICE_SCALE (represents 1.0)
+    let mut price = PRICE_SCALE as u128;
     
-    // Now we have: price_raw = sqrt_price^2 >> 64
-    // But we need: price = sqrt_price^2 / 2^128
-    // So: price = price_raw >> 64
-    // Then scale by PRICE_SCALE
+    // Limit iterations for safety (|bin_id| > 500 would be extreme)
+    let abs_id = bin_id.unsigned_abs().min(500) as usize;
     
-    let price = (price_raw >> 64)
-        .checked_mul(PRICE_SCALE as u128)
-        .ok_or(ErrorCode::Overflow)?;
-    
-    // Handle case where price_raw >> 64 is 0 but we still want a non-zero result
-    // for very small prices
-    if price == 0 && sqrt_price > 0 {
-        // Return minimum representable price
-        return Ok(1);
+    if bin_id >= 0 {
+        // Multiply by base for each step
+        for _ in 0..abs_id {
+            price = price
+                .checked_mul(base_num as u128)
+                .ok_or(ErrorCode::Overflow)?
+                .checked_div(base_den as u128)
+                .ok_or(ErrorCode::Overflow)?;
+        }
+    } else {
+        // Divide by base for each step (multiply by 10000/(10000+binStep))
+        for _ in 0..abs_id {
+            price = price
+                .checked_mul(base_den as u128)
+                .ok_or(ErrorCode::Overflow)?
+                .checked_div(base_num as u128)
+                .ok_or(ErrorCode::Overflow)?;
+        }
     }
     
     Ok(price as u64)
 }
 
-/// Calculate DLMM price from active bin ID and bin step
-/// price = (1 + bin_step/10000)^(active_id - 8388608)
-/// where 8388608 = 2^23 (the zero point)
-fn calculate_dlmm_price(active_id: i32, bin_step: u16) -> Result<u64> {
-    const ZERO_POINT: i32 = 8388608; // 2^23
-    
-    let delta = active_id - ZERO_POINT;
-    let bin_step_bps = bin_step as u64;
-    
-    // Base multiplier: (10000 + bin_step) / 10000
-    let multiplier_num = 10000u64 + bin_step_bps;
-    let multiplier_den = 10000u64;
-    
-    let mut price = PRICE_SCALE;
-    let abs_delta = delta.unsigned_abs().min(200) as usize; // Cap iterations
-    
-    if delta >= 0 {
-        for _ in 0..abs_delta {
-            price = price
-                .checked_mul(multiplier_num)
-                .ok_or(ErrorCode::Overflow)?
-                .checked_div(multiplier_den)
-                .ok_or(ErrorCode::Overflow)?;
-        }
-    } else {
-        for _ in 0..abs_delta {
-            price = price
-                .checked_mul(multiplier_den)
-                .ok_or(ErrorCode::Overflow)?
-                .checked_div(multiplier_num)
-                .ok_or(ErrorCode::Overflow)?;
-        }
-    }
-    
-    Ok(price)
-}
-
 /// Validate that CP-AMM pool mints match vault mints
+/// Returns: true if pool's token A is the base mint
 pub fn validate_cp_amm_pool_mints(
     pool_account: &AccountInfo,
     expected_base: &Pubkey,
@@ -131,17 +208,17 @@ pub fn validate_cp_amm_pool_mints(
     let pool_data = pool_account.try_borrow_data()?;
     let pool = cp_amm::accounts::Pool::try_deserialize(&mut &pool_data[..])?;
     
-    // Check if mints match - return which order (true = A is base, false = B is base)
     if pool.token_a_mint == *expected_base && pool.token_b_mint == *expected_quote {
         Ok(true) // A is base, B is quote
     } else if pool.token_a_mint == *expected_quote && pool.token_b_mint == *expected_base {
-        Ok(false) // A is quote, B is base (need to invert price)
+        Ok(false) // A is quote, B is base
     } else {
         Err(ErrorCode::PoolMintMismatch.into())
     }
 }
 
 /// Validate that DLMM pool mints match vault mints
+/// Returns: true if pool's token X is the base mint
 pub fn validate_dlmm_pool_mints(
     lb_pair_account: &AccountInfo,
     expected_base: &Pubkey,
@@ -150,28 +227,11 @@ pub fn validate_dlmm_pool_mints(
     let pair_data = lb_pair_account.try_borrow_data()?;
     let lb_pair = dlmm::accounts::LbPair::try_deserialize(&mut &pair_data[..])?;
     
-    // Check if mints match - return which order (true = X is base, false = Y is base)
     if lb_pair.token_x_mint == *expected_base && lb_pair.token_y_mint == *expected_quote {
         Ok(true) // X is base, Y is quote
     } else if lb_pair.token_x_mint == *expected_quote && lb_pair.token_y_mint == *expected_base {
-        Ok(false) // X is quote, Y is base (need to invert price)
+        Ok(false) // X is quote, Y is base
     } else {
         Err(ErrorCode::PoolMintMismatch.into())
     }
-}
-
-/// Invert a price (for when pool order is opposite of vault order)
-pub fn invert_price(price: u64) -> Result<u64> {
-    if price == 0 {
-        return Err(ErrorCode::InvalidOraclePrice.into());
-    }
-    
-    // inverted = PRICE_SCALE^2 / price
-    let inverted = (PRICE_SCALE as u128)
-        .checked_mul(PRICE_SCALE as u128)
-        .ok_or(ErrorCode::Overflow)?
-        .checked_div(price as u128)
-        .ok_or(ErrorCode::Overflow)?;
-    
-    Ok(inverted as u64)
 }

@@ -103,20 +103,20 @@ pub fn handler(
         .ok_or(ErrorCode::Overflow)?;
     require!(borrow_amount <= available, ErrorCode::InsufficientLiquidity);
 
-    // Get price from pool based on pool type
-    let raw_price = match vault.pool_type {
-        PoolType::CpAmm => oracle::get_cp_amm_price(&ctx.accounts.pool.to_account_info())?,
-        PoolType::Dlmm => oracle::get_dlmm_price(&ctx.accounts.pool.to_account_info())?,
-    };
-    
-    // Adjust price if pool token order is opposite of vault order
-    // base_price should be: how much quote per 1 base
-    let base_price = if vault.is_pool_base_token_a {
-        // Pool: A=base, B=quote. Price is B/A (quote per base). Correct.
-        raw_price
-    } else {
-        // Pool: A=quote, B=base. Price is B/A (base per quote). Need to invert.
-        oracle::invert_price(raw_price)?
+    // Get price from pool (quote lamports per base lamport, scaled by PRICE_SCALE)
+    let base_price = match vault.pool_type {
+        PoolType::CpAmm => oracle::get_cp_amm_price(
+            &ctx.accounts.pool.to_account_info(),
+            vault.base_decimals,
+            vault.quote_decimals,
+            vault.is_pool_base_token_a,
+        )?,
+        PoolType::Dlmm => oracle::get_dlmm_price(
+            &ctx.accounts.pool.to_account_info(),
+            vault.base_decimals,
+            vault.quote_decimals,
+            vault.is_pool_base_token_a,
+        )?,
     };
 
     // Check LTV

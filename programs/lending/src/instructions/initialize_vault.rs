@@ -124,6 +124,8 @@ pub fn handler(
         admin: ctx.accounts.admin.key(),
         base_mint: ctx.accounts.base_mint.key(),
         quote_mint: ctx.accounts.quote_mint.key(),
+        base_decimals: ctx.accounts.base_mint.decimals,
+        quote_decimals: ctx.accounts.quote_mint.decimals,
         base_vault: ctx.accounts.base_vault.key(),
         quote_vault: ctx.accounts.quote_vault.key(),
         pool: ctx.accounts.pool.key(),

@@ -225,13 +225,13 @@ pub fn handler_cp_amm(ctx: Context<LiquidateCpAmm>, min_amount_out: u64) -> Resu
     let vault = &ctx.accounts.vault;
     let position = &ctx.accounts.position;
 
-    // Get price for health check
-    let raw_price = oracle::get_cp_amm_price(&ctx.accounts.pool.to_account_info())?;
-    let base_price = if vault.is_pool_base_token_a {
-        raw_price
-    } else {
-        oracle::invert_price(raw_price)?
-    };
+    // Get price for health check (quote lamports per base lamport, scaled)
+    let base_price = oracle::get_cp_amm_price(
+        &ctx.accounts.pool.to_account_info(),
+        vault.base_decimals,
+        vault.quote_decimals,
+        vault.is_pool_base_token_a,
+    )?;
 
     // Check liquidation conditions
     let is_expired = position.is_expired(clock.unix_timestamp, vault.loan_duration_seconds);
@@ -364,13 +364,13 @@ pub fn handler_dlmm<'a, 'b, 'c, 'info>(
     let vault = &ctx.accounts.vault;
     let position = &ctx.accounts.position;
 
-    // Get price for health check
-    let raw_price = oracle::get_dlmm_price(&ctx.accounts.lb_pair.to_account_info())?;
-    let base_price = if vault.is_pool_base_token_a {
-        raw_price
-    } else {
-        oracle::invert_price(raw_price)?
-    };
+    // Get price for health check (quote lamports per base lamport, scaled)
+    let base_price = oracle::get_dlmm_price(
+        &ctx.accounts.lb_pair.to_account_info(),
+        vault.base_decimals,
+        vault.quote_decimals,
+        vault.is_pool_base_token_a,
+    )?;
 
     // Check liquidation conditions
     let is_expired = position.is_expired(clock.unix_timestamp, vault.loan_duration_seconds);
