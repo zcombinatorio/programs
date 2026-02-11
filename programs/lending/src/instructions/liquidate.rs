@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::error::ErrorCode;
 use crate::state::*;
 use crate::oracle::{self, PRICE_SCALE};
-use crate::cpi::{dynamic_amm, dlmm};
+use crate::cpi::{cp_amm, dlmm};
 
 // ============================================================================
 // Events
@@ -30,11 +30,11 @@ pub enum LiquidationReason {
 }
 
 // ============================================================================
-// Accounts - Dynamic AMM Liquidation
+// Accounts - CP-AMM Liquidation
 // ============================================================================
 
 #[derive(Accounts)]
-pub struct LiquidateDammV2<'info> {
+pub struct LiquidateCpAmm<'info> {
     /// Anyone can liquidate (permissionless)
     #[account(mut)]
     pub liquidator: Signer<'info>,
@@ -51,7 +51,7 @@ pub struct LiquidateDammV2<'info> {
         has_one = base_vault,
         has_one = quote_vault,
         has_one = pool,
-        constraint = vault.pool_type == PoolType::DammV2 @ ErrorCode::InvalidPool,
+        constraint = vault.pool_type == PoolType::CpAmm @ ErrorCode::InvalidPool,
     )]
     pub vault: Account<'info, LendingVault>,
 
@@ -76,54 +76,46 @@ pub struct LiquidateDammV2<'info> {
     #[account(mut)]
     pub quote_vault: InterfaceAccount<'info, TokenAccount>,
 
-    // === Dynamic AMM Pool Accounts ===
+    // === CP-AMM Pool Accounts ===
+    
+    /// CHECK: Pool authority (constant address)
+    #[account(address = cp_amm::CP_AMM_POOL_AUTHORITY)]
+    pub pool_authority: UncheckedAccount<'info>,
     
     /// CHECK: Pool account (validated against vault.pool)
     #[account(mut)]
     pub pool: UncheckedAccount<'info>,
     
-    /// CHECK: Pool's A vault
+    /// CHECK: Pool's token A vault
     #[account(mut)]
-    pub pool_a_vault: UncheckedAccount<'info>,
+    pub token_a_vault: UncheckedAccount<'info>,
     
-    /// CHECK: Pool's B vault  
+    /// CHECK: Pool's token B vault
     #[account(mut)]
-    pub pool_b_vault: UncheckedAccount<'info>,
+    pub token_b_vault: UncheckedAccount<'info>,
     
-    /// CHECK: Pool's A token vault
+    /// CHECK: Token A mint (validated against pool)
+    pub token_a_mint: UncheckedAccount<'info>,
+    
+    /// CHECK: Token B mint (validated against pool)
+    pub token_b_mint: UncheckedAccount<'info>,
+    
+    /// CHECK: Token A program
+    pub token_a_program: UncheckedAccount<'info>,
+    
+    /// CHECK: Token B program
+    pub token_b_program: UncheckedAccount<'info>,
+    
+    /// CHECK: Referral token account (optional)
     #[account(mut)]
-    pub pool_a_token_vault: UncheckedAccount<'info>,
+    pub referral_token_account: Option<UncheckedAccount<'info>>,
     
-    /// CHECK: Pool's B token vault
-    #[account(mut)]
-    pub pool_b_token_vault: UncheckedAccount<'info>,
+    /// CHECK: Event authority
+    pub event_authority: UncheckedAccount<'info>,
     
-    /// CHECK: Pool's A vault LP mint
-    #[account(mut)]
-    pub pool_a_vault_lp_mint: UncheckedAccount<'info>,
-    
-    /// CHECK: Pool's B vault LP mint
-    #[account(mut)]
-    pub pool_b_vault_lp_mint: UncheckedAccount<'info>,
-    
-    /// CHECK: Pool's A vault LP token account
-    #[account(mut)]
-    pub pool_a_vault_lp: UncheckedAccount<'info>,
-    
-    /// CHECK: Pool's B vault LP token account
-    #[account(mut)]
-    pub pool_b_vault_lp: UncheckedAccount<'info>,
-    
-    /// CHECK: Protocol fee token account (for quote token)
-    #[account(mut)]
-    pub protocol_token_fee: UncheckedAccount<'info>,
-    
-    /// CHECK: Dynamic vault program
-    pub vault_program: UncheckedAccount<'info>,
-    
-    /// CHECK: Dynamic AMM program
-    #[account(address = dynamic_amm::ID)]
-    pub dynamic_amm_program: UncheckedAccount<'info>,
+    /// CHECK: CP-AMM program
+    #[account(address = cp_amm::ID)]
+    pub cp_amm_program: UncheckedAccount<'info>,
 
     pub token_program: Interface<'info, TokenInterface>,
 }
@@ -227,24 +219,20 @@ pub struct LiquidateDlmm<'info> {
 // Handlers
 // ============================================================================
 
-/// Liquidate a position using Dynamic AMM swap
-pub fn handler_damm_v2(ctx: Context<LiquidateDammV2>, min_amount_out: u64) -> Result<()> {
+/// Liquidate a position using CP-AMM swap
+pub fn handler_cp_amm(ctx: Context<LiquidateCpAmm>, min_amount_out: u64) -> Result<()> {
     let clock = Clock::get()?;
     let vault = &ctx.accounts.vault;
     let position = &ctx.accounts.position;
 
     // Get price for health check
-    let is_a_base = oracle::validate_dynamic_amm_pool_mints(
+    let is_a_base = oracle::validate_cp_amm_pool_mints(
         &ctx.accounts.pool.to_account_info(),
         &vault.base_mint,
         &vault.quote_mint,
     )?;
     
-    let base_price = oracle::get_dynamic_amm_price(
-        &ctx.accounts.pool.to_account_info(),
-        &ctx.accounts.pool_a_vault_lp.to_account_info(),
-        &ctx.accounts.pool_b_vault_lp.to_account_info(),
-    )?;
+    let base_price = oracle::get_cp_amm_price(&ctx.accounts.pool.to_account_info())?;
     
     let base_price = if is_a_base {
         base_price
@@ -284,45 +272,35 @@ pub fn handler_damm_v2(ctx: Context<LiquidateDammV2>, min_amount_out: u64) -> Re
     ];
     let signer_seeds = &[&vault_seeds[..]];
 
-    // Determine source/dest based on pool token order
+    // Determine input/output based on pool token order
     // We're swapping quote (collateral) -> base
-    let (user_source_token, user_destination_token) = if is_a_base {
-        // A is base, B is quote. We're selling quote (B) for base (A)
-        // source = quote_vault, dest = base_vault
-        (
-            ctx.accounts.quote_vault.to_account_info(),
-            ctx.accounts.base_vault.to_account_info(),
-        )
-    } else {
-        // A is quote, B is base. We're selling quote (A) for base (B)
-        // source = quote_vault, dest = base_vault
-        (
-            ctx.accounts.quote_vault.to_account_info(),
-            ctx.accounts.base_vault.to_account_info(),
-        )
-    };
+    let (input_token_account, output_token_account) = (
+        ctx.accounts.quote_vault.to_account_info(),
+        ctx.accounts.base_vault.to_account_info(),
+    );
 
-    // Execute swap via Dynamic AMM CPI
-    let swap_accounts = dynamic_amm::cpi::accounts::Swap {
+    // Execute swap via CP-AMM CPI
+    let swap_accounts = cp_amm::cpi::accounts::Swap {
+        pool_authority: ctx.accounts.pool_authority.to_account_info(),
         pool: ctx.accounts.pool.to_account_info(),
-        user_source_token,
-        user_destination_token,
-        a_vault: ctx.accounts.pool_a_vault.to_account_info(),
-        b_vault: ctx.accounts.pool_b_vault.to_account_info(),
-        a_token_vault: ctx.accounts.pool_a_token_vault.to_account_info(),
-        b_token_vault: ctx.accounts.pool_b_token_vault.to_account_info(),
-        a_vault_lp_mint: ctx.accounts.pool_a_vault_lp_mint.to_account_info(),
-        b_vault_lp_mint: ctx.accounts.pool_b_vault_lp_mint.to_account_info(),
-        a_vault_lp: ctx.accounts.pool_a_vault_lp.to_account_info(),
-        b_vault_lp: ctx.accounts.pool_b_vault_lp.to_account_info(),
-        protocol_token_fee: ctx.accounts.protocol_token_fee.to_account_info(),
-        user: ctx.accounts.vault.to_account_info(),
-        vault_program: ctx.accounts.vault_program.to_account_info(),
-        token_program: ctx.accounts.token_program.to_account_info(),
+        input_token_account,
+        output_token_account,
+        token_a_vault: ctx.accounts.token_a_vault.to_account_info(),
+        token_b_vault: ctx.accounts.token_b_vault.to_account_info(),
+        token_a_mint: ctx.accounts.token_a_mint.to_account_info(),
+        token_b_mint: ctx.accounts.token_b_mint.to_account_info(),
+        payer: ctx.accounts.vault.to_account_info(),
+        token_a_program: ctx.accounts.token_a_program.to_account_info(),
+        token_b_program: ctx.accounts.token_b_program.to_account_info(),
+        referral_token_account: ctx.accounts.referral_token_account
+            .as_ref()
+            .map(|a| a.to_account_info()),
+        event_authority: ctx.accounts.event_authority.to_account_info(),
+        program: ctx.accounts.cp_amm_program.to_account_info(),
     };
 
     let cpi_ctx = CpiContext::new_with_signer(
-        ctx.accounts.dynamic_amm_program.to_account_info(),
+        ctx.accounts.cp_amm_program.to_account_info(),
         swap_accounts,
         signer_seeds,
     );
@@ -330,7 +308,12 @@ pub fn handler_damm_v2(ctx: Context<LiquidateDammV2>, min_amount_out: u64) -> Re
     // Get base_vault balance before swap
     let base_before = ctx.accounts.base_vault.amount;
     
-    dynamic_amm::cpi::swap(cpi_ctx, collateral_amount, min_amount_out)?;
+    // CP-AMM swap takes SwapParameters struct
+    let swap_params = cp_amm::types::SwapParameters {
+        amount_in: collateral_amount,
+        minimum_amount_out: min_amount_out,
+    };
+    cp_amm::cpi::swap(cpi_ctx, swap_params)?;
 
     // Reload to get new balance
     ctx.accounts.base_vault.reload()?;

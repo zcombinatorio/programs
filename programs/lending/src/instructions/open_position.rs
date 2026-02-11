@@ -74,18 +74,9 @@ pub struct OpenPosition<'info> {
     )]
     pub user_base_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// Pool for price oracle (Dynamic AMM or DLMM)
+    /// Pool for price oracle (CP-AMM or DLMM)
     /// CHECK: Validated against vault.pool
     pub pool: UncheckedAccount<'info>,
-
-    // === Dynamic AMM specific accounts (optional, for price reading) ===
-    /// Pool's A vault LP token account (only for Dynamic AMM)
-    /// CHECK: Validated in handler if pool_type is DammV2
-    pub pool_a_vault_lp: Option<UncheckedAccount<'info>>,
-    
-    /// Pool's B vault LP token account (only for Dynamic AMM)
-    /// CHECK: Validated in handler if pool_type is DammV2
-    pub pool_b_vault_lp: Option<UncheckedAccount<'info>>,
 
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -114,25 +105,15 @@ pub fn handler(
 
     // Get price from pool based on pool type
     let (base_price, is_base_token_a) = match vault.pool_type {
-        PoolType::DammV2 => {
-            // Dynamic AMM requires vault LP accounts for price
-            let a_vault_lp = ctx.accounts.pool_a_vault_lp.as_ref()
-                .ok_or(ErrorCode::InvalidPool)?;
-            let b_vault_lp = ctx.accounts.pool_b_vault_lp.as_ref()
-                .ok_or(ErrorCode::InvalidPool)?;
-            
-            // Validate pool mints and get order
-            let is_a_base = oracle::validate_dynamic_amm_pool_mints(
+        PoolType::CpAmm => {
+            // CP-AMM uses sqrtPrice stored in pool state
+            let is_a_base = oracle::validate_cp_amm_pool_mints(
                 &ctx.accounts.pool.to_account_info(),
                 &vault.base_mint,
                 &vault.quote_mint,
             )?;
             
-            let price = oracle::get_dynamic_amm_price(
-                &ctx.accounts.pool.to_account_info(),
-                &a_vault_lp.to_account_info(),
-                &b_vault_lp.to_account_info(),
-            )?;
+            let price = oracle::get_cp_amm_price(&ctx.accounts.pool.to_account_info())?;
             
             (price, is_a_base)
         }

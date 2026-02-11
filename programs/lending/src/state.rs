@@ -69,8 +69,8 @@ pub struct LendingVault {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace)]
 pub enum PoolType {
-    DammV2,
-    Dlmm,
+    CpAmm,  // CP-AMM (DAMM v2) - uses sqrtPrice
+    Dlmm,   // DLMM - concentrated liquidity bins
 }
 
 // ============================================================================

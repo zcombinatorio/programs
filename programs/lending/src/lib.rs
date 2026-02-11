@@ -76,13 +76,13 @@ pub mod lending {
         instructions::repay::handler(ctx)
     }
 
-    /// Liquidate a position using Dynamic AMM (DAMM v2) swap
+    /// Liquidate a position using CP-AMM (DAMM v2) swap
     /// Permissionless - anyone can call this
     /// 
     /// # Arguments
     /// * `min_amount_out` - Minimum base tokens expected from swap (slippage protection)
-    pub fn liquidate_damm_v2(ctx: Context<LiquidateDammV2>, min_amount_out: u64) -> Result<()> {
-        instructions::liquidate::handler_damm_v2(ctx, min_amount_out)
+    pub fn liquidate_cp_amm(ctx: Context<LiquidateCpAmm>, min_amount_out: u64) -> Result<()> {
+        instructions::liquidate::handler_cp_amm(ctx, min_amount_out)
     }
 
     /// Liquidate a position using DLMM swap
