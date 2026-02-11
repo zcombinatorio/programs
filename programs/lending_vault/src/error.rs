@@ -59,4 +59,7 @@ pub enum ErrorCode {
     
     #[msg("Pool mints do not match vault mints")]
     PoolMintMismatch,
+    
+    #[msg("Invalid oracle price (zero or overflow)")]
+    InvalidOraclePrice,
 }
