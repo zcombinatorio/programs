@@ -7,13 +7,13 @@
 import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { PoolType } from "./types";
+import { PoolType, Lending } from "./types";
 
 /**
  * Initialize a new lending vault
  */
 export function initializeVault(
-  program: Program,
+  program: Program<Lending>,
   admin: PublicKey,
   baseMint: PublicKey,
   quoteMint: PublicKey,
@@ -54,7 +54,7 @@ export function initializeVault(
  * Add liquidity to the vault
  */
 export function addLiquidity(
-  program: Program,
+  program: Program<Lending>,
   admin: PublicKey,
   vaultPda: PublicKey,
   baseMint: PublicKey,
@@ -76,7 +76,7 @@ export function addLiquidity(
  * Remove liquidity from the vault
  */
 export function removeLiquidity(
-  program: Program,
+  program: Program<Lending>,
   admin: PublicKey,
   vaultPda: PublicKey,
   baseMint: PublicKey,
@@ -98,7 +98,7 @@ export function removeLiquidity(
  * Open a borrowing position
  */
 export function openPosition(
-  program: Program,
+  program: Program<Lending>,
   user: PublicKey,
   vaultPda: PublicKey,
   positionPda: PublicKey,
@@ -134,7 +134,7 @@ export function openPosition(
  * Repay a position
  */
 export function repay(
-  program: Program,
+  program: Program<Lending>,
   user: PublicKey,
   vaultPda: PublicKey,
   positionPda: PublicKey,

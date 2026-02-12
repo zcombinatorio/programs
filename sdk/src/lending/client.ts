@@ -3,7 +3,9 @@
  * Handles account derivation, instruction building, and transaction composition.
  */
 
-import { Program, AnchorProvider, BN, Idl } from "@coral-xyz/anchor";
+import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
+import { Lending } from "../generated/types";
+import { LendingIDL } from "../generated/idls";
 import {
   PublicKey,
   ComputeBudgetProgram,
@@ -54,18 +56,17 @@ import {
 const DEFAULT_COMPUTE_UNITS = 400_000;
 
 export class LendingClient {
-  public program: Program;
+  public program: Program<Lending>;
   public programId: PublicKey;
   private defaultComputeUnits: number;
 
   constructor(
     provider: AnchorProvider,
-    idl: Idl,
     programId?: PublicKey,
     computeUnits?: number
   ) {
     this.programId = programId ?? PROGRAM_ID;
-    this.program = new Program(idl, provider);
+    this.program = new Program(LendingIDL as Lending, provider);
     this.defaultComputeUnits = computeUnits ?? DEFAULT_COMPUTE_UNITS;
   }
 
@@ -98,13 +99,11 @@ export class LendingClient {
    * ========================================================================== */
 
   async fetchVault(vaultPda: PublicKey): Promise<LendingVaultAccount> {
-    // @ts-ignore - Account type available after IDL generation
-    return this.program.account.lendingVault.fetch(vaultPda) as Promise<LendingVaultAccount>;
+    return this.program.account.lendingVault.fetch(vaultPda) as unknown as Promise<LendingVaultAccount>;
   }
 
   async fetchPosition(positionPda: PublicKey): Promise<PositionAccount> {
-    // @ts-ignore - Account type available after IDL generation
-    return this.program.account.position.fetch(positionPda) as Promise<PositionAccount>;
+    return this.program.account.position.fetch(positionPda) as unknown as Promise<PositionAccount>;
   }
 
   async fetchPositionOrNull(positionPda: PublicKey): Promise<PositionAccount | null> {

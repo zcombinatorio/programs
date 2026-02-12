@@ -1,0 +1,1676 @@
+{
+  "address": "LEND7YMJZSudGFhVmx1xJCAahk8Vv62RQ9p4QkyeBH8",
+  "metadata": {
+    "name": "lending",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Lending program for Z Combinator"
+  },
+  "instructions": [
+    {
+      "name": "add_liquidity",
+      "docs": [
+        "Add base token liquidity to the vault (admin only)",
+        "",
+        "# Arguments",
+        "* `amount` - Amount of base tokens to deposit"
+      ],
+      "discriminator": [
+        181,
+        157,
+        89,
+        67,
+        143,
+        182,
+        52,
+        72
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "base_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "base_vault",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "admin_base_ata",
+          "docs": [
+            "Admin's base token account to transfer from"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_vault",
+      "docs": [
+        "Initialize a new lending vault",
+        "",
+        "# Arguments",
+        "* `nonce` - Unique identifier for this vault (allows multiple vaults per mint pair)",
+        "* `ltv_bps` - Loan-to-value ratio in basis points (e.g., 5000 = 50%)",
+        "* `liquidation_threshold_bps` - Threshold for health-based liquidation (e.g., 8000 = 80%)",
+        "* `loan_duration_seconds` - Time before position becomes liquidatable",
+        "* `pool_type` - Type of AMM pool (DammV2 or Dlmm)"
+      ],
+      "discriminator": [
+        48,
+        191,
+        163,
+        44,
+        71,
+        129,
+        63,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "base_mint",
+          "docs": [
+            "Base mint (what users borrow)"
+          ]
+        },
+        {
+          "name": "quote_mint",
+          "docs": [
+            "Quote mint (what users deposit as collateral)"
+          ]
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "AMM pool for price oracle and liquidation swaps"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "base_mint"
+              },
+              {
+                "kind": "account",
+                "path": "quote_mint"
+              },
+              {
+                "kind": "arg",
+                "path": "nonce"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  98,
+                  97,
+                  115,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "quote_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  113,
+                  117,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "nonce",
+          "type": "u16"
+        },
+        {
+          "name": "ltv_bps",
+          "type": "u16"
+        },
+        {
+          "name": "liquidation_threshold_bps",
+          "type": "u16"
+        },
+        {
+          "name": "loan_duration_seconds",
+          "type": "u64"
+        },
+        {
+          "name": "pool_type",
+          "type": {
+            "defined": {
+              "name": "PoolType"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "liquidate_cp_amm",
+      "docs": [
+        "Liquidate a position using CP-AMM (DAMM v2) swap",
+        "Permissionless - anyone can call this",
+        "",
+        "# Arguments",
+        "* `min_amount_out` - Minimum base tokens expected from swap (slippage protection)"
+      ],
+      "discriminator": [
+        142,
+        73,
+        156,
+        75,
+        22,
+        254,
+        98,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "liquidator",
+          "docs": [
+            "Anyone can liquidate (permissionless)"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user",
+          "docs": [
+            "The user who owns the position (receives rent refund)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "position"
+          ]
+        },
+        {
+          "name": "position",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              },
+              {
+                "kind": "account",
+                "path": "position.user",
+                "account": "Position"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "quote_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "base_vault",
+          "docs": [
+            "Vault's base token account (receives swapped base)"
+          ],
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "quote_vault",
+          "docs": [
+            "Vault's quote token account (source of collateral for swap)"
+          ],
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "pool_authority",
+          "address": "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC"
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "token_a_vault",
+          "writable": true
+        },
+        {
+          "name": "token_b_vault",
+          "writable": true
+        },
+        {
+          "name": "token_a_mint"
+        },
+        {
+          "name": "token_b_mint"
+        },
+        {
+          "name": "token_a_program"
+        },
+        {
+          "name": "token_b_program"
+        },
+        {
+          "name": "referral_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "cp_amm_program",
+          "address": "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "min_amount_out",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "liquidate_dlmm",
+      "docs": [
+        "Liquidate a position using DLMM swap",
+        "Permissionless - anyone can call this",
+        "Bin arrays must be passed as remaining accounts",
+        "",
+        "# Arguments",
+        "* `min_amount_out` - Minimum base tokens expected from swap (slippage protection)"
+      ],
+      "discriminator": [
+        164,
+        177,
+        172,
+        201,
+        53,
+        22,
+        184,
+        98
+      ],
+      "accounts": [
+        {
+          "name": "liquidator",
+          "docs": [
+            "Anyone can liquidate (permissionless)"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user",
+          "docs": [
+            "The user who owns the position (receives rent refund)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "position"
+          ]
+        },
+        {
+          "name": "position",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              },
+              {
+                "kind": "account",
+                "path": "position.user",
+                "account": "Position"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "quote_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "base_vault",
+          "docs": [
+            "Vault's base token account (receives swapped base)"
+          ],
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "quote_vault",
+          "docs": [
+            "Vault's quote token account (source of collateral for swap)"
+          ],
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "lb_pair",
+          "writable": true
+        },
+        {
+          "name": "bin_array_bitmap_extension",
+          "optional": true
+        },
+        {
+          "name": "reserve_x",
+          "writable": true
+        },
+        {
+          "name": "reserve_y",
+          "writable": true
+        },
+        {
+          "name": "token_x_mint"
+        },
+        {
+          "name": "token_y_mint"
+        },
+        {
+          "name": "oracle",
+          "writable": true
+        },
+        {
+          "name": "host_fee_in",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "dlmm_program",
+          "address": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "token_x_program"
+        },
+        {
+          "name": "token_y_program"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "min_amount_out",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "open_position",
+      "docs": [
+        "Open a new borrowing position",
+        "User deposits quote tokens as collateral and borrows base tokens",
+        "",
+        "# Arguments",
+        "* `collateral_amount` - Amount of quote tokens to deposit as collateral",
+        "* `borrow_amount` - Amount of base tokens to borrow"
+      ],
+      "discriminator": [
+        135,
+        128,
+        47,
+        77,
+        15,
+        152,
+        240,
+        49
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "position",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "quote_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "base_vault",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "quote_vault",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "user_quote_ata",
+          "docs": [
+            "User's quote token account (collateral source)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_base_ata",
+          "docs": [
+            "User's base token account (borrow destination)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "Pool for price oracle (CP-AMM or DLMM)"
+          ],
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "collateral_amount",
+          "type": "u64"
+        },
+        {
+          "name": "borrow_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "remove_liquidity",
+      "docs": [
+        "Remove base token liquidity from the vault (admin only)",
+        "Can only remove liquidity that isn't currently borrowed",
+        "",
+        "# Arguments",
+        "* `amount` - Amount of base tokens to withdraw"
+      ],
+      "discriminator": [
+        80,
+        85,
+        209,
+        72,
+        24,
+        206,
+        177,
+        108
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "base_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "base_vault",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "admin_base_ata",
+          "docs": [
+            "Admin's base token account to receive tokens"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "repay",
+      "docs": [
+        "Repay a borrowing position",
+        "User returns borrowed base tokens and receives collateral back",
+        "Position is closed and account rent is returned"
+      ],
+      "discriminator": [
+        234,
+        103,
+        67,
+        82,
+        208,
+        234,
+        219,
+        166
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "position"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "position"
+          ]
+        },
+        {
+          "name": "position",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "quote_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "base_vault",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "quote_vault",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "user_base_ata",
+          "docs": [
+            "User's base token account (repayment source)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_quote_ata",
+          "docs": [
+            "User's quote token account (collateral destination)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "LendingVault",
+      "discriminator": [
+        0,
+        74,
+        47,
+        254,
+        64,
+        13,
+        66,
+        21
+      ]
+    },
+    {
+      "name": "Position",
+      "discriminator": [
+        170,
+        188,
+        143,
+        228,
+        122,
+        64,
+        247,
+        208
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "LiquidityAdded",
+      "discriminator": [
+        154,
+        26,
+        221,
+        108,
+        238,
+        64,
+        217,
+        161
+      ]
+    },
+    {
+      "name": "LiquidityRemoved",
+      "discriminator": [
+        225,
+        105,
+        216,
+        39,
+        124,
+        116,
+        169,
+        189
+      ]
+    },
+    {
+      "name": "PositionClosed",
+      "discriminator": [
+        157,
+        163,
+        227,
+        228,
+        13,
+        97,
+        138,
+        121
+      ]
+    },
+    {
+      "name": "PositionLiquidated",
+      "discriminator": [
+        40,
+        107,
+        90,
+        214,
+        96,
+        30,
+        61,
+        128
+      ]
+    },
+    {
+      "name": "PositionOpened",
+      "discriminator": [
+        237,
+        175,
+        243,
+        230,
+        147,
+        117,
+        101,
+        121
+      ]
+    },
+    {
+      "name": "VaultInitialized",
+      "discriminator": [
+        180,
+        43,
+        207,
+        2,
+        18,
+        71,
+        3,
+        75
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "MathOverflow"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidFee"
+    },
+    {
+      "code": 6002,
+      "name": "ExceededSlippage"
+    },
+    {
+      "code": 6003,
+      "name": "PoolDisabled"
+    },
+    {
+      "code": 6004,
+      "name": "ExceedMaxFeeBps"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidAdmin"
+    },
+    {
+      "code": 6006,
+      "name": "AmountIsZero"
+    },
+    {
+      "code": 6007,
+      "name": "TypeCastFailed"
+    },
+    {
+      "code": 6008,
+      "name": "UnableToModifyActivationPoint"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidAuthorityToCreateThePool"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidActivationType"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidActivationPoint"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidQuoteMint"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidFeeCurve"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidPriceRange"
+    },
+    {
+      "code": 6015,
+      "name": "PriceRangeViolation"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidParameters"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidCollectFeeMode"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidInput"
+    },
+    {
+      "code": 6019,
+      "name": "CannotCreateTokenBadgeOnSupportedMint"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidTokenBadge"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidMinimumLiquidity"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidVestingInfo"
+    },
+    {
+      "code": 6023,
+      "name": "InsufficientLiquidity"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidVestingAccount"
+    },
+    {
+      "code": 6025,
+      "name": "InvalidPoolStatus"
+    },
+    {
+      "code": 6026,
+      "name": "UnsupportNativeMintToken2022"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidRewardIndex"
+    },
+    {
+      "code": 6028,
+      "name": "InvalidRewardDuration"
+    },
+    {
+      "code": 6029,
+      "name": "RewardInitialized"
+    },
+    {
+      "code": 6030,
+      "name": "RewardUninitialized"
+    },
+    {
+      "code": 6031,
+      "name": "InvalidRewardVault"
+    },
+    {
+      "code": 6032,
+      "name": "MustWithdrawnIneligibleReward"
+    },
+    {
+      "code": 6033,
+      "name": "IdenticalRewardDuration"
+    },
+    {
+      "code": 6034,
+      "name": "RewardCampaignInProgress"
+    },
+    {
+      "code": 6035,
+      "name": "IdenticalFunder"
+    },
+    {
+      "code": 6036,
+      "name": "InvalidFunder"
+    },
+    {
+      "code": 6037,
+      "name": "RewardNotEnded"
+    },
+    {
+      "code": 6038,
+      "name": "FeeInverseIsIncorrect"
+    },
+    {
+      "code": 6039,
+      "name": "PositionIsNotEmpty"
+    },
+    {
+      "code": 6040,
+      "name": "InvalidPoolCreatorAuthority"
+    },
+    {
+      "code": 6041,
+      "name": "InvalidConfigType"
+    },
+    {
+      "code": 6042,
+      "name": "InvalidPoolCreator"
+    },
+    {
+      "code": 6043,
+      "name": "RewardVaultFrozenSkipRequired"
+    },
+    {
+      "code": 6044,
+      "name": "InvalidSplitPositionParameters"
+    },
+    {
+      "code": 6045,
+      "name": "UnsupportPositionHasVestingLock"
+    },
+    {
+      "code": 6046,
+      "name": "SamePosition"
+    },
+    {
+      "code": 6047,
+      "name": "InvalidBaseFeeMode"
+    },
+    {
+      "code": 6048,
+      "name": "InvalidFeeRateLimiter"
+    },
+    {
+      "code": 6049,
+      "name": "FailToValidateSingleSwapInstruction"
+    },
+    {
+      "code": 6050,
+      "name": "InvalidFeeTimeScheduler"
+    },
+    {
+      "code": 6051,
+      "name": "UndeterminedError"
+    },
+    {
+      "code": 6052,
+      "name": "InvalidPoolVersion"
+    },
+    {
+      "code": 6053,
+      "name": "InvalidAuthority"
+    },
+    {
+      "code": 6054,
+      "name": "InvalidPermission"
+    },
+    {
+      "code": 6055,
+      "name": "InvalidFeeMarketCapScheduler"
+    },
+    {
+      "code": 6056,
+      "name": "CannotUpdateBaseFee"
+    },
+    {
+      "code": 6057,
+      "name": "InvalidDynamicFeeParameters"
+    },
+    {
+      "code": 6058,
+      "name": "InvalidUpdatePoolFeesParameters"
+    },
+    {
+      "code": 6059,
+      "name": "MissingOperatorAccount"
+    },
+    {
+      "code": 6060,
+      "name": "IncorrectATA"
+    },
+    {
+      "code": 6061,
+      "name": "InvalidZapOutParameters"
+    },
+    {
+      "code": 6062,
+      "name": "InvalidWithdrawProtocolFeeZapAccounts"
+    },
+    {
+      "code": 6063,
+      "name": "MintRestrictedFromZap"
+    },
+    {
+      "code": 6064,
+      "name": "CpiDisabled"
+    },
+    {
+      "code": 6065,
+      "name": "MissingZapOutInstruction"
+    },
+    {
+      "code": 6066,
+      "name": "InvalidZapAccounts"
+    }
+  ],
+  "types": [
+    {
+      "name": "LendingVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "docs": [
+              "Bump for PDA derivation"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "nonce",
+            "docs": [
+              "Nonce for multiple vaults"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "admin",
+            "docs": [
+              "Admin who can manage the vault"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "base_mint",
+            "docs": [
+              "Base mint (what users borrow)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
+            "docs": [
+              "Quote mint (what users deposit as collateral)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "base_vault",
+            "docs": [
+              "Vault-owned ATA for base tokens (liquidity pool)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_vault",
+            "docs": [
+              "Vault-owned ATA for quote tokens (collateral storage)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "AMM pool address (DAMM v2 or DLMM) - must be base/quote pair"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pool_type",
+            "docs": [
+              "Pool type for CPI routing"
+            ],
+            "type": {
+              "defined": {
+                "name": "PoolType"
+              }
+            }
+          },
+          {
+            "name": "is_pool_base_token_a",
+            "docs": [
+              "True if pool's token A/X is the vault's base mint (false = need to invert price)"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "ltv_bps",
+            "docs": [
+              "Loan-to-Value ratio in basis points (max borrow ratio at entry)",
+              "e.g., 5000 = 50% = can borrow up to 50% of collateral value"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "liquidation_threshold_bps",
+            "docs": [
+              "Liquidation threshold in basis points",
+              "e.g., 8000 = 80% = liquidatable when loan/collateral >= 80%"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "loan_duration_seconds",
+            "docs": [
+              "Loan duration in seconds (time-based liquidation)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_base_liquidity",
+            "docs": [
+              "Total base tokens available for borrowing"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_base_borrowed",
+            "docs": [
+              "Total base tokens currently borrowed"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_quote_collateral",
+            "docs": [
+              "Total quote tokens held as collateral"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "open_positions",
+            "docs": [
+              "Number of open positions"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiquidationReason",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Expired"
+          },
+          {
+            "name": "Undercollateralized"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiquidityAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_liquidity",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiquidityRemoved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_liquidity",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "CpAmm"
+          },
+          {
+            "name": "Dlmm"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Position",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "docs": [
+              "Bump for PDA derivation"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "vault",
+            "docs": [
+              "The vault this position belongs to"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "docs": [
+              "The user who owns this position"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "collateral_amount",
+            "docs": [
+              "Amount of quote tokens deposited as collateral"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "borrowed_amount",
+            "docs": [
+              "Amount of base tokens borrowed"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "opened_at",
+            "docs": [
+              "When the position was opened"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PositionClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "position",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "collateral_returned",
+            "type": "u64"
+          },
+          {
+            "name": "base_repaid",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PositionLiquidated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "position",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "liquidator",
+            "type": "pubkey"
+          },
+          {
+            "name": "collateral_amount",
+            "type": "u64"
+          },
+          {
+            "name": "borrowed_amount",
+            "type": "u64"
+          },
+          {
+            "name": "base_recovered",
+            "type": "u64"
+          },
+          {
+            "name": "base_price",
+            "type": "u64"
+          },
+          {
+            "name": "liquidation_reason",
+            "type": {
+              "defined": {
+                "name": "LiquidationReason"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PositionOpened",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "position",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "collateral_amount",
+            "type": "u64"
+          },
+          {
+            "name": "borrowed_amount",
+            "type": "u64"
+          },
+          {
+            "name": "base_price",
+            "type": "u64"
+          },
+          {
+            "name": "opened_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "ltv_bps",
+            "type": "u16"
+          },
+          {
+            "name": "liquidation_threshold_bps",
+            "type": "u16"
+          },
+          {
+            "name": "loan_duration_seconds",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "POSITION_SEED",
+      "type": "bytes",
+      "value": "[112, 111, 115, 105, 116, 105, 111, 110]"
+    },
+    {
+      "name": "VAULT_BASE_ATA_SEED",
+      "type": "bytes",
+      "value": "[118, 97, 117, 108, 116, 95, 98, 97, 115, 101]"
+    },
+    {
+      "name": "VAULT_QUOTE_ATA_SEED",
+      "type": "bytes",
+      "value": "[118, 97, 117, 108, 116, 95, 113, 117, 111, 116, 101]"
+    },
+    {
+      "name": "VAULT_SEED",
+      "type": "bytes",
+      "value": "[118, 97, 117, 108, 116]"
+    }
+  ]
+}

@@ -1,11 +1,20 @@
 /*
  * Type definitions for the Lending program.
- * Manually defined to match Rust structures until IDL is generated.
+ * Exports IDL-derived types and SDK-friendly enums.
  */
 
 import { PublicKey } from "@solana/web3.js";
-import { BN } from "@coral-xyz/anchor";
+import { BN, IdlAccounts, IdlEvents, IdlTypes } from "@coral-xyz/anchor";
 import { TxOptions } from "../utils";
+
+export { Lending } from "../generated/types";
+import type { Lending } from "../generated/types";
+
+/* IDL-derived Types */
+
+export type LendingVaultAccountRaw = IdlAccounts<Lending>["lendingVault"];
+export type PositionAccountRaw = IdlAccounts<Lending>["position"];
+export type PoolTypeRaw = IdlTypes<Lending>["poolType"];
 
 /* Pool Type Enum */
 
