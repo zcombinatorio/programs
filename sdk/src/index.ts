@@ -153,11 +153,55 @@ export {
   SECONDS_PER_DAY,
 } from "./svault";
 
+/* Lending Sub-SDK */
+
+export {
+  // Client
+  LendingClient,
+  // Types
+  PoolType as LendingPoolType,
+  LendingVaultAccount,
+  PositionAccount,
+  VaultInitializedEvent as LendingVaultInitializedEvent,
+  LiquidityAddedEvent as LendingLiquidityAddedEvent,
+  LiquidityRemovedEvent as LendingLiquidityRemovedEvent,
+  PositionOpenedEvent,
+  PositionRepaidEvent,
+  PositionLiquidatedEvent,
+  LiquidationReason,
+  LendingEvent,
+  LendingTxOptions,
+  // Utils
+  deriveVaultPDA as deriveLendingVaultPDA,
+  deriveBaseVaultPDA,
+  deriveQuoteVaultPDA,
+  derivePositionPDA,
+  calculateHealthBps,
+  calculateHealthThreshold,
+  isUndercollateralized,
+  isExpired as isPositionExpired,
+  isLiquidatable,
+  calculateMaxBorrow,
+  calculateCurrentLtvBps,
+  getTimeRemaining as getLoanTimeRemaining,
+  getAvailableLiquidity,
+  getUtilizationBps,
+  // Constants
+  PROGRAM_ID as LENDING_PROGRAM_ID,
+  VAULT_SEED as LENDING_VAULT_SEED,
+  VAULT_BASE_ATA_SEED,
+  VAULT_QUOTE_ATA_SEED,
+  POSITION_SEED,
+  PRICE_SCALE as LENDING_PRICE_SCALE,
+  BASIS_POINTS_DIVISOR,
+} from "./lending";
+
 /* Sub-SDK Namespaces */
 
 import * as vault from "./vault";
 import * as amm from "./amm";
 import * as futarchy from "./futarchy";
 import * as svault from "./svault";
+import * as lending from "./lending";
 
-export { vault, amm, futarchy, svault };
+export { vault, amm, futarchy, svault, lending };
