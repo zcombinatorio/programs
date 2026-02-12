@@ -90,15 +90,16 @@ Liquidate unhealthy positions. Anyone can call this (permissionless).
 
 | Parameter | Typical Value | Purpose |
 |-----------|---------------|---------|
-| LTV | 75-80% | Safety buffer at entry |
-| Liquidation Threshold | 80-85% | When liquidation triggers |
-| Gap (Threshold - LTV) | 5%+ | Buffer for price movement |
+| LTV | 75-80% | Max borrow ratio at entry |
+| Liquidation Threshold | 85-90% | When liquidation triggers |
 | Loan Duration | 1-30 days | Time-based backstop |
 
 **Example:**
 - LTV: 80% — User deposits $100 SOL, can borrow up to $80 USDC
-- Liquidation: 85% — If SOL drops and debt hits 85% of collateral, position is liquidatable
+- Liquidation: 90% — If SOL drops and debt reaches 90% of collateral value, position is liquidatable
 - Duration: 7 days — Even if healthy, loan becomes liquidatable after 7 days
+
+> ⚠️ LTV must always be less than Liquidation Threshold — this gap gives borrowers a buffer before liquidation.
 
 ## Price Oracle
 
