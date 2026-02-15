@@ -5,11 +5,20 @@
 
 use anchor_lang::prelude::*;
 use ethnum::U256;
-use crate::cpi::{cp_amm, dlmm};
+use crate::cpi::cp_amm;
 use crate::error::ErrorCode;
 
 /// Price scale factor (1e12 for precision)
 pub const PRICE_SCALE: u64 = 1_000_000_000_000; // 1e12
+
+// =============================================================================
+// DLMM LbPair byte offsets (avoids full deserialization to prevent stack overflow)
+// Layout: 8 disc + 32 StaticParams + 32 VarParams + 1 bump + 2 bin_step_seed + 1 pair_type
+// =============================================================================
+const DLMM_ACTIVE_ID_OFFSET: usize = 76;      // i32
+const DLMM_BIN_STEP_OFFSET: usize = 80;       // u16
+const DLMM_TOKEN_X_MINT_OFFSET: usize = 88;   // Pubkey (32 bytes)
+const DLMM_TOKEN_Y_MINT_OFFSET: usize = 120;  // Pubkey (32 bytes)
 
 /// Get price from a CP-AMM (DAMM v2) pool
 /// 
@@ -69,15 +78,25 @@ pub fn get_cp_amm_price(
 /// This gives the lamport-denominated price directly.
 /// 
 /// Returns: Y lamports per X lamport, scaled by PRICE_SCALE
+/// 
+/// Note: Uses direct byte reads to avoid stack overflow from full LbPair deserialization
 pub fn get_dlmm_price(
     lb_pair_account: &AccountInfo,
     is_x_base: bool,
 ) -> Result<u64> {
-    let pair_data = lb_pair_account.try_borrow_data()?;
-    let lb_pair = dlmm::accounts::LbPair::try_deserialize(&mut &pair_data[..])?;
+    let data = lb_pair_account.try_borrow_data()?;
     
-    let active_id = lb_pair.active_id;
-    let bin_step = lb_pair.bin_step;
+    // Read active_id (i32) and bin_step (u16) directly from byte offsets
+    let active_id = i32::from_le_bytes(
+        data[DLMM_ACTIVE_ID_OFFSET..DLMM_ACTIVE_ID_OFFSET + 4]
+            .try_into()
+            .map_err(|_| ErrorCode::InvalidOraclePrice)?
+    );
+    let bin_step = u16::from_le_bytes(
+        data[DLMM_BIN_STEP_OFFSET..DLMM_BIN_STEP_OFFSET + 2]
+            .try_into()
+            .map_err(|_| ErrorCode::InvalidOraclePrice)?
+    );
     
     // Calculate (1 + binStep/10000)^activeId * PRICE_SCALE
     let price_scaled = calculate_dlmm_bin_price(active_id, bin_step)?;
@@ -165,17 +184,26 @@ pub fn validate_cp_amm_pool_mints(
 
 /// Validate that DLMM pool mints match vault mints
 /// Returns: true if pool's token X is the base mint
+/// 
+/// Note: Uses direct byte reads to avoid stack overflow from full LbPair deserialization
 pub fn validate_dlmm_pool_mints(
     lb_pair_account: &AccountInfo,
     expected_base: &Pubkey,
     expected_quote: &Pubkey,
 ) -> Result<bool> {
-    let pair_data = lb_pair_account.try_borrow_data()?;
-    let lb_pair = dlmm::accounts::LbPair::try_deserialize(&mut &pair_data[..])?;
+    let data = lb_pair_account.try_borrow_data()?;
     
-    if lb_pair.token_x_mint == *expected_base && lb_pair.token_y_mint == *expected_quote {
+    // Read token_x_mint and token_y_mint directly from byte offsets
+    let token_x_mint = Pubkey::try_from(
+        &data[DLMM_TOKEN_X_MINT_OFFSET..DLMM_TOKEN_X_MINT_OFFSET + 32]
+    ).map_err(|_| ErrorCode::InvalidOraclePrice)?;
+    let token_y_mint = Pubkey::try_from(
+        &data[DLMM_TOKEN_Y_MINT_OFFSET..DLMM_TOKEN_Y_MINT_OFFSET + 32]
+    ).map_err(|_| ErrorCode::InvalidOraclePrice)?;
+    
+    if token_x_mint == *expected_base && token_y_mint == *expected_quote {
         Ok(true) // X is base, Y is quote
-    } else if lb_pair.token_x_mint == *expected_quote && lb_pair.token_y_mint == *expected_base {
+    } else if token_x_mint == *expected_quote && token_y_mint == *expected_base {
         Ok(false) // X is quote, Y is base
     } else {
         Err(ErrorCode::PoolMintMismatch.into())
