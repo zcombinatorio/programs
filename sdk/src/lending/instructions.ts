@@ -10,6 +10,20 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { PoolType, Lending } from "./types";
 
 /**
+ * Helper to convert pool type to Anchor IDL format.
+ * Handles both numeric enum (PoolType.CpAmm) and raw format ({ cpAmm: {} }).
+ */
+function toPoolTypeArg(poolType: PoolType | { cpAmm?: {}; dlmm?: {} }): { cpAmm: {} } | { dlmm: {} } {
+  // Handle raw Anchor format
+  if (typeof poolType === 'object' && poolType !== null) {
+    if ('cpAmm' in poolType) return { cpAmm: {} };
+    if ('dlmm' in poolType) return { dlmm: {} };
+  }
+  // Handle numeric enum
+  return poolType === PoolType.CpAmm ? { cpAmm: {} } : { dlmm: {} };
+}
+
+/**
  * Initialize a new lending vault
  */
 export function initializeVault(
@@ -25,9 +39,9 @@ export function initializeVault(
   ltvBps: number,
   liquidationThresholdBps: number,
   loanDurationSeconds: BN,
-  poolType: PoolType
+  poolType: PoolType | { cpAmm?: {}; dlmm?: {} }
 ) {
-  const poolTypeArg = poolType === PoolType.CpAmm ? { cpAmm: {} } : { dlmm: {} };
+  const poolTypeArg = toPoolTypeArg(poolType);
 
   return program.methods
     .initializeVault(

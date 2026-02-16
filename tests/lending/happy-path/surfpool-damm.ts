@@ -20,17 +20,15 @@ import {
 import * as http from "http";
 import { CpAmm } from "@meteora-ag/cp-amm-sdk";
 
-import { LendingClient, PoolType } from "../../../sdk/src";
+import { LendingClient, LendingPoolType } from "../../../sdk/src";
 import { getTestContext, TestContext } from "../helpers/setup";
 import { DAMM_CONFIG, USDC_MINT, NATIVE_SOL_MINT } from "../helpers/mainnet-config";
 
 // CP-AMM program ID
 const CP_AMM_PROGRAM_ID = new PublicKey("cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG");
 
-// TODO: CP-AMM IDL may be out of sync with deployed program - needs IDL refresh
-// Pool account struct layout differs from expected, causing PoolMintMismatch errors
-// DLMM tests work correctly; prioritize those for now
-describe.skip("Lending: DAMM v2 (CP-AMM) Full Lifecycle", function () {
+// CP-AMM Pool struct now uses direct byte reads to avoid bytemuck alignment issues
+describe("Lending: DAMM v2 (CP-AMM) Full Lifecycle", function () {
   this.timeout(300000);
 
   let ctx: TestContext;
@@ -236,7 +234,7 @@ describe.skip("Lending: DAMM v2 (CP-AMM) Full Lifecycle", function () {
         5000,  // 50% LTV
         8000,  // 80% liquidation threshold
         new BN(86400), // 24 hour loan duration
-        { cpAmm: {} } as PoolType  // CP-AMM (DAMM v2)
+        LendingPoolType.CpAmm  // CP-AMM (DAMM v2)
       );
 
       vaultPda = vPda;
@@ -250,7 +248,7 @@ describe.skip("Lending: DAMM v2 (CP-AMM) Full Lifecycle", function () {
       const vault = await adminClient.fetchVault(vaultPda);
       expect(vault).to.exist;
       expect(vault.pool.toString()).to.equal(DAMM_CONFIG.pool.toString());
-      expect(vault.poolType).to.equal(PoolType.CpAmm);
+      expect(vault.poolType).to.deep.equal({ cpAmm: {} });
       console.log("Vault PDA:", vaultPda.toString());
       console.log("Pool Type: CP-AMM (DAMM v2)");
     });
@@ -296,7 +294,7 @@ describe.skip("Lending: DAMM v2 (CP-AMM) Full Lifecycle", function () {
 
       // Open position: collateral in SOL, borrow USDC
       const collateralAmount = new BN(wrapAmount);
-      const borrowAmount = new BN('500000000'); // 500 USDC (well under LTV, assuming ~$100/SOL)
+      const borrowAmount = new BN('200000000'); // 200 USDC (under max ~307 at current pool price)
 
       const { builder, positionPda: pPda } = await borrowerClient.openPosition(
         borrowerKeypair.publicKey,

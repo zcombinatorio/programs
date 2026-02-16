@@ -207,7 +207,7 @@ export class LendingClient {
     ltvBps: number,
     liquidationThresholdBps: number,
     loanDurationSeconds: BN | number,
-    poolType: PoolType,
+    poolType: PoolType | { cpAmm?: {}; dlmm?: {} },
     options?: LendingTxOptions
   ) {
     const { includeCuBudget = true, computeUnits } = options ?? {};
