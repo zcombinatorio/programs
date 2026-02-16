@@ -27,3 +27,6 @@ test-admin.json
 yarn.lock
 yarn-error.log
 .yarnrc*
+
+# Surfpool manifest (contains API keys)
+txtx.yml
