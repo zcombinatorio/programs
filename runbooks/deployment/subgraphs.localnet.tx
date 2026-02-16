@@ -1,0 +1,54 @@
+
+action "lending_liquidity_added" "svm::deploy_subgraph" {
+    program_id = action.deploy_lending.program_id
+    program_idl = action.deploy_lending.program_idl
+    block_height = 0 // action.deploy_lending.block_height
+    event {
+        name = "LiquidityAdded"
+    }
+}
+
+action "lending_liquidity_removed" "svm::deploy_subgraph" {
+    program_id = action.deploy_lending.program_id
+    program_idl = action.deploy_lending.program_idl
+    block_height = 0 // action.deploy_lending.block_height
+    event {
+        name = "LiquidityRemoved"
+    }
+}
+
+action "lending_position_closed" "svm::deploy_subgraph" {
+    program_id = action.deploy_lending.program_id
+    program_idl = action.deploy_lending.program_idl
+    block_height = 0 // action.deploy_lending.block_height
+    event {
+        name = "PositionClosed"
+    }
+}
+
+action "lending_position_liquidated" "svm::deploy_subgraph" {
+    program_id = action.deploy_lending.program_id
+    program_idl = action.deploy_lending.program_idl
+    block_height = 0 // action.deploy_lending.block_height
+    event {
+        name = "PositionLiquidated"
+    }
+}
+
+action "lending_position_opened" "svm::deploy_subgraph" {
+    program_id = action.deploy_lending.program_id
+    program_idl = action.deploy_lending.program_idl
+    block_height = 0 // action.deploy_lending.block_height
+    event {
+        name = "PositionOpened"
+    }
+}
+
+action "lending_vault_initialized" "svm::deploy_subgraph" {
+    program_id = action.deploy_lending.program_id
+    program_idl = action.deploy_lending.program_idl
+    block_height = 0 // action.deploy_lending.block_height
+    event {
+        name = "VaultInitialized"
+    }
+}

@@ -63,7 +63,7 @@ describe("Lending: Lifecycle", () => {
   describe("Vault Initialization", () => {
     it("should initialize a vault with valid parameters", async () => {
       // Skip if no real pool (localnet)
-      if (ctx.provider.connection.rpcEndpoint.includes("localhost")) {
+      if (ctx.provider.connection.rpcEndpoint.includes("localhost") || ctx.provider.connection.rpcEndpoint.includes("127.0.0.1")) {
         console.log("Skipping: requires Meteora pool on devnet");
         return;
       }
@@ -97,7 +97,7 @@ describe("Lending: Lifecycle", () => {
     let adminBaseAta: PublicKey;
 
     before(async () => {
-      if (ctx.provider.connection.rpcEndpoint.includes("localhost")) {
+      if (ctx.provider.connection.rpcEndpoint.includes("localhost") || ctx.provider.connection.rpcEndpoint.includes("127.0.0.1")) {
         console.log("Skipping liquidity tests: requires Meteora pool");
         return;
       }
@@ -164,7 +164,7 @@ describe("Lending: Lifecycle", () => {
     let positionPda: PublicKey;
 
     before(async () => {
-      if (ctx.provider.connection.rpcEndpoint.includes("localhost")) {
+      if (ctx.provider.connection.rpcEndpoint.includes("localhost") || ctx.provider.connection.rpcEndpoint.includes("127.0.0.1")) {
         console.log("Skipping borrow tests: requires Meteora pool");
         return;
       }

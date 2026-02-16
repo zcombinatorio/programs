@@ -1,5 +1,5 @@
 [toolchain]
-package_manager = "yarn"
+package_manager = "npm"
 
 [features]
 resolution = true
@@ -30,15 +30,15 @@ vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = ".keys/authority.json"
 
 [scripts]
 prop = "./scripts/sync-idl.sh"
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
-test-amm = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/amm/**/*.ts\""
-test-dao = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/dao/**/*.ts\""
-test-fut = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/futarchy/**/*.ts\""
-test-vault = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/vault/**/*.ts\""
-test-svault = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/svault/**/*.ts\""
-test-lending = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/lending/**/*.ts\""
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
+test-amm = "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/amm/**/*.ts\""
+test-dao = "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/dao/**/*.ts\""
+test-fut = "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/futarchy/**/*.ts\""
+test-vault = "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/vault/**/*.ts\""
+test-svault = "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/svault/**/*.ts\""
+test-lending = "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/lending/**/*.ts\""
