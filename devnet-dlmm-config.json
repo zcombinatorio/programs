@@ -1,0 +1,11 @@
+{
+  "pool": "4Y29TVZmviHSDC9ts4Te9LFgMDoXxacU3FSoqVQBe7J3",
+  "baseMint": "BhLDyXG1UkTDYfZ98xZjB5q9fu4UhJJGu9CcreCfMkYz",
+  "quoteMint": "5BPmUXbgFLgzpWktR7K8GZ6TpueGYLeL6AyrMZQH2zyL",
+  "binStep": 25,
+  "activeId": 0,
+  "reserveX": "HAm11iWemcQUng2TbFJ4HVPSTxXKq521ET49XbF6tsgb",
+  "reserveY": "52fAXS26iRuA2orvCZimkVsBuNSB1G1T3ZmDpKKASYcb",
+  "admin": "mns8YmqefB3aKTqCQimDvCexFoWGz787ZGtT5BegfuE",
+  "positionPubkey": "GghhZ6wQnhSKDjcX7aWadssrufRXsfzeyNRZEMC7chkg"
+}
