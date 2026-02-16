@@ -1,5 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-import { BN } from "@coral-xyz/anchor";
+import { BN } from "bn.js";
 
 // Lending program on devnet
 export const LENDING_PROGRAM_ID = new PublicKey(

@@ -159,5 +159,76 @@ export function repay(
   });
 }
 
-// Note: Liquidation instructions require many pool-specific accounts
-// and are best handled by the LendingClient which can fetch pool state
+/**
+ * Liquidate a position via DLMM swap
+ * 
+ * Requires fetching pool state to derive all accounts.
+ * binArrays should be passed as remaining accounts.
+ */
+export function liquidateDlmm(
+  program: Program<Lending>,
+  liquidator: PublicKey,
+  user: PublicKey,
+  vaultPda: PublicKey,
+  positionPda: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
+  baseVault: PublicKey,
+  quoteVault: PublicKey,
+  // DLMM pool accounts
+  lbPair: PublicKey,
+  binArrayBitmapExtension: PublicKey | null,
+  reserveX: PublicKey,
+  reserveY: PublicKey,
+  tokenXMint: PublicKey,
+  tokenYMint: PublicKey,
+  oracle: PublicKey,
+  hostFeeIn: PublicKey | null,
+  dlmmProgram: PublicKey,
+  eventAuthority: PublicKey,
+  tokenXProgram: PublicKey,
+  tokenYProgram: PublicKey,
+  // Slippage
+  minAmountOut: BN,
+  // Remaining accounts (bin arrays)
+  binArrays: PublicKey[] = []
+) {
+  const builder = program.methods
+    .liquidateDlmm(minAmountOut)
+    .accountsPartial({
+      liquidator,
+      user,
+      vault: vaultPda,
+      position: positionPda,
+      baseMint,
+      quoteMint,
+      baseVault,
+      quoteVault,
+      lbPair,
+      binArrayBitmapExtension,
+      reserveX,
+      reserveY,
+      tokenXMint,
+      tokenYMint,
+      oracle,
+      hostFeeIn,
+      dlmmProgram,
+      eventAuthority,
+      tokenXProgram,
+      tokenYProgram,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    });
+
+  // Add bin arrays as remaining accounts
+  if (binArrays.length > 0) {
+    return builder.remainingAccounts(
+      binArrays.map((pubkey) => ({
+        pubkey,
+        isSigner: false,
+        isWritable: true,
+      }))
+    );
+  }
+
+  return builder;
+}
