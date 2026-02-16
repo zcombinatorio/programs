@@ -5,11 +5,18 @@
 
 use anchor_lang::prelude::*;
 use ethnum::U256;
-use crate::cpi::cp_amm;
 use crate::error::ErrorCode;
 
 /// Price scale factor (1e12 for precision)
 pub const PRICE_SCALE: u64 = 1_000_000_000_000; // 1e12
+
+// =============================================================================
+// CP-AMM Pool byte offsets (avoids bytemuck alignment issues)
+// Layout verified on-chain: USDC at 168, SOL at 200 in USDC/SOL pool
+// =============================================================================
+const CP_AMM_TOKEN_A_MINT_OFFSET: usize = 168;  // Pubkey (32 bytes)
+const CP_AMM_TOKEN_B_MINT_OFFSET: usize = 200;  // Pubkey (32 bytes)
+const CP_AMM_SQRT_PRICE_OFFSET: usize = 456;    // u128 (16 bytes)
 
 // =============================================================================
 // DLMM LbPair byte offsets (avoids full deserialization to prevent stack overflow)
@@ -30,14 +37,20 @@ const DLMM_TOKEN_Y_MINT_OFFSET: usize = 120;  // Pubkey (32 bytes)
 /// Returns: B lamports per A lamport, scaled by PRICE_SCALE
 /// If is_a_base=true, this is quote/base (what we want)
 /// If is_a_base=false, this is base/quote (need to invert)
+/// 
+/// Note: Uses direct byte reads to avoid bytemuck alignment issues with CP-AMM Pool struct
 pub fn get_cp_amm_price(
     pool_account: &AccountInfo,
     is_a_base: bool,
 ) -> Result<u64> {
-    let pool_data = pool_account.try_borrow_data()?;
-    let pool = cp_amm::accounts::Pool::try_deserialize(&mut &pool_data[..])?;
+    let data = pool_account.try_borrow_data()?;
     
-    let sqrt_price = pool.sqrt_price;
+    // Read sqrt_price directly from verified byte offset (u128 little-endian)
+    let sqrt_price_bytes: [u8; 16] = data[CP_AMM_SQRT_PRICE_OFFSET..CP_AMM_SQRT_PRICE_OFFSET + 16]
+        .try_into()
+        .map_err(|_| ErrorCode::InvalidOraclePrice)?;
+    let sqrt_price = u128::from_le_bytes(sqrt_price_bytes);
+    
     if sqrt_price == 0 {
         return Err(ErrorCode::InvalidOraclePrice.into());
     }
@@ -165,17 +178,26 @@ fn calculate_dlmm_bin_price(bin_id: i32, bin_step: u16) -> Result<u64> {
 
 /// Validate that CP-AMM pool mints match vault mints
 /// Returns: true if pool's token A is the base mint
+/// 
+/// Note: Uses direct byte reads to avoid bytemuck alignment issues with CP-AMM Pool struct
 pub fn validate_cp_amm_pool_mints(
     pool_account: &AccountInfo,
     expected_base: &Pubkey,
     expected_quote: &Pubkey,
 ) -> Result<bool> {
-    let pool_data = pool_account.try_borrow_data()?;
-    let pool = cp_amm::accounts::Pool::try_deserialize(&mut &pool_data[..])?;
+    let data = pool_account.try_borrow_data()?;
     
-    if pool.token_a_mint == *expected_base && pool.token_b_mint == *expected_quote {
+    // Read token_a_mint and token_b_mint directly from verified byte offsets
+    let token_a_mint = Pubkey::try_from(
+        &data[CP_AMM_TOKEN_A_MINT_OFFSET..CP_AMM_TOKEN_A_MINT_OFFSET + 32]
+    ).map_err(|_| ErrorCode::InvalidOraclePrice)?;
+    let token_b_mint = Pubkey::try_from(
+        &data[CP_AMM_TOKEN_B_MINT_OFFSET..CP_AMM_TOKEN_B_MINT_OFFSET + 32]
+    ).map_err(|_| ErrorCode::InvalidOraclePrice)?;
+    
+    if token_a_mint == *expected_base && token_b_mint == *expected_quote {
         Ok(true) // A is base, B is quote
-    } else if pool.token_a_mint == *expected_quote && pool.token_b_mint == *expected_base {
+    } else if token_a_mint == *expected_quote && token_b_mint == *expected_base {
         Ok(false) // A is quote, B is base
     } else {
         Err(ErrorCode::PoolMintMismatch.into())

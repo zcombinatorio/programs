@@ -11,4 +11,19 @@ sdk/dist/
 .keys/
 .blinker/
 .deploy-cache/
+
+# Surfpool local state
+.surfpool/
+
+# Runbooks (may contain keys/sensitive config)
+runbooks/
+
+# Test configs with keys
+devnet-dlmm-config.json
+test-admin.json
 .claude/test-admin.json
+
+# Yarn (using pnpm)
+yarn.lock
+yarn-error.log
+.yarnrc*

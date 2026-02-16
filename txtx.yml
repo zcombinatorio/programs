@@ -14,4 +14,7 @@ environments:
       rpc_api_url: https://api.devnet.solana.com
       payer_keypair_json: ~/.config/solana/id.json
       authority_keypair_json: ~/.config/solana/id.json
+  mainnet:
+      network_id: mainnet
+      rpc_api_url: https://mainnet.helius-rpc.com/?api-key=63b82fa3-bd8e-4994-8fdb-a9b564ee6bd1
 
