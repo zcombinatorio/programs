@@ -1,6 +1,3 @@
-// https://github.com/coral-xyz/anchor/issues/3401#issuecomment-2513466441
-#![allow(unexpected_cfgs)]
-
 use anchor_lang::prelude::*;
 
 pub mod cpi;
