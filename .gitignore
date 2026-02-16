@@ -23,10 +23,11 @@ devnet-dlmm-config.json
 test-admin.json
 .claude/test-admin.json
 
-# Yarn (using pnpm)
+# Yarn/npm (using pnpm)
 yarn.lock
 yarn-error.log
 .yarnrc*
+package-lock.json
 
 # Surfpool manifest (contains API keys)
 txtx.yml
