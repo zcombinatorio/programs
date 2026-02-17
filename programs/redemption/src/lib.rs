@@ -20,7 +20,6 @@ use anchor_lang::prelude::*;
 
 declare_id!("rdm5xmgfjVn2WXCNrdEuBDoj3JJHt7K6M82jBnXf1Ef");
 
-pub mod constants;
 pub mod errors;
 pub mod instructions;
 pub mod state;
