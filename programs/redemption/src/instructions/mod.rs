@@ -16,10 +16,12 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+pub mod deposit;
 pub mod initialize;
 pub mod redeem;
 pub mod withdraw;
 
+pub use deposit::*;
 pub use initialize::*;
 pub use redeem::*;
 pub use withdraw::*;

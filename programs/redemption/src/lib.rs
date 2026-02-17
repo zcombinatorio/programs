@@ -37,6 +37,11 @@ pub mod redemption {
         initialize_handler(ctx, nonce, price, deposit)
     }
 
+    /// Admin deposits additional quote tokens into the vault
+    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
+        deposit_handler(ctx, amount)
+    }
+
     /// Admin withdraws tokens from the vault
     pub fn withdraw(ctx: Context<Withdraw>, quote_amount: u64, base_amount: u64) -> Result<()> {
         withdraw_handler(ctx, quote_amount, base_amount)
