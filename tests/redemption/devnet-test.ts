@@ -192,9 +192,13 @@ describe("Redemption - Devnet Test", () => {
       .redeem(RAW_REDEEM_AMOUNT)
       .accountsPartial({
         user: userKeypair.publicKey,
+        vault,
         baseMint,
         quoteMint,
+        vaultQuoteAta,
+        vaultBaseAta,
         userBaseAta,
+        userQuoteAta,
         baseTokenProgram: TOKEN_PROGRAM_ID,
         quoteTokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -227,9 +231,13 @@ describe("Redemption - Devnet Test", () => {
         .redeem(tooMuchBase)
         .accountsPartial({
           user: userKeypair.publicKey,
+          vault,
           baseMint,
           quoteMint,
+          vaultQuoteAta,
+          vaultBaseAta,
           userBaseAta,
+          userQuoteAta,
           baseTokenProgram: TOKEN_PROGRAM_ID,
           quoteTokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -270,8 +278,11 @@ describe("Redemption - Devnet Test", () => {
       .withdraw(quoteToWithdraw, baseToWithdraw)
       .accountsPartial({
         admin: admin.publicKey,
+        vault,
         baseMint,
         quoteMint,
+        vaultQuoteAta,
+        vaultBaseAta,
         adminQuoteAta,
         adminBaseAta,
         baseTokenProgram: TOKEN_PROGRAM_ID,
