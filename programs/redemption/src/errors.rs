@@ -20,6 +20,24 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum RedemptionError {
-    #[msg("Placeholder error")]
-    Placeholder,
+    #[msg("Unauthorized: only admin can perform this action")]
+    Unauthorized,
+
+    #[msg("Invalid amount: must be greater than zero")]
+    InvalidAmount,
+
+    #[msg("Invalid price: must be greater than zero")]
+    InvalidPrice,
+
+    #[msg("Insufficient vault balance: not enough quote tokens to fulfill redemption")]
+    InsufficientVaultBalance,
+
+    #[msg("Arithmetic overflow occurred")]
+    Overflow,
+
+    #[msg("Arithmetic underflow occurred")]
+    Underflow,
+
+    #[msg("Quote amount too small: redemption would yield zero tokens")]
+    QuoteAmountTooSmall,
 }

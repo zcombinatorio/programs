@@ -21,4 +21,5 @@ use anchor_lang::prelude::*;
 #[constant]
 pub const REDEMPTION_VERSION: u8 = 1;
 
-// TODO: Add constants
+#[constant]
+pub const VAULT_SEED: &[u8] = b"redemption_vault";
