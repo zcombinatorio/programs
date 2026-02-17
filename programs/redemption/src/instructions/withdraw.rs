@@ -18,11 +18,10 @@
  */
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 
-use crate::state::VAULT_SEED;
 use crate::errors::RedemptionError;
-use crate::state::RedemptionVault;
+use crate::state::{RedemptionVault, VAULT_SEED};
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
@@ -36,34 +35,47 @@ pub struct Withdraw<'info> {
     )]
     pub vault: Account<'info, RedemptionVault>,
 
-    pub base_mint: Account<'info, Mint>,
-    pub quote_mint: Account<'info, Mint>,
+    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub quote_mint: InterfaceAccount<'info, Mint>,
 
-    #[account(mut, associated_token::mint = quote_mint, associated_token::authority = vault)]
-    pub vault_quote_ata: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        associated_token::mint = quote_mint,
+        associated_token::authority = vault,
+        associated_token::token_program = quote_token_program,
+    )]
+    pub vault_quote_ata: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(mut, associated_token::mint = base_mint, associated_token::authority = vault)]
-    pub vault_base_ata: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        associated_token::mint = base_mint,
+        associated_token::authority = vault,
+        associated_token::token_program = base_token_program,
+    )]
+    pub vault_base_ata: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
         payer = admin,
         associated_token::mint = quote_mint,
         associated_token::authority = admin,
+        associated_token::token_program = quote_token_program,
     )]
-    pub admin_quote_ata: Account<'info, TokenAccount>,
+    pub admin_quote_ata: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
         payer = admin,
         associated_token::mint = base_mint,
         associated_token::authority = admin,
+        associated_token::token_program = base_token_program,
     )]
-    pub admin_base_ata: Account<'info, TokenAccount>,
+    pub admin_base_ata: InterfaceAccount<'info, TokenAccount>,
 
-    pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
+    pub base_token_program: Interface<'info, TokenInterface>,
+    pub quote_token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
 }
 
 /// Admin withdraws quote and/or base tokens from the vault
@@ -83,17 +95,19 @@ pub fn withdraw_handler(ctx: Context<Withdraw>, quote_amount: u64, base_amount: 
             ctx.accounts.vault_quote_ata.amount >= quote_amount,
             RedemptionError::InsufficientBalance
         );
-        token::transfer(
+        token_interface::transfer_checked(
             CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                Transfer {
+                ctx.accounts.quote_token_program.to_account_info(),
+                TransferChecked {
                     from: ctx.accounts.vault_quote_ata.to_account_info(),
+                    mint: ctx.accounts.quote_mint.to_account_info(),
                     to: ctx.accounts.admin_quote_ata.to_account_info(),
                     authority: ctx.accounts.vault.to_account_info(),
                 },
                 signer,
             ),
             quote_amount,
+            ctx.accounts.quote_mint.decimals,
         )?;
     }
 
@@ -102,17 +116,19 @@ pub fn withdraw_handler(ctx: Context<Withdraw>, quote_amount: u64, base_amount: 
             ctx.accounts.vault_base_ata.amount >= base_amount,
             RedemptionError::InsufficientBalance
         );
-        token::transfer(
+        token_interface::transfer_checked(
             CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                Transfer {
+                ctx.accounts.base_token_program.to_account_info(),
+                TransferChecked {
                     from: ctx.accounts.vault_base_ata.to_account_info(),
+                    mint: ctx.accounts.base_mint.to_account_info(),
                     to: ctx.accounts.admin_base_ata.to_account_info(),
                     authority: ctx.accounts.vault.to_account_info(),
                 },
                 signer,
             ),
             base_amount,
+            ctx.accounts.base_mint.decimals,
         )?;
     }
 

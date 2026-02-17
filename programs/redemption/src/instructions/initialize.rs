@@ -18,11 +18,10 @@
  */
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 
-use crate::state::VAULT_SEED;
 use crate::errors::RedemptionError;
-use crate::state::RedemptionVault;
+use crate::state::{RedemptionVault, VAULT_SEED};
 
 #[derive(Accounts)]
 #[instruction(nonce: u16)]
@@ -39,8 +38,8 @@ pub struct Initialize<'info> {
     )]
     pub vault: Account<'info, RedemptionVault>,
 
-    pub base_mint: Account<'info, Mint>,
-    pub quote_mint: Account<'info, Mint>,
+    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub quote_mint: InterfaceAccount<'info, Mint>,
 
     /// Vault's ATA for holding quote tokens (what users receive)
     #[account(
@@ -48,8 +47,9 @@ pub struct Initialize<'info> {
         payer = admin,
         associated_token::mint = quote_mint,
         associated_token::authority = vault,
+        associated_token::token_program = quote_token_program,
     )]
-    pub vault_quote_ata: Account<'info, TokenAccount>,
+    pub vault_quote_ata: InterfaceAccount<'info, TokenAccount>,
 
     /// Vault's ATA for collecting base tokens (what users send)
     #[account(
@@ -57,20 +57,23 @@ pub struct Initialize<'info> {
         payer = admin,
         associated_token::mint = base_mint,
         associated_token::authority = vault,
+        associated_token::token_program = base_token_program,
     )]
-    pub vault_base_ata: Account<'info, TokenAccount>,
+    pub vault_base_ata: InterfaceAccount<'info, TokenAccount>,
 
     /// Admin's quote token account (source of initial deposit)
     #[account(
         mut,
         associated_token::mint = quote_mint,
         associated_token::authority = admin,
+        associated_token::token_program = quote_token_program,
     )]
-    pub admin_quote_ata: Account<'info, TokenAccount>,
+    pub admin_quote_ata: InterfaceAccount<'info, TokenAccount>,
 
-    pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
+    pub base_token_program: Interface<'info, TokenInterface>,
+    pub quote_token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
 }
 
 /// Initialize a new redemption vault with a price and initial quote deposit
@@ -85,17 +88,20 @@ pub fn initialize_handler(ctx: Context<Initialize>, nonce: u16, price: u64, depo
     vault.quote_mint = ctx.accounts.quote_mint.key();
     vault.price = price;
     vault.base_decimals = ctx.accounts.base_mint.decimals;
+    vault.quote_decimals = ctx.accounts.quote_mint.decimals;
 
     // Transfer initial quote tokens from admin to vault
-    token::transfer(
+    token_interface::transfer_checked(
         CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
+            ctx.accounts.quote_token_program.to_account_info(),
+            TransferChecked {
                 from: ctx.accounts.admin_quote_ata.to_account_info(),
+                mint: ctx.accounts.quote_mint.to_account_info(),
                 to: ctx.accounts.vault_quote_ata.to_account_info(),
                 authority: ctx.accounts.admin.to_account_info(),
             },
         ),
         deposit,
+        ctx.accounts.quote_mint.decimals,
     )
 }

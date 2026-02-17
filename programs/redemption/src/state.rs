@@ -32,4 +32,5 @@ pub struct RedemptionVault {
     /// Quote tokens per base token (scaled by 10^base_decimals)
     pub price: u64,
     pub base_decimals: u8,
+    pub quote_decimals: u8,
 }

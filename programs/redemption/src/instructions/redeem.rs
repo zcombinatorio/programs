@@ -18,11 +18,10 @@
  */
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 
-use crate::state::VAULT_SEED;
 use crate::errors::RedemptionError;
-use crate::state::RedemptionVault;
+use crate::state::{RedemptionVault, VAULT_SEED};
 
 #[derive(Accounts)]
 pub struct Redeem<'info> {
@@ -35,29 +34,46 @@ pub struct Redeem<'info> {
     )]
     pub vault: Account<'info, RedemptionVault>,
 
-    pub base_mint: Account<'info, Mint>,
-    pub quote_mint: Account<'info, Mint>,
+    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub quote_mint: InterfaceAccount<'info, Mint>,
 
-    #[account(mut, associated_token::mint = quote_mint, associated_token::authority = vault)]
-    pub vault_quote_ata: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        associated_token::mint = quote_mint,
+        associated_token::authority = vault,
+        associated_token::token_program = quote_token_program,
+    )]
+    pub vault_quote_ata: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(mut, associated_token::mint = base_mint, associated_token::authority = vault)]
-    pub vault_base_ata: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        associated_token::mint = base_mint,
+        associated_token::authority = vault,
+        associated_token::token_program = base_token_program,
+    )]
+    pub vault_base_ata: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(mut, associated_token::mint = base_mint, associated_token::authority = user)]
-    pub user_base_ata: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        associated_token::mint = base_mint,
+        associated_token::authority = user,
+        associated_token::token_program = base_token_program,
+    )]
+    pub user_base_ata: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init_if_needed,
         payer = user,
         associated_token::mint = quote_mint,
         associated_token::authority = user,
+        associated_token::token_program = quote_token_program,
     )]
-    pub user_quote_ata: Account<'info, TokenAccount>,
+    pub user_quote_ata: InterfaceAccount<'info, TokenAccount>,
 
-    pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
+    pub base_token_program: Interface<'info, TokenInterface>,
+    pub quote_token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
 }
 
 /// User redeems base tokens for quote tokens at the vault's price
@@ -66,7 +82,7 @@ pub fn redeem_handler(ctx: Context<Redeem>, base_amount: u64) -> Result<()> {
 
     let vault = &ctx.accounts.vault;
 
-    // Calculate quote amount: quote = base * price / 10^decimals
+    // Calculate quote amount: quote = base * price / 10^base_decimals
     let quote_amount = (base_amount as u128)
         .checked_mul(vault.price as u128)
         .and_then(|v| v.checked_div(10u128.pow(vault.base_decimals as u32)))
@@ -80,16 +96,18 @@ pub fn redeem_handler(ctx: Context<Redeem>, base_amount: u64) -> Result<()> {
     );
 
     // User sends base tokens to vault
-    token::transfer(
+    token_interface::transfer_checked(
         CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
+            ctx.accounts.base_token_program.to_account_info(),
+            TransferChecked {
                 from: ctx.accounts.user_base_ata.to_account_info(),
+                mint: ctx.accounts.base_mint.to_account_info(),
                 to: ctx.accounts.vault_base_ata.to_account_info(),
                 authority: ctx.accounts.user.to_account_info(),
             },
         ),
         base_amount,
+        ctx.accounts.base_mint.decimals,
     )?;
 
     // Vault sends quote tokens to user
@@ -100,16 +118,18 @@ pub fn redeem_handler(ctx: Context<Redeem>, base_amount: u64) -> Result<()> {
         &vault.nonce.to_le_bytes(),
         &[vault.bump],
     ];
-    token::transfer(
+    token_interface::transfer_checked(
         CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
+            ctx.accounts.quote_token_program.to_account_info(),
+            TransferChecked {
                 from: ctx.accounts.vault_quote_ata.to_account_info(),
+                mint: ctx.accounts.quote_mint.to_account_info(),
                 to: ctx.accounts.user_quote_ata.to_account_info(),
                 authority: ctx.accounts.vault.to_account_info(),
             },
             &[&seeds[..]],
         ),
         quote_amount,
+        ctx.accounts.quote_mint.decimals,
     )
 }
