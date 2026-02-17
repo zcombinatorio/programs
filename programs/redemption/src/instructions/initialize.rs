@@ -20,7 +20,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-use crate::constants::*;
+use crate::state::VAULT_SEED;
 use crate::errors::RedemptionError;
 use crate::state::RedemptionVault;
 

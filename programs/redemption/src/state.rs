@@ -18,6 +18,8 @@
  */
 use anchor_lang::prelude::*;
 
+pub const VAULT_SEED: &[u8] = b"redemption";
+
 /// Redemption vault that holds quote tokens for users to redeem with base tokens
 #[account]
 #[derive(InitSpace)]
