@@ -3,13 +3,13 @@
  *
  * Tests:
  * 1. Initialize vault with 9-decimal base, 6-decimal quote (USDC-like)
- * 2. Redeem 1M base tokens at 0.0002758 price → ~275.8 quote
+ * 2. Redeem 1M base tokens at 0.000275 price → ~275 quote
  * 3. Error when redeeming more than vault balance
  * 4. Admin withdraws leftover quote
  */
 
 import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
+import { Program, BN } from "@coral-xyz/anchor";
 import {
   PublicKey,
   Keypair,
@@ -26,7 +26,6 @@ import {
 } from "@solana/spl-token";
 import { expect } from "chai";
 
-// IDL will be loaded by Anchor
 import { Redemption } from "../../target/types/redemption";
 
 const VAULT_SEED = Buffer.from("redemption");
@@ -34,17 +33,15 @@ const VAULT_SEED = Buffer.from("redemption");
 // Test parameters
 const BASE_DECIMALS = 9;
 const QUOTE_DECIMALS = 6;
-const UI_PRICE = 0.000275; // ~0.0002758 quote per base (rounded down)
+const UI_PRICE = 0.000275;
 const PRICE = Math.floor(UI_PRICE * 10 ** QUOTE_DECIMALS); // 275
 
-const UI_REDEEM_AMOUNT = 1_000_000; // 1 million base tokens
-const RAW_REDEEM_AMOUNT = UI_REDEEM_AMOUNT * 10 ** BASE_DECIMALS;
-const EXPECTED_QUOTE = Math.floor(
-  (RAW_REDEEM_AMOUNT * PRICE) / 10 ** BASE_DECIMALS
-); // ~275,800,000 raw = 275.8 USDC
+const UI_REDEEM_AMOUNT = 1_000_000;
+const RAW_REDEEM_AMOUNT = new BN(UI_REDEEM_AMOUNT).mul(new BN(10 ** BASE_DECIMALS));
+const EXPECTED_QUOTE = RAW_REDEEM_AMOUNT.mul(new BN(PRICE)).div(new BN(10 ** BASE_DECIMALS));
 
-// Initial vault deposit (enough for the test + some extra)
-const INITIAL_QUOTE_DEPOSIT = 500 * 10 ** QUOTE_DECIMALS; // 500 quote tokens
+// Initial vault deposit
+const INITIAL_QUOTE_DEPOSIT = new BN(500 * 10 ** QUOTE_DECIMALS);
 
 describe("Redemption - Devnet Test", () => {
   const provider = anchor.AnchorProvider.env();
@@ -56,7 +53,6 @@ describe("Redemption - Devnet Test", () => {
   let baseMint: PublicKey;
   let quoteMint: PublicKey;
   let vault: PublicKey;
-  let vaultBump: number;
   let vaultQuoteAta: PublicKey;
   let vaultBaseAta: PublicKey;
   let adminQuoteAta: PublicKey;
@@ -65,7 +61,7 @@ describe("Redemption - Devnet Test", () => {
   let userBaseAta: PublicKey;
   let userQuoteAta: PublicKey;
 
-  const nonce = Math.floor(Math.random() * 65535); // Random nonce for unique vault
+  const nonce = Math.floor(Math.random() * 65535);
 
   before(async () => {
     console.log("\n=== Setup ===");
@@ -84,7 +80,7 @@ describe("Redemption - Devnet Test", () => {
     );
     console.log(`Base Mint (${BASE_DECIMALS} decimals): ${baseMint.toBase58()}`);
 
-    // Create quote mint (6 decimals, like USDC)
+    // Create quote mint (6 decimals)
     quoteMint = await createMint(
       provider.connection,
       admin.payer,
@@ -95,13 +91,10 @@ describe("Redemption - Devnet Test", () => {
     console.log(`Quote Mint (${QUOTE_DECIMALS} decimals): ${quoteMint.toBase58()}`);
 
     // Derive vault PDA
-    [vault, vaultBump] = PublicKey.findProgramAddressSync(
-      [
-        VAULT_SEED,
-        baseMint.toBuffer(),
-        quoteMint.toBuffer(),
-        Buffer.from(new Uint16Array([nonce]).buffer),
-      ],
+    const nonceBuffer = Buffer.alloc(2);
+    nonceBuffer.writeUInt16LE(nonce);
+    [vault] = PublicKey.findProgramAddressSync(
+      [VAULT_SEED, baseMint.toBuffer(), quoteMint.toBuffer(), nonceBuffer],
       program.programId
     );
     console.log(`Vault PDA: ${vault.toBase58()}`);
@@ -110,7 +103,7 @@ describe("Redemption - Devnet Test", () => {
     vaultQuoteAta = await getAssociatedTokenAddress(quoteMint, vault, true);
     vaultBaseAta = await getAssociatedTokenAddress(baseMint, vault, true);
 
-    // Setup admin quote ATA and mint tokens for deposit
+    // Setup admin quote ATA and mint tokens
     const adminQuoteAccount = await getOrCreateAssociatedTokenAccount(
       provider.connection,
       admin.payer,
@@ -125,14 +118,12 @@ describe("Redemption - Devnet Test", () => {
       quoteMint,
       adminQuoteAta,
       admin.publicKey,
-      INITIAL_QUOTE_DEPOSIT
+      INITIAL_QUOTE_DEPOSIT.toNumber()
     );
-    console.log(`Minted ${INITIAL_QUOTE_DEPOSIT / 10 ** QUOTE_DECIMALS} quote to admin`);
+    console.log(`Minted ${INITIAL_QUOTE_DEPOSIT.toNumber() / 10 ** QUOTE_DECIMALS} quote to admin`);
 
     // Setup test user
     userKeypair = Keypair.generate();
-
-    // Fund user with SOL
     const fundTx = await provider.connection.requestAirdrop(
       userKeypair.publicKey,
       LAMPORTS_PER_SOL
@@ -149,8 +140,7 @@ describe("Redemption - Devnet Test", () => {
     );
     userBaseAta = userBaseAccount.address;
 
-    // Mint base tokens to user (enough for test)
-    const userBaseMintAmount = 2_000_000 * 10 ** BASE_DECIMALS; // 2M base tokens
+    const userBaseMintAmount = 2_000_000 * 10 ** BASE_DECIMALS;
     await mintTo(
       provider.connection,
       admin.payer,
@@ -168,14 +158,11 @@ describe("Redemption - Devnet Test", () => {
     console.log("\n=== Test: Initialize Vault ===");
 
     await program.methods
-      .initialize(nonce, new anchor.BN(PRICE), new anchor.BN(INITIAL_QUOTE_DEPOSIT))
-      .accounts({
+      .initialize(nonce, new BN(PRICE), INITIAL_QUOTE_DEPOSIT)
+      .accountsPartial({
         admin: admin.publicKey,
-        vault,
         baseMint,
         quoteMint,
-        vaultQuoteAta,
-        vaultBaseAta,
         adminQuoteAta,
         baseTokenProgram: TOKEN_PROGRAM_ID,
         quoteTokenProgram: TOKEN_PROGRAM_ID,
@@ -184,7 +171,6 @@ describe("Redemption - Devnet Test", () => {
       })
       .rpc();
 
-    // Verify vault state
     const vaultAccount = await program.account.redemptionVault.fetch(vault);
     expect(vaultAccount.admin.toBase58()).to.equal(admin.publicKey.toBase58());
     expect(vaultAccount.baseMint.toBase58()).to.equal(baseMint.toBase58());
@@ -192,32 +178,23 @@ describe("Redemption - Devnet Test", () => {
     expect(vaultAccount.price.toNumber()).to.equal(PRICE);
     expect(vaultAccount.nonce).to.equal(nonce);
 
-    // Verify vault quote balance
     const vaultQuoteBalance = await provider.connection.getTokenAccountBalance(vaultQuoteAta);
-    expect(Number(vaultQuoteBalance.value.amount)).to.equal(INITIAL_QUOTE_DEPOSIT);
+    expect(Number(vaultQuoteBalance.value.amount)).to.equal(INITIAL_QUOTE_DEPOSIT.toNumber());
 
-    console.log(`✓ Vault initialized with ${INITIAL_QUOTE_DEPOSIT / 10 ** QUOTE_DECIMALS} quote tokens`);
+    console.log(`✓ Vault initialized with ${INITIAL_QUOTE_DEPOSIT.toNumber() / 10 ** QUOTE_DECIMALS} quote`);
     console.log(`✓ Price set to ${PRICE} (${UI_PRICE} UI)`);
   });
 
-  it("redeems 1M base tokens for ~275.8 quote", async () => {
+  it("redeems 1M base tokens for ~275 quote", async () => {
     console.log("\n=== Test: Redeem 1M Base ===");
 
-    const userQuoteBalanceBefore = await provider.connection
-      .getTokenAccountBalance(userQuoteAta)
-      .catch(() => ({ value: { amount: "0" } }));
-
     await program.methods
-      .redeem(new anchor.BN(RAW_REDEEM_AMOUNT))
-      .accounts({
+      .redeem(RAW_REDEEM_AMOUNT)
+      .accountsPartial({
         user: userKeypair.publicKey,
-        vault,
         baseMint,
         quoteMint,
-        vaultQuoteAta,
-        vaultBaseAta,
         userBaseAta,
-        userQuoteAta,
         baseTokenProgram: TOKEN_PROGRAM_ID,
         quoteTokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -226,41 +203,33 @@ describe("Redemption - Devnet Test", () => {
       .signers([userKeypair])
       .rpc();
 
-    // Verify user received quote tokens
     const userQuoteBalance = await provider.connection.getTokenAccountBalance(userQuoteAta);
-    const received = Number(userQuoteBalance.value.amount) - Number(userQuoteBalanceBefore.value.amount);
+    const received = Number(userQuoteBalance.value.amount);
 
     console.log(`✓ Redeemed ${UI_REDEEM_AMOUNT.toLocaleString()} base tokens`);
     console.log(`✓ Received ${received / 10 ** QUOTE_DECIMALS} quote tokens`);
-    console.log(`✓ Expected ~${EXPECTED_QUOTE / 10 ** QUOTE_DECIMALS} quote tokens`);
+    console.log(`✓ Expected ${EXPECTED_QUOTE.toNumber() / 10 ** QUOTE_DECIMALS} quote tokens`);
 
-    // Allow small rounding tolerance
-    expect(received).to.be.closeTo(EXPECTED_QUOTE, 10);
+    expect(received).to.be.closeTo(EXPECTED_QUOTE.toNumber(), 10);
 
-    // Verify vault received base tokens
     const vaultBaseBalance = await provider.connection.getTokenAccountBalance(vaultBaseAta);
-    expect(Number(vaultBaseBalance.value.amount)).to.equal(RAW_REDEEM_AMOUNT);
-    console.log(`✓ Vault received ${RAW_REDEEM_AMOUNT / 10 ** BASE_DECIMALS} base tokens`);
+    expect(Number(vaultBaseBalance.value.amount)).to.equal(RAW_REDEEM_AMOUNT.toNumber());
+    console.log(`✓ Vault received ${RAW_REDEEM_AMOUNT.toNumber() / 10 ** BASE_DECIMALS} base tokens`);
   });
 
   it("fails when redeeming more than vault balance", async () => {
     console.log("\n=== Test: Insufficient Balance Error ===");
 
-    // Try to redeem way more than vault has
-    const tooMuchBase = 10_000_000 * 10 ** BASE_DECIMALS; // 10M base = ~2758 quote needed
+    const tooMuchBase = new BN(10_000_000).mul(new BN(10 ** BASE_DECIMALS));
 
     try {
       await program.methods
-        .redeem(new anchor.BN(tooMuchBase))
-        .accounts({
+        .redeem(tooMuchBase)
+        .accountsPartial({
           user: userKeypair.publicKey,
-          vault,
           baseMint,
           quoteMint,
-          vaultQuoteAta,
-          vaultBaseAta,
           userBaseAta,
-          userQuoteAta,
           baseTokenProgram: TOKEN_PROGRAM_ID,
           quoteTokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -270,8 +239,10 @@ describe("Redemption - Devnet Test", () => {
         .rpc();
 
       expect.fail("Should have thrown InsufficientBalance error");
-    } catch (err: any) {
-      expect(err.error?.errorCode?.code || err.message).to.include("InsufficientBalance");
+    } catch (err: unknown) {
+      const error = err as { error?: { errorCode?: { code: string } }; message?: string };
+      const errorCode = error.error?.errorCode?.code || error.message || "";
+      expect(errorCode).to.include("InsufficientBalance");
       console.log("✓ Correctly rejected: InsufficientBalance");
     }
   });
@@ -279,16 +250,14 @@ describe("Redemption - Devnet Test", () => {
   it("admin withdraws leftover quote", async () => {
     console.log("\n=== Test: Admin Withdraw ===");
 
-    // Check vault quote balance
     const vaultQuoteBefore = await provider.connection.getTokenAccountBalance(vaultQuoteAta);
     const vaultBaseBefore = await provider.connection.getTokenAccountBalance(vaultBaseAta);
-    const quoteToWithdraw = Number(vaultQuoteBefore.value.amount);
-    const baseToWithdraw = Number(vaultBaseBefore.value.amount);
+    const quoteToWithdraw = new BN(vaultQuoteBefore.value.amount);
+    const baseToWithdraw = new BN(vaultBaseBefore.value.amount);
 
-    console.log(`Vault quote balance: ${quoteToWithdraw / 10 ** QUOTE_DECIMALS}`);
-    console.log(`Vault base balance: ${baseToWithdraw / 10 ** BASE_DECIMALS}`);
+    console.log(`Vault quote balance: ${quoteToWithdraw.toNumber() / 10 ** QUOTE_DECIMALS}`);
+    console.log(`Vault base balance: ${baseToWithdraw.toNumber() / 10 ** BASE_DECIMALS}`);
 
-    // Setup admin base ATA if needed
     const adminBaseAccount = await getOrCreateAssociatedTokenAccount(
       provider.connection,
       admin.payer,
@@ -298,14 +267,11 @@ describe("Redemption - Devnet Test", () => {
     adminBaseAta = adminBaseAccount.address;
 
     await program.methods
-      .withdraw(new anchor.BN(quoteToWithdraw), new anchor.BN(baseToWithdraw))
-      .accounts({
+      .withdraw(quoteToWithdraw, baseToWithdraw)
+      .accountsPartial({
         admin: admin.publicKey,
-        vault,
         baseMint,
         quoteMint,
-        vaultQuoteAta,
-        vaultBaseAta,
         adminQuoteAta,
         adminBaseAta,
         baseTokenProgram: TOKEN_PROGRAM_ID,
@@ -315,15 +281,14 @@ describe("Redemption - Devnet Test", () => {
       })
       .rpc();
 
-    // Verify vault is empty
     const vaultQuoteAfter = await provider.connection.getTokenAccountBalance(vaultQuoteAta);
     const vaultBaseAfter = await provider.connection.getTokenAccountBalance(vaultBaseAta);
 
     expect(Number(vaultQuoteAfter.value.amount)).to.equal(0);
     expect(Number(vaultBaseAfter.value.amount)).to.equal(0);
 
-    console.log(`✓ Admin withdrew ${quoteToWithdraw / 10 ** QUOTE_DECIMALS} quote tokens`);
-    console.log(`✓ Admin withdrew ${baseToWithdraw / 10 ** BASE_DECIMALS} base tokens`);
+    console.log(`✓ Admin withdrew ${quoteToWithdraw.toNumber() / 10 ** QUOTE_DECIMALS} quote`);
+    console.log(`✓ Admin withdrew ${baseToWithdraw.toNumber() / 10 ** BASE_DECIMALS} base`);
     console.log("✓ Vault is now empty");
   });
 
