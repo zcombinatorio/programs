@@ -1,6 +1,20 @@
 /*
  * Copyright (C) 2025 Spice Finance Inc.
- * Licensed under AGPL-3.0 — see LICENSE
+ *
+ * This file is part of Z Combinator.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
@@ -16,7 +30,7 @@ pub struct Redeem<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        seeds = [VAULT_SEED, vault.base_mint.as_ref(), vault.quote_mint.as_ref()],
+        seeds = [VAULT_SEED, vault.base_mint.as_ref(), vault.quote_mint.as_ref(), &vault.nonce.to_le_bytes()],
         bump = vault.bump,
     )]
     pub vault: Account<'info, RedemptionVault>,
@@ -46,12 +60,13 @@ pub struct Redeem<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
+/// User redeems base tokens for quote tokens at the vault's price
 pub fn redeem_handler(ctx: Context<Redeem>, base_amount: u64) -> Result<()> {
     require!(base_amount > 0, RedemptionError::InvalidAmount);
 
     let vault = &ctx.accounts.vault;
 
-    // quote = base * price / 10^decimals
+    // Calculate quote amount: quote = base * price / 10^decimals
     let quote_amount = (base_amount as u128)
         .checked_mul(vault.price as u128)
         .and_then(|v| v.checked_div(10u128.pow(vault.base_decimals as u32)))
@@ -64,7 +79,7 @@ pub fn redeem_handler(ctx: Context<Redeem>, base_amount: u64) -> Result<()> {
         RedemptionError::InsufficientBalance
     );
 
-    // User sends base to vault
+    // User sends base tokens to vault
     token::transfer(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -77,11 +92,12 @@ pub fn redeem_handler(ctx: Context<Redeem>, base_amount: u64) -> Result<()> {
         base_amount,
     )?;
 
-    // Vault sends quote to user
+    // Vault sends quote tokens to user
     let seeds = &[
         VAULT_SEED,
         vault.base_mint.as_ref(),
         vault.quote_mint.as_ref(),
+        &vault.nonce.to_le_bytes(),
         &[vault.bump],
     ];
     token::transfer(

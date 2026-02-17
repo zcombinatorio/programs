@@ -1,6 +1,20 @@
 /*
  * Copyright (C) 2025 Spice Finance Inc.
- * Licensed under AGPL-3.0 — see LICENSE
+ *
+ * This file is part of Z Combinator.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
@@ -16,7 +30,7 @@ pub struct Withdraw<'info> {
     pub admin: Signer<'info>,
 
     #[account(
-        seeds = [VAULT_SEED, vault.base_mint.as_ref(), vault.quote_mint.as_ref()],
+        seeds = [VAULT_SEED, vault.base_mint.as_ref(), vault.quote_mint.as_ref(), &vault.nonce.to_le_bytes()],
         bump = vault.bump,
         constraint = vault.admin == admin.key() @ RedemptionError::Unauthorized,
     )]
@@ -52,12 +66,15 @@ pub struct Withdraw<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
+/// Admin withdraws quote and/or base tokens from the vault
 pub fn withdraw_handler(ctx: Context<Withdraw>, quote_amount: u64, base_amount: u64) -> Result<()> {
+    let vault = &ctx.accounts.vault;
     let seeds = &[
         VAULT_SEED,
-        ctx.accounts.vault.base_mint.as_ref(),
-        ctx.accounts.vault.quote_mint.as_ref(),
-        &[ctx.accounts.vault.bump],
+        vault.base_mint.as_ref(),
+        vault.quote_mint.as_ref(),
+        &vault.nonce.to_le_bytes(),
+        &[vault.bump],
     ];
     let signer = &[&seeds[..]];
 
