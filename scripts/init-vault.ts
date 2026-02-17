@@ -1,12 +1,7 @@
 /**
  * Initialize Redemption Vault Script
  * 
- * Reads config from Anchor.toml automatically.
- * 
- * Usage:
- *   npx tsx scripts/init-vault.ts
- *   npx tsx scripts/init-vault.ts --cluster devnet
- *   npx tsx scripts/init-vault.ts --cluster mainnet
+ * Usage: npx tsx scripts/init-vault.ts
  */
 
 import * as anchor from "@coral-xyz/anchor";
@@ -20,13 +15,18 @@ import {
 } from "@solana/spl-token";
 import * as fs from "fs";
 import * as path from "path";
-import * as toml from "toml";
 
 import { Redemption } from "../target/types/redemption";
 
 // ============================================
-// CONFIGURATION - Edit these values
+// CONFIGURATION
 // ============================================
+
+// RPC URL
+const RPC_URL = "https://api.mainnet-beta.solana.com";
+
+// Wallet path
+const WALLET_PATH = ".keys/authority.json";
 
 // Base mint (token users send in) - FAIR token, 9 decimals
 const BASE_MINT = new PublicKey("Fairr196TRbroavk2QhRb3RRDH1ZpdWC3yJDTDDestar");
@@ -37,46 +37,19 @@ const QUOTE_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 const QUOTE_DECIMALS = 6;
 
 // Price: 0.000276 USDC per FAIR token
-// price = 0.000276 * 10^6 = 276
 const PRICE = 276;
 
 // Initial deposit: 10 USDC
-const DEPOSIT_AMOUNT = 10 * 10 ** QUOTE_DECIMALS; // 10_000_000
+const DEPOSIT_AMOUNT = 10 * 10 ** QUOTE_DECIMALS;
 
-// Vault nonce (change this to create multiple vaults)
+// Vault nonce
 const NONCE = 1;
 
 // ============================================
-// LOAD ANCHOR.TOML CONFIG
+// SCRIPT
 // ============================================
 
-interface AnchorToml {
-  provider: {
-    cluster: string;
-    wallet: string;
-  };
-}
-
-function loadAnchorToml(): AnchorToml {
-  const tomlPath = path.resolve(__dirname, "../Anchor.toml");
-  const content = fs.readFileSync(tomlPath, "utf-8");
-  return toml.parse(content) as AnchorToml;
-}
-
-function resolveClusterUrl(cluster: string): string {
-  switch (cluster) {
-    case "localnet":
-      return "http://127.0.0.1:8899";
-    case "devnet":
-      return "https://api.devnet.solana.com";
-    case "mainnet":
-    case "mainnet-beta":
-      return "https://api.mainnet-beta.solana.com";
-    default:
-      // Assume it's a URL
-      return cluster;
-  }
-}
+const VAULT_SEED = Buffer.from("redemption");
 
 function loadWallet(walletPath: string): Keypair {
   const resolved = walletPath.startsWith("~")
@@ -86,68 +59,40 @@ function loadWallet(walletPath: string): Keypair {
   return Keypair.fromSecretKey(Uint8Array.from(secretKey));
 }
 
-// ============================================
-// SCRIPT
-// ============================================
-
-const VAULT_SEED = Buffer.from("redemption");
-
 async function main() {
-  // Parse args
-  const args = process.argv.slice(2);
-  let clusterOverride: string | null = null;
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--cluster" && args[i + 1]) {
-      clusterOverride = args[i + 1];
-    }
-  }
-
-  // Load config from Anchor.toml
-  const config = loadAnchorToml();
-  const cluster = clusterOverride || config.provider.cluster;
-  const clusterUrl = resolveClusterUrl(cluster);
-  const walletKeypair = loadWallet(config.provider.wallet);
+  const walletKeypair = loadWallet(WALLET_PATH);
   const wallet = new Wallet(walletKeypair);
-
-  // Setup connection and provider
-  const connection = new Connection(clusterUrl, "confirmed");
-  const provider = new anchor.AnchorProvider(connection, wallet, {
-    commitment: "confirmed",
-  });
+  const connection = new Connection(RPC_URL, "confirmed");
+  const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
   anchor.setProvider(provider);
 
-  // Load program from IDL
   const idlPath = path.resolve(__dirname, "../target/idl/redemption.json");
   const idl = JSON.parse(fs.readFileSync(idlPath, "utf-8"));
   const program = new Program<Redemption>(idl, provider);
 
   console.log("=== Redemption Vault Initialization ===\n");
-  console.log("Cluster:", cluster, `(${clusterUrl})`);
+  console.log("RPC:", RPC_URL);
   console.log("Program ID:", program.programId.toBase58());
   console.log("Admin:", wallet.publicKey.toBase58());
   console.log("Base Mint:", BASE_MINT.toBase58());
   console.log("Quote Mint:", QUOTE_MINT.toBase58());
   console.log("Price:", PRICE, `(${PRICE / 10 ** QUOTE_DECIMALS} quote per base)`);
-  console.log("Deposit:", DEPOSIT_AMOUNT / 10 ** QUOTE_DECIMALS, "quote tokens");
+  console.log("Deposit:", DEPOSIT_AMOUNT / 10 ** QUOTE_DECIMALS, "USDC");
   console.log("Nonce:", NONCE);
   console.log();
 
   // Derive vault PDA
   const nonceBuffer = Buffer.alloc(2);
   nonceBuffer.writeUInt16LE(NONCE);
-  const [vault, bump] = PublicKey.findProgramAddressSync(
+  const [vault] = PublicKey.findProgramAddressSync(
     [VAULT_SEED, BASE_MINT.toBuffer(), QUOTE_MINT.toBuffer(), nonceBuffer],
     program.programId
   );
   console.log("Vault PDA:", vault.toBase58());
 
-  // Get vault ATAs
+  // Get ATAs
   const vaultQuoteAta = await getAssociatedTokenAddress(QUOTE_MINT, vault, true);
   const vaultBaseAta = await getAssociatedTokenAddress(BASE_MINT, vault, true);
-  console.log("Vault Quote ATA:", vaultQuoteAta.toBase58());
-  console.log("Vault Base ATA:", vaultBaseAta.toBase58());
-
-  // Get admin quote ATA
   const adminQuoteAccount = await getOrCreateAssociatedTokenAccount(
     connection,
     walletKeypair,
@@ -155,14 +100,13 @@ async function main() {
     wallet.publicKey
   );
   const adminQuoteAta = adminQuoteAccount.address;
-  console.log("Admin Quote ATA:", adminQuoteAta.toBase58());
 
-  // Check admin has enough quote tokens
+  // Check balance
   const adminQuoteBalance = await connection.getTokenAccountBalance(adminQuoteAta);
-  console.log("Admin Quote Balance:", Number(adminQuoteBalance.value.amount) / 10 ** QUOTE_DECIMALS);
+  console.log("Admin USDC Balance:", Number(adminQuoteBalance.value.amount) / 10 ** QUOTE_DECIMALS);
   
   if (Number(adminQuoteBalance.value.amount) < DEPOSIT_AMOUNT) {
-    console.error("\n❌ Error: Insufficient quote token balance for deposit");
+    console.error("\n❌ Insufficient USDC balance");
     console.error(`   Need: ${DEPOSIT_AMOUNT / 10 ** QUOTE_DECIMALS}`);
     console.error(`   Have: ${Number(adminQuoteBalance.value.amount) / 10 ** QUOTE_DECIMALS}`);
     process.exit(1);
@@ -170,7 +114,6 @@ async function main() {
 
   console.log("\nInitializing vault...");
 
-  // Initialize vault
   const tx = await program.methods
     .initialize(NONCE, new BN(PRICE), new BN(DEPOSIT_AMOUNT))
     .accountsPartial({
@@ -187,12 +130,7 @@ async function main() {
 
   console.log("\n✅ Vault initialized!");
   console.log("Transaction:", tx);
-  console.log("\n=== Vault Details ===");
-  console.log("Vault Address:", vault.toBase58());
-  console.log("Base Mint:", BASE_MINT.toBase58());
-  console.log("Quote Mint:", QUOTE_MINT.toBase58());
-  console.log("Price:", PRICE);
-  console.log("Nonce:", NONCE);
+  console.log("\nVault Address:", vault.toBase58());
 }
 
 main().catch((err) => {
