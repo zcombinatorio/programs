@@ -1,21 +1,26 @@
 /**
  * Initialize Redemption Vault Script
  * 
+ * Reads config from Anchor.toml automatically.
+ * 
  * Usage:
- *   ANCHOR_PROVIDER_URL=https://api.devnet.solana.com \
- *   ANCHOR_WALLET=~/.config/solana/id.json \
- *   npx ts-node scripts/init-vault.ts
+ *   npx tsx scripts/init-vault.ts
+ *   npx tsx scripts/init-vault.ts --cluster devnet
+ *   npx tsx scripts/init-vault.ts --cluster mainnet
  */
 
 import * as anchor from "@coral-xyz/anchor";
-import { Program, BN } from "@coral-xyz/anchor";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { Program, BN, Wallet } from "@coral-xyz/anchor";
+import { Connection, PublicKey, SystemProgram, Keypair } from "@solana/web3.js";
 import {
   getAssociatedTokenAddress,
   getOrCreateAssociatedTokenAccount,
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
+import * as fs from "fs";
+import * as path from "path";
+import * as toml from "toml";
 
 import { Redemption } from "../target/types/redemption";
 
@@ -42,22 +47,84 @@ const DEPOSIT_AMOUNT = 10 * 10 ** QUOTE_DECIMALS; // 10_000_000
 const NONCE = 1;
 
 // ============================================
+// LOAD ANCHOR.TOML CONFIG
+// ============================================
+
+interface AnchorToml {
+  provider: {
+    cluster: string;
+    wallet: string;
+  };
+}
+
+function loadAnchorToml(): AnchorToml {
+  const tomlPath = path.resolve(__dirname, "../Anchor.toml");
+  const content = fs.readFileSync(tomlPath, "utf-8");
+  return toml.parse(content) as AnchorToml;
+}
+
+function resolveClusterUrl(cluster: string): string {
+  switch (cluster) {
+    case "localnet":
+      return "http://127.0.0.1:8899";
+    case "devnet":
+      return "https://api.devnet.solana.com";
+    case "mainnet":
+    case "mainnet-beta":
+      return "https://api.mainnet-beta.solana.com";
+    default:
+      // Assume it's a URL
+      return cluster;
+  }
+}
+
+function loadWallet(walletPath: string): Keypair {
+  const resolved = walletPath.startsWith("~")
+    ? walletPath.replace("~", process.env.HOME || "")
+    : path.resolve(__dirname, "..", walletPath);
+  const secretKey = JSON.parse(fs.readFileSync(resolved, "utf-8"));
+  return Keypair.fromSecretKey(Uint8Array.from(secretKey));
+}
+
+// ============================================
 // SCRIPT
 // ============================================
 
 const VAULT_SEED = Buffer.from("redemption");
 
 async function main() {
-  // Setup provider
-  const provider = anchor.AnchorProvider.env();
+  // Parse args
+  const args = process.argv.slice(2);
+  let clusterOverride: string | null = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--cluster" && args[i + 1]) {
+      clusterOverride = args[i + 1];
+    }
+  }
+
+  // Load config from Anchor.toml
+  const config = loadAnchorToml();
+  const cluster = clusterOverride || config.provider.cluster;
+  const clusterUrl = resolveClusterUrl(cluster);
+  const walletKeypair = loadWallet(config.provider.wallet);
+  const wallet = new Wallet(walletKeypair);
+
+  // Setup connection and provider
+  const connection = new Connection(clusterUrl, "confirmed");
+  const provider = new anchor.AnchorProvider(connection, wallet, {
+    commitment: "confirmed",
+  });
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Redemption as Program<Redemption>;
-  const admin = provider.wallet;
+  // Load program from IDL
+  const idlPath = path.resolve(__dirname, "../target/idl/redemption.json");
+  const idl = JSON.parse(fs.readFileSync(idlPath, "utf-8"));
+  const program = new Program<Redemption>(idl, provider);
 
   console.log("=== Redemption Vault Initialization ===\n");
+  console.log("Cluster:", cluster, `(${clusterUrl})`);
   console.log("Program ID:", program.programId.toBase58());
-  console.log("Admin:", admin.publicKey.toBase58());
+  console.log("Admin:", wallet.publicKey.toBase58());
   console.log("Base Mint:", BASE_MINT.toBase58());
   console.log("Quote Mint:", QUOTE_MINT.toBase58());
   console.log("Price:", PRICE, `(${PRICE / 10 ** QUOTE_DECIMALS} quote per base)`);
@@ -82,16 +149,16 @@ async function main() {
 
   // Get admin quote ATA
   const adminQuoteAccount = await getOrCreateAssociatedTokenAccount(
-    provider.connection,
-    (admin as anchor.Wallet).payer,
+    connection,
+    walletKeypair,
     QUOTE_MINT,
-    admin.publicKey
+    wallet.publicKey
   );
   const adminQuoteAta = adminQuoteAccount.address;
   console.log("Admin Quote ATA:", adminQuoteAta.toBase58());
 
   // Check admin has enough quote tokens
-  const adminQuoteBalance = await provider.connection.getTokenAccountBalance(adminQuoteAta);
+  const adminQuoteBalance = await connection.getTokenAccountBalance(adminQuoteAta);
   console.log("Admin Quote Balance:", Number(adminQuoteBalance.value.amount) / 10 ** QUOTE_DECIMALS);
   
   if (Number(adminQuoteBalance.value.amount) < DEPOSIT_AMOUNT) {
@@ -107,7 +174,7 @@ async function main() {
   const tx = await program.methods
     .initialize(NONCE, new BN(PRICE), new BN(DEPOSIT_AMOUNT))
     .accountsPartial({
-      admin: admin.publicKey,
+      admin: wallet.publicKey,
       baseMint: BASE_MINT,
       quoteMint: QUOTE_MINT,
       adminQuoteAta,
