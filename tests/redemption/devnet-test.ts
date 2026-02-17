@@ -34,8 +34,8 @@ const VAULT_SEED = Buffer.from("redemption");
 // Test parameters
 const BASE_DECIMALS = 9;
 const QUOTE_DECIMALS = 6;
-const UI_PRICE = 0.0002758; // 0.0002758 quote per base
-const PRICE = Math.round(UI_PRICE * 10 ** QUOTE_DECIMALS); // 276
+const UI_PRICE = 0.000275; // ~0.0002758 quote per base (rounded down)
+const PRICE = Math.floor(UI_PRICE * 10 ** QUOTE_DECIMALS); // 275
 
 const UI_REDEEM_AMOUNT = 1_000_000; // 1 million base tokens
 const RAW_REDEEM_AMOUNT = UI_REDEEM_AMOUNT * 10 ** BASE_DECIMALS;
