@@ -705,6 +705,114 @@ export type Futarchy = {
       ]
     },
     {
+      "name": "initializeParentDaoRealms",
+      "discriminator": [
+        210,
+        220,
+        229,
+        132,
+        252,
+        200,
+        76,
+        138
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "parentAdmin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "baseMint"
+        },
+        {
+          "name": "quoteMint"
+        },
+        {
+          "name": "treasuryMultisig"
+        },
+        {
+          "name": "mintMultisig"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "treasuryCosigner",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "poolType",
+          "type": {
+            "defined": {
+              "name": "poolType"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "initializeProposal",
       "discriminator": [
         50,
@@ -1432,6 +1540,11 @@ export type Futarchy = {
       "code": 6018,
       "name": "invalidProposalParams",
       "msg": "Invalid proposal parameters"
+    },
+    {
+      "code": 6019,
+      "name": "invalidGovernanceAccount",
+      "msg": "Account not owned by SPL Governance program"
     }
   ],
   "types": [

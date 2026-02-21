@@ -8,6 +8,9 @@ pub const MINT_MULTISIG_CONFIG_AUTH: Pubkey = pubkey!("Dobm8QnaCPQoc6koxC3wqBQqP
 pub const MINT_MULTISIG_KEY_A: Pubkey = pubkey!("Dobm8QnaCPQoc6koxC3wqBQqPTfDwspATb2u6EcWC9Aw");
 pub const MINT_MULTISIG_KEY_B: Pubkey = pubkey!("2xrEGvtxXKujqnHceiSzYDTAbTJEX3yGGPJgywH7LmcD");
 
+// SPL Governance program ID (Realms)
+pub const SPL_GOVERNANCE_PROGRAM_ID: Pubkey = pubkey!("GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw");
+
 // Maximum number of conditional options
 // Bottle-necked by launch_proposal (64 account max)
 #[constant]

@@ -699,6 +699,114 @@
       ]
     },
     {
+      "name": "initialize_parent_dao_realms",
+      "discriminator": [
+        210,
+        220,
+        229,
+        132,
+        252,
+        200,
+        76,
+        138
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "parent_admin",
+          "signer": true
+        },
+        {
+          "name": "dao",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  111
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderator",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  100,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_mint"
+        },
+        {
+          "name": "quote_mint"
+        },
+        {
+          "name": "treasury_multisig"
+        },
+        {
+          "name": "mint_multisig"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "treasury_cosigner",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool_type",
+          "type": {
+            "defined": {
+              "name": "PoolType"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "initialize_proposal",
       "discriminator": [
         50,
@@ -1426,6 +1534,11 @@
       "code": 6018,
       "name": "InvalidProposalParams",
       "msg": "Invalid proposal parameters"
+    },
+    {
+      "code": 6019,
+      "name": "InvalidGovernanceAccount",
+      "msg": "Account not owned by SPL Governance program"
     }
   ],
   "types": [

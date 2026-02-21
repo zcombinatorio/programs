@@ -54,6 +54,7 @@ import {
   addHistoricalProposal,
   initializeParentDAO,
   initializeChildDAO,
+  initializeParentDAORealms,
   upgradeDAO,
   addHistoricalParentDAO,
   transferAdmin,
@@ -1134,6 +1135,47 @@ export class FutarchyClient {
       parentDaoPda,
       treasuryMultisig: treasuryMultisigPda,
       mintMultisig: mintMultisigPda,
+    };
+  }
+
+  async initializeParentDAORealms(
+    admin: PublicKey,
+    parentAdmin: PublicKey,
+    name: string,
+    baseMint: PublicKey,
+    quoteMint: PublicKey,
+    treasuryCosigner: PublicKey,
+    pool: PublicKey,
+    poolType: PoolType,
+    treasuryAuthority: PublicKey,
+    mintAuthority: PublicKey,
+    options?: TxOptions
+  ) {
+    const [daoPda] = this.deriveDAOPDA(name);
+    const [moderatorPda] = this.deriveModeratorPDA(name);
+
+    const builder = initializeParentDAORealms(
+      this.program,
+      admin,
+      parentAdmin,
+      daoPda,
+      moderatorPda,
+      baseMint,
+      quoteMint,
+      treasuryAuthority,
+      mintAuthority,
+      name,
+      treasuryCosigner,
+      pool,
+      poolType
+    ).preInstructions(this.maybeAddComputeBudget(options));
+
+    return {
+      builder,
+      daoPda,
+      moderatorPda,
+      treasuryMultisig: treasuryAuthority,
+      mintMultisig: mintAuthority,
     };
   }
 

@@ -210,6 +210,35 @@ export function initializeChildDAO(
     });
 }
 
+export function initializeParentDAORealms(
+  program: Program<Futarchy>,
+  admin: PublicKey,
+  parentAdmin: PublicKey,
+  dao: PublicKey,
+  moderator: PublicKey,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
+  treasuryMultisig: PublicKey,
+  mintMultisig: PublicKey,
+  name: string,
+  treasuryCosigner: PublicKey,
+  pool: PublicKey,
+  poolType: PoolType
+) {
+  return program.methods
+    .initializeParentDaoRealms(name, treasuryCosigner, pool, poolType)
+    .accountsPartial({
+      admin,
+      parentAdmin,
+      dao,
+      moderator,
+      baseMint,
+      quoteMint,
+      treasuryMultisig,
+      mintMultisig,
+    });
+}
+
 export function upgradeDAO(
   program: Program<Futarchy>,
   admin: PublicKey,

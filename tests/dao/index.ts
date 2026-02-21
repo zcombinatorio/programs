@@ -85,6 +85,52 @@ describe("DAO", () => {
     poolPda = pool;
   });
 
+  describe("Initialize Parent DAO (Realms)", () => {
+    it("creates a parent DAO with pre-existing governance authorities", async () => {
+      const daoName = `realms-dao-${Date.now()}`;
+      const treasuryCosigner = Keypair.generate().publicKey;
+      const treasuryAuthority = Keypair.generate().publicKey;
+      const mintAuthority = Keypair.generate().publicKey;
+
+      const { builder, daoPda, moderatorPda, treasuryMultisig, mintMultisig } =
+        await client.initializeParentDAORealms(
+          wallet.publicKey,
+          wallet.publicKey,
+          daoName,
+          baseMint,
+          quoteMint,
+          treasuryCosigner,
+          poolPda,
+          { damm: {} },
+          treasuryAuthority,
+          mintAuthority
+        );
+
+      await builder.rpc();
+
+      // Fetch and verify the DAO account
+      const dao = await client.fetchDAO(daoPda);
+
+      expect(dao.name).to.equal(daoName);
+      expect(dao.admin.toBase58()).to.equal(wallet.publicKey.toBase58());
+      expect(dao.tokenMint.toBase58()).to.equal(baseMint.toBase58());
+      expect(dao.cosigner.toBase58()).to.equal(treasuryCosigner.toBase58());
+      expect(dao.treasuryMultisig.toBase58()).to.equal(treasuryAuthority.toBase58());
+      expect(dao.mintAuthMultisig.toBase58()).to.equal(mintAuthority.toBase58());
+
+      // Verify moderator was created
+      const moderator = await client.fetchModerator(moderatorPda);
+      expect(moderator.name).to.equal(daoName);
+      expect(moderator.baseMint.toBase58()).to.equal(baseMint.toBase58());
+      expect(moderator.quoteMint.toBase58()).to.equal(quoteMint.toBase58());
+
+      console.log("    DAO created:", daoPda.toBase58());
+      console.log("    Moderator:", moderatorPda.toBase58());
+      console.log("    Treasury Authority:", treasuryAuthority.toBase58());
+      console.log("    Mint Authority:", mintAuthority.toBase58());
+    });
+  });
+
   describe("Initialize Parent DAO", () => {
     it("creates a parent DAO", async () => {
       const daoName = `dao-${Date.now()}`;
@@ -125,4 +171,5 @@ describe("DAO", () => {
       console.log("    Treasury Multisig:", treasuryMultisig.toBase58());
     });
   });
+
 });

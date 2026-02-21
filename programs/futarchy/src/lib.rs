@@ -137,4 +137,21 @@ pub mod futarchy {
     ) -> Result<()> {
         instructions::transfer_admin::transfer_admin_handler(ctx, new_admin)
     }
+
+    pub fn initialize_parent_dao_realms(
+        ctx: Context<InitializeParentDAORealms>,
+        name: String,
+        treasury_cosigner: Pubkey,
+        pool: Pubkey,
+        pool_type: PoolType,
+    ) -> Result<()> {
+        instructions::initialize_parent_dao_realms::initialize_parent_dao_realms_handler(
+            ctx,
+            name,
+            treasury_cosigner,
+            pool,
+            pool_type,
+        )
+    }
+
 }

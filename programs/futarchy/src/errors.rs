@@ -58,4 +58,7 @@ pub enum FutarchyError {
 
     #[msg("Invalid proposal parameters")]
     InvalidProposalParams,
+
+    #[msg("Account not owned by SPL Governance program")]
+    InvalidGovernanceAccount,
 }

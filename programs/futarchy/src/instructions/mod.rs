@@ -10,6 +10,7 @@ pub mod redeem_liquidity;
 pub mod add_historical_proposal;
 pub mod add_historical_parent_dao;
 pub mod transfer_admin;
+pub mod initialize_parent_dao_realms;
 
 pub use add_option::*;
 pub use finalize_proposal::*;
@@ -23,3 +24,4 @@ pub use redeem_liquidity::*;
 pub use add_historical_proposal::*;
 pub use add_historical_parent_dao::*;
 pub use transfer_admin::*;
+pub use initialize_parent_dao_realms::*;
