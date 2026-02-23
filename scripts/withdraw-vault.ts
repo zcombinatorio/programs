@@ -37,7 +37,7 @@ const QUOTE_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 const QUOTE_DECIMALS = 6;
 
 // Vault nonce (must match the vault you want to withdraw from)
-const NONCE = 1;
+const NONCE = 2;
 
 // ============================================
 // SCRIPT
@@ -84,27 +84,27 @@ async function main() {
   const vaultQuoteAta = await getAssociatedTokenAddress(QUOTE_MINT, vault, true);
   const vaultBaseAta = await getAssociatedTokenAddress(BASE_MINT, vault, true);
 
-  // Check vault balances
-  let quoteBalance = 0;
-  let baseBalance = 0;
+  // Check vault balances (keep as strings to avoid Number overflow with large amounts)
+  let quoteBalance = "0";
+  let baseBalance = "0";
 
   try {
     const vaultQuoteBalance = await connection.getTokenAccountBalance(vaultQuoteAta);
-    quoteBalance = Number(vaultQuoteBalance.value.amount);
-    console.log("Vault USDC Balance:", quoteBalance / 10 ** QUOTE_DECIMALS);
+    quoteBalance = vaultQuoteBalance.value.amount;
+    console.log("Vault USDC Balance:", vaultQuoteBalance.value.uiAmountString);
   } catch {
     console.log("Vault USDC Balance: 0 (account doesn't exist)");
   }
 
   try {
     const vaultBaseBalance = await connection.getTokenAccountBalance(vaultBaseAta);
-    baseBalance = Number(vaultBaseBalance.value.amount);
-    console.log("Vault FAIR Balance:", baseBalance / 10 ** BASE_DECIMALS);
+    baseBalance = vaultBaseBalance.value.amount;
+    console.log("Vault FAIR Balance:", vaultBaseBalance.value.uiAmountString);
   } catch {
     console.log("Vault FAIR Balance: 0 (account doesn't exist)");
   }
 
-  if (quoteBalance === 0 && baseBalance === 0) {
+  if (quoteBalance === "0" && baseBalance === "0") {
     console.log("\n⚠️  Vault is empty, nothing to withdraw.");
     return;
   }
@@ -149,8 +149,8 @@ async function main() {
   console.log("\n✅ Withdrawal complete!");
   console.log("Transaction:", tx);
   console.log("\nWithdrew:");
-  if (quoteBalance > 0) console.log(`  ${quoteBalance / 10 ** QUOTE_DECIMALS} USDC`);
-  if (baseBalance > 0) console.log(`  ${baseBalance / 10 ** BASE_DECIMALS} FAIR`);
+  if (quoteBalance !== "0") console.log(`  ${Number(quoteBalance) / 10 ** QUOTE_DECIMALS} USDC`);
+  if (baseBalance !== "0") console.log(`  ${Number(baseBalance) / 10 ** BASE_DECIMALS} FAIR`);
 }
 
 main().catch((err) => {
