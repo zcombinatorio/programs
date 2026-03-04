@@ -5,7 +5,7 @@
 
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { VAULT_SEED, CONDITIONAL_MINT_SEED, PROGRAM_ID } from "./constants";
+import { VAULT_SEED, CONDITIONAL_MINT_SEED, CLAIM_LOCK_SEED, PROGRAM_ID } from "./constants";
 import { Vault, VaultType, VaultState, VaultAccount } from "./types";
 
 /* PDA Derivation */
@@ -40,6 +40,16 @@ export function deriveConditionalMint(
       Buffer.from([vaultType]),
       Buffer.from([index]),
     ],
+    programId
+  );
+}
+
+export function deriveClaimLockPDA(
+  vaultPda: PublicKey,
+  programId: PublicKey = PROGRAM_ID
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [CLAIM_LOCK_SEED, vaultPda.toBuffer()],
     programId
   );
 }

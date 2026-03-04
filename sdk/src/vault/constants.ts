@@ -15,6 +15,7 @@ export const PROGRAM_ID = new PublicKey(VaultIDL.address);
 
 export const VAULT_SEED = parseIdlBytes(getIdlConstant(VaultIDL, "VAULT_SEED"));
 export const CONDITIONAL_MINT_SEED = parseIdlBytes(getIdlConstant(VaultIDL, "CONDITIONAL_MINT_SEED"));
+export const CLAIM_LOCK_SEED = parseIdlBytes(getIdlConstant(VaultIDL, "CLAIM_LOCK_SEED"));
 
 /* Numeric Constants */
 

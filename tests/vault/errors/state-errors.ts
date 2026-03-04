@@ -193,4 +193,35 @@ describe("State Errors", () => {
       );
     });
   });
+
+  describe("Claims lock", () => {
+    it("rejects redeem_winnings until claim lock has expired", async () => {
+      const ctx = await createVaultWithDeposit(
+        client,
+        wallet,
+        baseMint,
+        quoteMint,
+        DEPOSIT_AMOUNT,
+        VaultType.Base
+      );
+
+      await client.finalize(wallet.publicKey, ctx.vaultPda, 0, 2).rpc();
+
+      const builder = await client.redeemWinnings(
+        wallet.publicKey,
+        ctx.vaultPda,
+        VaultType.Base
+      );
+      await expectAnchorError(sendAndLog(builder, client, wallet), "ClaimsLocked");
+
+      await new Promise((resolve) => setTimeout(resolve, 2200));
+
+      const retryBuilder = await client.redeemWinnings(
+        wallet.publicKey,
+        ctx.vaultPda,
+        VaultType.Base
+      );
+      await sendAndLog(retryBuilder, client, wallet);
+    });
+  });
 });

@@ -43,4 +43,10 @@ pub enum VaultError {
 
     #[msg("Invalid mint for vault type")]
     InvalidMint,
+
+    #[msg("Claims are still locked")]
+    ClaimsLocked,
+
+    #[msg("Math overflow")]
+    MathOverflow,
 }

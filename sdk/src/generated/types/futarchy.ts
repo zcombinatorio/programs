@@ -363,6 +363,10 @@ export type Futarchy = {
         {
           "name": "ammProgram",
           "address": "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -780,6 +784,82 @@ export type Futarchy = {
           }
         },
         {
+          "name": "proposalClaimConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108,
+                  95,
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposalClaimTarget",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108,
+                  95,
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  95,
+                  116,
+                  97,
+                  114,
+                  103,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal"
+              }
+            ]
+          }
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         },
@@ -813,6 +893,16 @@ export type Futarchy = {
           "name": "metadata",
           "type": {
             "option": "string"
+          }
+        },
+        {
+          "name": "claimLockSeconds",
+          "type": "u32"
+        },
+        {
+          "name": "claimLockIndex",
+          "type": {
+            "option": "u8"
           }
         }
       ],
@@ -1215,6 +1305,32 @@ export type Futarchy = {
         124,
         243,
         64
+      ]
+    },
+    {
+      "name": "proposalClaimConfigAccount",
+      "discriminator": [
+        22,
+        65,
+        194,
+        148,
+        104,
+        157,
+        36,
+        36
+      ]
+    },
+    {
+      "name": "proposalClaimTargetAccount",
+      "discriminator": [
+        185,
+        147,
+        143,
+        70,
+        182,
+        125,
+        85,
+        77
       ]
     }
   ],
@@ -1824,6 +1940,50 @@ export type Futarchy = {
       }
     },
     {
+      "name": "proposalClaimConfigAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimLockSeconds",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "proposalClaimTargetAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "hasClaimLockIndex",
+            "type": "bool"
+          },
+          {
+            "name": "claimLockIndex",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "proposalFinalized",
       "type": {
         "kind": "struct",
@@ -1985,6 +2145,16 @@ export type Futarchy = {
       "name": "moderatorSeed",
       "type": "bytes",
       "value": "[109, 111, 100, 101, 114, 97, 116, 111, 114]"
+    },
+    {
+      "name": "proposalClaimConfigSeed",
+      "type": "bytes",
+      "value": "[112, 114, 111, 112, 111, 115, 97, 108, 95, 99, 108, 97, 105, 109, 95, 99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "proposalClaimTargetSeed",
+      "type": "bytes",
+      "value": "[112, 114, 111, 112, 111, 115, 97, 108, 95, 99, 108, 97, 105, 109, 95, 116, 97, 114, 103, 101, 116]"
     },
     {
       "name": "proposalSeed",

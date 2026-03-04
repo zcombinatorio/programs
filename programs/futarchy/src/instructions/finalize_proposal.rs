@@ -2,7 +2,7 @@ use amm::cpi::accounts::{CeaseTrading, CrankTwap};
 use amm::program::Amm;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::get_return_data;
-use vault::cpi::accounts::FinalizeVault;
+use vault::cpi::accounts::FinalizeVaultWithLock;
 use vault::program::Vault;
 
 use crate::state::proposal::*;
@@ -41,11 +41,16 @@ pub struct FinalizeProposal<'info> {
     pub vault_program: Program<'info, Vault>,
     pub amm_program: Program<'info, Amm>,
 
-    // Remaining accounts (for N pools, 3 accounts per pool):
+    // Remaining accounts:
+    // - For N pools, 3 accounts per pool:
     // For each pool i:
     //   - pool[i * 3]      - Pool account (mutable)
     //   - reserve_a[i * 3 + 1] - Reserve A token account
     //   - reserve_b[i * 3 + 2] - Reserve B token account
+    // - claim_lock PDA (vault sidecar)
+    // - system_program
+    // - Optional proposal claim config PDA
+    // - Optional proposal claim target PDA
 }
 
 pub fn finalize_proposal_handler<'info>(
@@ -53,12 +58,70 @@ pub fn finalize_proposal_handler<'info>(
 ) -> Result<()> {
     let proposal = &ctx.accounts.proposal;
     let num_options = proposal.num_options as usize;
+    let base_remaining = num_options * 3;
 
-    // Validate remaining accounts length (3 accounts per pool: pool, reserve_a, reserve_b)
+    // Validate remaining accounts length:
+    // 3 accounts per pool + claim_lock PDA + system_program (+ optional claim config/target PDAs)
     require!(
-        ctx.remaining_accounts.len() == num_options * 3,
+        ctx.remaining_accounts.len() == base_remaining + 2
+            || ctx.remaining_accounts.len() == base_remaining + 3
+            || ctx.remaining_accounts.len() == base_remaining + 4,
         FutarchyError::InvalidRemainingAccounts
     );
+    let claim_lock_info = &ctx.remaining_accounts[base_remaining];
+    let system_program_info = &ctx.remaining_accounts[base_remaining + 1];
+    require!(
+        system_program_info.key() == System::id(),
+        FutarchyError::InvalidRemainingAccounts
+    );
+
+    let mut claim_lock_seconds = 0u32;
+    let mut claim_lock_index = 0u8;
+    let mut claim_lock_applies_to_all = true;
+
+    let (expected_claim_config_pda, _) = Pubkey::find_program_address(
+        &[PROPOSAL_CLAIM_CONFIG_SEED, proposal.key().as_ref()],
+        &crate::id(),
+    );
+    let (expected_claim_target_pda, _) = Pubkey::find_program_address(
+        &[PROPOSAL_CLAIM_TARGET_SEED, proposal.key().as_ref()],
+        &crate::id(),
+    );
+    for extra_info in ctx.remaining_accounts.iter().skip(base_remaining + 2) {
+        if extra_info.key() == expected_claim_config_pda {
+            require!(
+                !extra_info.data_is_empty(),
+                FutarchyError::InvalidRemainingAccounts
+            );
+            let claim_config = Account::<ProposalClaimConfigAccount>::try_from(extra_info)?;
+            require!(
+                claim_config.proposal == proposal.key(),
+                FutarchyError::InvalidRemainingAccounts
+            );
+            claim_lock_seconds = claim_config.claim_lock_seconds;
+        } else if extra_info.key() == expected_claim_target_pda {
+            require!(
+                !extra_info.data_is_empty(),
+                FutarchyError::InvalidRemainingAccounts
+            );
+            let claim_target = Account::<ProposalClaimTargetAccount>::try_from(extra_info)?;
+            require!(
+                claim_target.proposal == proposal.key(),
+                FutarchyError::InvalidRemainingAccounts
+            );
+            claim_lock_applies_to_all = !claim_target.has_claim_lock_index;
+            claim_lock_index = claim_target.claim_lock_index;
+        } else {
+            return err!(FutarchyError::InvalidRemainingAccounts);
+        }
+    }
+
+    if claim_lock_seconds > 0 && !claim_lock_applies_to_all {
+        require!(
+            claim_lock_index < proposal.num_options,
+            FutarchyError::InvalidProposalParams
+        );
+    }
 
     // Check that proposal time has elapsed
     let clock = Clock::get()?;
@@ -145,16 +208,29 @@ pub fn finalize_proposal_handler<'info>(
     }
 
     // Finalize vault with winning index (proposal PDA as owner)
+    let effective_claim_lock_seconds = if claim_lock_applies_to_all {
+        claim_lock_seconds
+    } else if winning_idx == claim_lock_index {
+        claim_lock_seconds
+    } else {
+        0
+    };
     let finalize_vault_ctx = CpiContext::new_with_signer(
         ctx.accounts.vault_program.to_account_info(),
-        FinalizeVault {
+        FinalizeVaultWithLock {
             payer: ctx.accounts.signer.to_account_info(),
             owner: ctx.accounts.proposal.to_account_info(),
             vault: ctx.accounts.vault.to_account_info(),
+            claim_lock: claim_lock_info.to_account_info(),
+            system_program: system_program_info.to_account_info(),
         },
         signer_seeds,
     );
-    vault::cpi::finalize(finalize_vault_ctx, winning_idx)?;
+    vault::cpi::finalize_with_lock(
+        finalize_vault_ctx,
+        winning_idx,
+        effective_claim_lock_seconds,
+    )?;
 
     // Update proposal state
     let proposal = &mut ctx.accounts.proposal;

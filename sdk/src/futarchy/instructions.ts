@@ -30,16 +30,22 @@ export function initializeProposal(
   creator: PublicKey,
   moderator: PublicKey,
   proposal: PublicKey,
+  proposalClaimConfig: PublicKey,
+  proposalClaimTarget: PublicKey,
   proposalParams: ProposalParams,
   metadata: string | null,
+  claimLockSeconds: number,
+  claimLockIndex: number | null,
   remainingAccounts: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[]
 ) {
   return program.methods
-    .initializeProposal(proposalParams, metadata)
+    .initializeProposal(proposalParams, metadata, claimLockSeconds, claimLockIndex)
     .accountsPartial({
       creator,
       moderator,
       proposal,
+      proposalClaimConfig,
+      proposalClaimTarget,
     })
     .remainingAccounts(remainingAccounts);
 }

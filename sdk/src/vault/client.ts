@@ -20,6 +20,7 @@ import { Vault, VaultType, VaultAccount, VaultActionOptions } from "./types";
 import {
   deriveVaultPDA,
   deriveConditionalMint,
+  deriveClaimLockPDA,
   fetchVaultAccount,
 } from "./utils";
 import {
@@ -28,7 +29,7 @@ import {
   activate,
   deposit,
   withdraw,
-  finalize,
+  finalizeWithLock,
   redeemWinnings,
 } from "./instructions";
 
@@ -66,6 +67,10 @@ export class VaultClient {
     index: number
   ): [PublicKey, number] {
     return deriveConditionalMint(vaultPda, vaultType, index, this.programId);
+  }
+
+  deriveClaimLockPDA(vaultPda: PublicKey): [PublicKey, number] {
+    return deriveClaimLockPDA(vaultPda, this.programId);
   }
 
   /* State Fetching */
@@ -287,8 +292,23 @@ export class VaultClient {
     return builder;
   }
 
-  finalize(payer: PublicKey, owner: PublicKey, vaultPda: PublicKey, winningIdx: number) {
-    return finalize(this.program, payer, owner, vaultPda, winningIdx);
+  finalize(
+    owner: PublicKey,
+    vaultPda: PublicKey,
+    winningIdx: number,
+    claimLockSeconds: number = 0,
+    payer?: PublicKey
+  ) {
+    const [claimLockPda] = this.deriveClaimLockPDA(vaultPda);
+    return finalizeWithLock(
+      this.program,
+      payer ?? owner,
+      owner,
+      vaultPda,
+      claimLockPda,
+      winningIdx,
+      claimLockSeconds
+    );
   }
 
   async redeemWinnings(
@@ -303,6 +323,7 @@ export class VaultClient {
     const mint = vaultType === VaultType.Base ? vault.baseMint.address : vault.quoteMint.address;
     const condMints = (vaultType === VaultType.Base ? vault.condBaseMints : vault.condQuoteMints)
       .slice(0, vault.numOptions);
+    const claimLockPda = vault.version >= 2 ? this.deriveClaimLockPDA(vaultPda)[0] : undefined;
 
     let builder = redeemWinnings(
       this.program,
@@ -310,7 +331,8 @@ export class VaultClient {
       vaultPda,
       mint,
       condMints,
-      vaultType
+      vaultType,
+      claimLockPda
     );
 
     if (includeCuBudget) {

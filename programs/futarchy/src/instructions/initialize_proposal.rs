@@ -52,6 +52,30 @@ pub struct InitializeProposal<'info> {
     )]
     pub proposal: Box<Account<'info, ProposalAccount>>,
 
+    #[account(
+        init,
+        payer = creator,
+        space = 8 + ProposalClaimConfigAccount::INIT_SPACE,
+        seeds = [
+            PROPOSAL_CLAIM_CONFIG_SEED,
+            proposal.key().as_ref()
+        ],
+        bump
+    )]
+    pub proposal_claim_config: Box<Account<'info, ProposalClaimConfigAccount>>,
+
+    #[account(
+        init,
+        payer = creator,
+        space = 8 + ProposalClaimTargetAccount::INIT_SPACE,
+        seeds = [
+            PROPOSAL_CLAIM_TARGET_SEED,
+            proposal.key().as_ref()
+        ],
+        bump
+    )]
+    pub proposal_claim_target: Box<Account<'info, ProposalClaimTargetAccount>>,
+
     // Programs
     pub system_program: Program<'info, System>,
     pub vault_program: Program<'info, Vault>,
@@ -84,6 +108,8 @@ pub fn initialize_proposal_handler<'info>(
     ctx: Context<'_, '_, 'info, 'info, InitializeProposal<'info>>,
     proposal_params: ProposalParams,
     metadata: Option<String>,
+    claim_lock_seconds: u32,
+    claim_lock_index: Option<u8>,
 ) -> Result<u16> {
     require!(
         ctx.remaining_accounts.len() == 18,
@@ -129,6 +155,17 @@ pub fn initialize_proposal_handler<'info>(
     // pools[2..] already default/zeroed
     proposal.vault = ctx.remaining_accounts[2].key();
     proposal.metadata = metadata;
+
+    let proposal_claim_config = &mut ctx.accounts.proposal_claim_config;
+    proposal_claim_config.proposal = proposal.key();
+    proposal_claim_config.claim_lock_seconds = claim_lock_seconds;
+    proposal_claim_config.bump = ctx.bumps.proposal_claim_config;
+
+    let proposal_claim_target = &mut ctx.accounts.proposal_claim_target;
+    proposal_claim_target.proposal = proposal.key();
+    proposal_claim_target.has_claim_lock_index = claim_lock_index.is_some();
+    proposal_claim_target.claim_lock_index = claim_lock_index.unwrap_or(0);
+    proposal_claim_target.bump = ctx.bumps.proposal_claim_target;
 
     // Build proposal PDA signer seeds
     let proposal_seeds = &[

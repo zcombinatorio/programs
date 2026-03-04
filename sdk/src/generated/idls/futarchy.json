@@ -357,6 +357,10 @@
         {
           "name": "amm_program",
           "address": "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -774,6 +778,82 @@
           }
         },
         {
+          "name": "proposal_claim_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108,
+                  95,
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal_claim_target",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108,
+                  95,
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  95,
+                  116,
+                  97,
+                  114,
+                  103,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "proposal"
+              }
+            ]
+          }
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         },
@@ -807,6 +887,16 @@
           "name": "metadata",
           "type": {
             "option": "string"
+          }
+        },
+        {
+          "name": "claim_lock_seconds",
+          "type": "u32"
+        },
+        {
+          "name": "claim_lock_index",
+          "type": {
+            "option": "u8"
           }
         }
       ],
@@ -1209,6 +1299,32 @@
         124,
         243,
         64
+      ]
+    },
+    {
+      "name": "ProposalClaimConfigAccount",
+      "discriminator": [
+        22,
+        65,
+        194,
+        148,
+        104,
+        157,
+        36,
+        36
+      ]
+    },
+    {
+      "name": "ProposalClaimTargetAccount",
+      "discriminator": [
+        185,
+        147,
+        143,
+        70,
+        182,
+        125,
+        85,
+        77
       ]
     }
   ],
@@ -1818,6 +1934,50 @@
       }
     },
     {
+      "name": "ProposalClaimConfigAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "claim_lock_seconds",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalClaimTargetAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "has_claim_lock_index",
+            "type": "bool"
+          },
+          {
+            "name": "claim_lock_index",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "ProposalFinalized",
       "type": {
         "kind": "struct",
@@ -1979,6 +2139,16 @@
       "name": "MODERATOR_SEED",
       "type": "bytes",
       "value": "[109, 111, 100, 101, 114, 97, 116, 111, 114]"
+    },
+    {
+      "name": "PROPOSAL_CLAIM_CONFIG_SEED",
+      "type": "bytes",
+      "value": "[112, 114, 111, 112, 111, 115, 97, 108, 95, 99, 108, 97, 105, 109, 95, 99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "PROPOSAL_CLAIM_TARGET_SEED",
+      "type": "bytes",
+      "value": "[112, 114, 111, 112, 111, 115, 97, 108, 95, 99, 108, 97, 105, 109, 95, 116, 97, 114, 103, 101, 116]"
     },
     {
       "name": "PROPOSAL_SEED",

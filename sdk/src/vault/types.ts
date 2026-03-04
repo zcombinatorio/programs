@@ -12,6 +12,7 @@ import type { Vault } from "../generated/types";
 /* IDL-derived Types */
 
 export type VaultAccount = IdlAccounts<Vault>["vaultAccount"];
+export type ClaimLockAccount = IdlAccounts<Vault>["claimLockAccount"];
 export type VaultStateRaw = IdlTypes<Vault>["vaultState"];
 export type VaultTypeRaw = IdlTypes<Vault>["vaultType"];
 
@@ -20,6 +21,7 @@ export type VaultActivatedEvent = IdlEvents<Vault>["vaultActivated"];
 export type VaultDepositEvent = IdlEvents<Vault>["vaultDeposit"];
 export type VaultWithdrawalEvent = IdlEvents<Vault>["vaultWithdrawal"];
 export type VaultFinalizedEvent = IdlEvents<Vault>["vaultFinalized"];
+export type VaultFinalizedWithLockEvent = IdlEvents<Vault>["vaultFinalizedWithLock"];
 export type OptionAddedEvent = IdlEvents<Vault>["optionAdded"];
 export type WinningsRedeemedEvent = IdlEvents<Vault>["winningsRedeemed"];
 
@@ -44,6 +46,7 @@ export type VaultEvent =
   | { name: "VaultDeposit"; data: VaultDepositEvent }
   | { name: "VaultWithdrawal"; data: VaultWithdrawalEvent }
   | { name: "VaultFinalized"; data: VaultFinalizedEvent }
+  | { name: "VaultFinalizedWithLock"; data: VaultFinalizedWithLockEvent }
   | { name: "OptionAdded"; data: OptionAddedEvent }
   | { name: "WinningsRedeemed"; data: WinningsRedeemedEvent };
 

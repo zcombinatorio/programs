@@ -5,7 +5,15 @@
 
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { DAO_SEED, MODERATOR_SEED, PROPOSAL_SEED, MINT_CREATE_KEY_SEED, PROGRAM_ID } from "./constants";
+import {
+  DAO_SEED,
+  MODERATOR_SEED,
+  PROPOSAL_SEED,
+  PROPOSAL_CLAIM_CONFIG_SEED,
+  PROPOSAL_CLAIM_TARGET_SEED,
+  MINT_CREATE_KEY_SEED,
+  PROGRAM_ID,
+} from "./constants";
 import { Futarchy, DAOAccount, ModeratorAccount, ProposalAccount, ProposalState } from "./types";
 
 /* PDA Derivation */
@@ -39,6 +47,26 @@ export function deriveProposalPDA(
   proposalIdBuffer.writeUInt16LE(proposalId);
   return PublicKey.findProgramAddressSync(
     [PROPOSAL_SEED, moderator.toBuffer(), proposalIdBuffer],
+    programId
+  );
+}
+
+export function deriveProposalClaimConfigPDA(
+  proposalPda: PublicKey,
+  programId: PublicKey = PROGRAM_ID
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [PROPOSAL_CLAIM_CONFIG_SEED, proposalPda.toBuffer()],
+    programId
+  );
+}
+
+export function deriveProposalClaimTargetPDA(
+  proposalPda: PublicKey,
+  programId: PublicKey = PROGRAM_ID
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [PROPOSAL_CLAIM_TARGET_SEED, proposalPda.toBuffer()],
     programId
   );
 }

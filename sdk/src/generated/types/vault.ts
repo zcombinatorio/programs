@@ -407,6 +407,105 @@ export type Vault = {
       ]
     },
     {
+      "name": "finalizeWithLock",
+      "discriminator": [
+        102,
+        76,
+        93,
+        110,
+        202,
+        155,
+        80,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer for account rent"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Owner of the vault — needs to sign"
+          ],
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "vaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "vaultAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "claimLock",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  95,
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "winningIdx",
+          "type": "u8"
+        },
+        {
+          "name": "claimLockSeconds",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "initialize",
       "discriminator": [
         175,
@@ -997,6 +1096,19 @@ export type Vault = {
   ],
   "accounts": [
     {
+      "name": "claimLockAccount",
+      "discriminator": [
+        169,
+        147,
+        103,
+        56,
+        49,
+        167,
+        34,
+        245
+      ]
+    },
+    {
       "name": "vaultAccount",
       "discriminator": [
         230,
@@ -1061,6 +1173,19 @@ export type Vault = {
         213,
         163,
         0
+      ]
+    },
+    {
+      "name": "vaultFinalizedWithLock",
+      "discriminator": [
+        170,
+        220,
+        199,
+        155,
+        125,
+        23,
+        170,
+        249
       ]
     },
     {
@@ -1173,9 +1298,39 @@ export type Vault = {
       "code": 6013,
       "name": "invalidMint",
       "msg": "Invalid mint for vault type"
+    },
+    {
+      "code": 6014,
+      "name": "claimsLocked",
+      "msg": "Claims are still locked"
+    },
+    {
+      "code": 6015,
+      "name": "mathOverflow",
+      "msg": "Math overflow"
     }
   ],
   "types": [
+    {
+      "name": "claimLockAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimsAvailableAt",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
     {
       "name": "optionAdded",
       "type": {
@@ -1355,6 +1510,34 @@ export type Vault = {
       }
     },
     {
+      "name": "vaultFinalizedWithLock",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "winningIdx",
+            "type": "u8"
+          },
+          {
+            "name": "claimsAvailableAt",
+            "type": "i64"
+          },
+          {
+            "name": "winningBaseMint",
+            "type": "pubkey"
+          },
+          {
+            "name": "winningQuoteMint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "vaultInitialized",
       "type": {
         "kind": "struct",
@@ -1479,6 +1662,11 @@ export type Vault = {
   ],
   "constants": [
     {
+      "name": "claimLockSeed",
+      "type": "bytes",
+      "value": "[99, 108, 97, 105, 109, 95, 108, 111, 99, 107]"
+    },
+    {
       "name": "conditionalMintSeed",
       "type": "bytes",
       "value": "[99, 109, 105, 110, 116]"
@@ -1501,7 +1689,7 @@ export type Vault = {
     {
       "name": "vaultVersion",
       "type": "u8",
-      "value": "1"
+      "value": "2"
     }
   ]
 };

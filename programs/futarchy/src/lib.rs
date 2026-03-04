@@ -25,11 +25,15 @@ pub mod futarchy {
         ctx: Context<'_, '_, 'info, 'info, InitializeProposal<'info>>,
         proposal_params: ProposalParams,
         metadata: Option<String>,
+        claim_lock_seconds: u32,
+        claim_lock_index: Option<u8>,
     ) -> Result<u16> {
         instructions::initialize_proposal::initialize_proposal_handler(
             ctx,
             proposal_params,
-            metadata
+            metadata,
+            claim_lock_seconds,
+            claim_lock_index,
         )
     }
 

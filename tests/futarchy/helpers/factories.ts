@@ -46,6 +46,9 @@ export interface CreateProposalOptions {
   length?: number; // default: PROPOSAL_LENGTH
   fee?: number; // default: DEFAULT_FEE
   twapConfig?: TWAPConfig; // default: DEFAULT_TWAP_CONFIG
+  marketBias?: number; // default: 0
+  claimLockSeconds?: number; // default: 0
+  claimLockIndex?: number | null; // default: null (all options)
 }
 
 /**
@@ -57,16 +60,17 @@ export async function createModerator(
   options: CreateModeratorOptions
 ): Promise<ModeratorTestContext> {
   const { baseMint, quoteMint } = options;
+  const moderatorName = `mod-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
 
-  const { builder, globalConfig, moderatorPda, moderatorId } =
-    await client.initializeModerator(wallet.publicKey, baseMint, quoteMint);
+  const { builder, moderatorPda } =
+    await client.initializeModerator(wallet.publicKey, baseMint, quoteMint, moderatorName);
 
   await builder.rpc();
 
   return {
     moderatorPda,
-    moderatorId,
-    globalConfig,
+    moderatorId: 0,
+    globalConfig: PublicKey.default,
     baseMint,
     quoteMint,
   };
@@ -86,6 +90,9 @@ export async function createProposalInSetupState(
   const length = options.length ?? PROPOSAL_LENGTH;
   const fee = options.fee ?? DEFAULT_FEE;
   const twapConfig = options.twapConfig ?? DEFAULT_TWAP_CONFIG;
+  const marketBias = options.marketBias ?? 0;
+  const claimLockSeconds = options.claimLockSeconds ?? 0;
+  const claimLockIndex = options.claimLockIndex ?? null;
 
   let altAddress: PublicKey | undefined;
 
@@ -116,9 +123,18 @@ export async function createProposalInSetupState(
   } = await client.initializeProposal(
     wallet.publicKey,
     moderatorCtx.moderatorPda,
-    length,
-    fee,
-    twapConfig
+    {
+      length,
+      fee,
+      startingObservation: twapConfig.startingObservation,
+      maxObservationDelta: twapConfig.maxObservationDelta,
+      warmupDuration: twapConfig.warmupDuration,
+      marketBias,
+    },
+    undefined,
+    undefined,
+    claimLockSeconds,
+    claimLockIndex
   );
   await builder.rpc();
 

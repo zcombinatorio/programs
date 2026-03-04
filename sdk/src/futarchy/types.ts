@@ -14,6 +14,8 @@ import type { Futarchy } from "../generated/types";
 export type DAOAccount = IdlAccounts<Futarchy>["daoAccount"];
 export type ModeratorAccount = IdlAccounts<Futarchy>["moderatorAccount"];
 export type ProposalAccount = IdlAccounts<Futarchy>["proposalAccount"];
+export type ProposalClaimConfigAccount = IdlAccounts<Futarchy>["proposalClaimConfigAccount"];
+export type ProposalClaimTargetAccount = IdlAccounts<Futarchy>["proposalClaimTargetAccount"];
 
 /* IDL Types */
 

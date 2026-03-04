@@ -47,9 +47,14 @@ describe("Futarchy - Authorization Errors", () => {
       const { builder } = await nonOwnerClient.initializeProposal(
         nonOwner.keypair.publicKey,
         moderatorCtx.moderatorPda,
-        60, // length
-        30, // fee
-        DEFAULT_TWAP_CONFIG
+        {
+          length: 60,
+          fee: 30,
+          startingObservation: DEFAULT_TWAP_CONFIG.startingObservation,
+          maxObservationDelta: DEFAULT_TWAP_CONFIG.maxObservationDelta,
+          warmupDuration: DEFAULT_TWAP_CONFIG.warmupDuration,
+          marketBias: 0,
+        }
       );
 
       await expectAnchorError(builder.rpc(), "ConstraintAddress");

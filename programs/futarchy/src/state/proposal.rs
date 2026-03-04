@@ -7,6 +7,12 @@ pub const PROPOSAL_VERSION: u8 = 1;
 #[constant]
 pub const PROPOSAL_SEED: &[u8] = b"proposal";
 
+#[constant]
+pub const PROPOSAL_CLAIM_CONFIG_SEED: &[u8] = b"proposal_claim_config";
+
+#[constant]
+pub const PROPOSAL_CLAIM_TARGET_SEED: &[u8] = b"proposal_claim_target";
+
 #[derive(Copy, Clone, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
 pub enum ProposalState {
     Setup,        // Options being added
@@ -66,4 +72,21 @@ pub struct ProposalAccount {
 
     #[max_len(64)] // Should cover v0 & most of v1
     pub metadata: Option<String>, // IPFS CID
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct ProposalClaimConfigAccount {
+    pub proposal: Pubkey,
+    pub claim_lock_seconds: u32,
+    pub bump: u8,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct ProposalClaimTargetAccount {
+    pub proposal: Pubkey,
+    pub has_claim_lock_index: bool,
+    pub claim_lock_index: u8,
+    pub bump: u8,
 }

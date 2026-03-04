@@ -16,6 +16,12 @@ export const PROGRAM_ID = new PublicKey(FutarchyIDL.address);
 export const DAO_SEED = parseIdlBytes(getIdlConstant(FutarchyIDL, "DAO_SEED"));
 export const MODERATOR_SEED = parseIdlBytes(getIdlConstant(FutarchyIDL, "MODERATOR_SEED"));
 export const PROPOSAL_SEED = parseIdlBytes(getIdlConstant(FutarchyIDL, "PROPOSAL_SEED"));
+export const PROPOSAL_CLAIM_CONFIG_SEED = parseIdlBytes(
+  getIdlConstant(FutarchyIDL, "PROPOSAL_CLAIM_CONFIG_SEED")
+);
+export const PROPOSAL_CLAIM_TARGET_SEED = parseIdlBytes(
+  getIdlConstant(FutarchyIDL, "PROPOSAL_CLAIM_TARGET_SEED")
+);
 
 /* Numeric Constants */
 

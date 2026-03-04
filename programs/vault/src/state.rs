@@ -59,3 +59,11 @@ pub struct VaultAccount {
     pub cond_base_mints: [Pubkey; MAX_OPTIONS as usize], // allocate for max options
     pub cond_quote_mints: [Pubkey; MAX_OPTIONS as usize], // allocate for max options
 }
+
+#[account]
+#[derive(InitSpace)]
+pub struct ClaimLockAccount {
+    pub vault: Pubkey,
+    pub claims_available_at: i64,
+    pub bump: u8,
+}

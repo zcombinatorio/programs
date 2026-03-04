@@ -5,6 +5,7 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Token, TokenAccount};
 use vault::cpi::accounts::UserVaultAction;
 use vault::program::Vault;
+use vault::state::VaultAccount;
 use vault::VaultType;
 
 use crate::errors::FutarchyError;
@@ -76,6 +77,10 @@ pub fn redeem_liquidity_handler<'info>(
 ) -> Result<()> {
     let proposal = &ctx.accounts.proposal;
     let num_options = proposal.num_options as usize;
+    let vault_data = ctx.accounts.vault.try_borrow_data()?;
+    let vault_account = VaultAccount::try_deserialize(&mut &vault_data[..])?;
+    let expects_lock = vault_account.version >= vault::VAULT_VERSION;
+    drop(vault_data);
 
     // Extract winning_idx from proposal state
     let ProposalState::Resolved(winning_idx) = proposal.state else {
@@ -88,10 +93,11 @@ pub fn redeem_liquidity_handler<'info>(
         FutarchyError::InvalidPools
     );
 
-    // Validate remaining accounts length: 4 + 3 + 2N + 3 + 2N = 10 + 4N
-    let expected_remaining = 10 + 4 * num_options;
+    // Remaining accounts:
+    // 4 + (3 + 2N [+1 lock]) + (3 + 2N [+1 lock])
+    let expected_remaining = 10 + 4 * num_options + if expects_lock { 2 } else { 0 };
     require!(
-        ctx.remaining_accounts.len() >= expected_remaining,
+        ctx.remaining_accounts.len() == expected_remaining,
         FutarchyError::InvalidRemainingAccounts
     );
 
@@ -121,15 +127,18 @@ pub fn redeem_liquidity_handler<'info>(
     );
     amm::cpi::remove_liquidity(remove_liq_ctx, amount_a, amount_b)?;
 
-    // Build remaining accounts for redeem_winnings base
-    // Indices: 7..7+2N
+    // Build remaining accounts for redeem_winnings base.
+    // Indices: 7..7+2N (+ optional lock account)
     let base_remaining_start = 7;
     let base_remaining_end = 7 + 2 * num_options;
-    let base_remaining: Vec<AccountInfo<'info>> = ctx.remaining_accounts
+    let mut base_remaining: Vec<AccountInfo<'info>> = ctx.remaining_accounts
         [base_remaining_start..base_remaining_end]
         .iter()
         .map(|a| a.to_account_info())
         .collect();
+    if expects_lock {
+        base_remaining.push(ctx.remaining_accounts[base_remaining_end].to_account_info());
+    }
 
     // 2. CPI to vault::redeem_winnings for base tokens
     let redeem_base_ctx = CpiContext::new(
@@ -149,18 +158,21 @@ pub fn redeem_liquidity_handler<'info>(
 
     vault::cpi::redeem_winnings(redeem_base_ctx, VaultType::Base)?;
 
-    // Build remaining accounts for redeem_winnings quote
-    // Indices: 7+2N+3..7+4N+3
-    let quote_remaining_start = 7 + 2 * num_options + 3;
-    let quote_remaining_end = 7 + 4 * num_options + 3;
-    let quote_remaining: Vec<AccountInfo<'info>> = ctx.remaining_accounts
+    // Build remaining accounts for redeem_winnings quote.
+    // Indices shift by 1 if base lock is present.
+    let quote_fixed_start = 7 + 2 * num_options + if expects_lock { 1 } else { 0 };
+    let quote_remaining_start = quote_fixed_start + 3;
+    let quote_remaining_end = quote_remaining_start + 2 * num_options;
+    let mut quote_remaining: Vec<AccountInfo<'info>> = ctx.remaining_accounts
         [quote_remaining_start..quote_remaining_end]
         .iter()
         .map(|a| a.to_account_info())
         .collect();
+    if expects_lock {
+        quote_remaining.push(ctx.remaining_accounts[quote_remaining_end].to_account_info());
+    }
 
     // 3. CPI to vault::redeem_winnings for quote tokens
-    let quote_fixed_start = 7 + 2 * num_options;
     let redeem_quote_ctx = CpiContext::new(
         ctx.accounts.vault_program.to_account_info(),
         UserVaultAction {

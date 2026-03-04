@@ -53,8 +53,20 @@ pub mod vault {
         instructions::activate_vault::activate_vault_handler(ctx)
     }
 
-    pub fn finalize(ctx: Context<FinalizeVault>, winning_idx: u8) -> Result<()> {
-        instructions::finalize::finalize_vault_handler(ctx, winning_idx)
+    pub fn finalize(ctx: Context<FinalizeVaultWithLock>, winning_idx: u8) -> Result<()> {
+        instructions::finalize_with_lock::finalize_vault_with_lock_handler(ctx, winning_idx, 0)
+    }
+
+    pub fn finalize_with_lock(
+        ctx: Context<FinalizeVaultWithLock>,
+        winning_idx: u8,
+        claim_lock_seconds: u32,
+    ) -> Result<()> {
+        instructions::finalize_with_lock::finalize_vault_with_lock_handler(
+            ctx,
+            winning_idx,
+            claim_lock_seconds,
+        )
     }
 
     /*

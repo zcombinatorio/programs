@@ -36,6 +36,8 @@ import {
   deriveDAOPDA,
   deriveModeratorPDA,
   deriveProposalPDA,
+  deriveProposalClaimConfigPDA,
+  deriveProposalClaimTargetPDA,
   deriveMintCreateKeyPDA,
   fetchDAOAccount,
   fetchModeratorAccount,
@@ -193,11 +195,15 @@ export class FutarchyClient {
     moderatorPda: PublicKey,
     proposalParams: ProposalParams,
     metadata?: string,
-    options?: TxOptions
+    options?: TxOptions,
+    claimLockSeconds: number = 0,
+    claimLockIndex: number | null = null,
   ) {
     const moderator = await this.fetchModerator(moderatorPda);
     const proposalId = moderator.proposalIdCounter;
     const [proposalPda] = this.deriveProposalPDA(moderatorPda, proposalId);
+    const [proposalClaimConfigPda] = deriveProposalClaimConfigPDA(proposalPda, this.programId);
+    const [proposalClaimTargetPda] = deriveProposalClaimTargetPDA(proposalPda, this.programId);
 
     // Derive vault PDA (proposal is the owner, nonce=proposalId)
     const [vaultPda] = deriveVaultPDA(proposalPda, proposalId, this.vault.programId);
@@ -251,8 +257,12 @@ export class FutarchyClient {
       creator,
       moderatorPda,
       proposalPda,
+      proposalClaimConfigPda,
+      proposalClaimTargetPda,
       proposalParams,
       metadata ?? null,
+      claimLockSeconds,
+      claimLockIndex,
       remainingAccounts
     ).preInstructions(this.maybeAddComputeBudget(options));
 
@@ -387,7 +397,8 @@ export class FutarchyClient {
       remainingAccounts
     ).preInstructions(this.maybeAddComputeBudget(options));
 
-    return { builder };
+    const instruction = await builder.instruction();
+    return { builder, instruction };
   }
 
   /**
@@ -482,6 +493,21 @@ export class FutarchyClient {
       remainingAccounts.push({ pubkey: reserveB, isSigner: false, isWritable: false });
     }
 
+    const [claimLockPda] = this.vault.deriveClaimLockPDA(proposal.vault);
+    remainingAccounts.push({ pubkey: claimLockPda, isSigner: false, isWritable: true });
+    remainingAccounts.push({ pubkey: SystemProgram.programId, isSigner: false, isWritable: false });
+
+    const [proposalClaimConfigPda] = deriveProposalClaimConfigPDA(proposalPda, this.programId);
+    const claimConfigExists = await this.program.provider.connection.getAccountInfo(proposalClaimConfigPda);
+    if (claimConfigExists) {
+      remainingAccounts.push({ pubkey: proposalClaimConfigPda, isSigner: false, isWritable: false });
+    }
+    const [proposalClaimTargetPda] = deriveProposalClaimTargetPDA(proposalPda, this.programId);
+    const claimTargetExists = await this.program.provider.connection.getAccountInfo(proposalClaimTargetPda);
+    if (claimTargetExists) {
+      remainingAccounts.push({ pubkey: proposalClaimTargetPda, isSigner: false, isWritable: false });
+    }
+
     const builder = finalizeProposal(
       this.program,
       signer,
@@ -531,6 +557,10 @@ export class FutarchyClient {
       remainingAccounts.push({ pubkey: vault.condBaseMints[i], isSigner: false, isWritable: true });
       remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.condBaseMints[i], creator), isSigner: false, isWritable: true });
     }
+    if (vault.version >= 2) {
+      const [claimLockPda] = this.vault.deriveClaimLockPDA(proposal.vault);
+      remainingAccounts.push({ pubkey: claimLockPda, isSigner: false, isWritable: false });
+    }
 
     // redeem_winnings quote fixed accounts
     remainingAccounts.push({ pubkey: vault.quoteMint.address, isSigner: false, isWritable: false });
@@ -541,6 +571,10 @@ export class FutarchyClient {
     for (let i = 0; i < numOptions; i++) {
       remainingAccounts.push({ pubkey: vault.condQuoteMints[i], isSigner: false, isWritable: true });
       remainingAccounts.push({ pubkey: getAssociatedTokenAddressSync(vault.condQuoteMints[i], creator), isSigner: false, isWritable: true });
+    }
+    if (vault.version >= 2) {
+      const [claimLockPda] = this.vault.deriveClaimLockPDA(proposal.vault);
+      remainingAccounts.push({ pubkey: claimLockPda, isSigner: false, isWritable: false });
     }
 
     let builder = redeemLiquidity(
@@ -560,7 +594,8 @@ export class FutarchyClient {
       ]);
     }
 
-    return { builder, numOptions };
+    const instruction = await builder.instruction();
+    return { builder, instruction, numOptions };
   }
 
   /**

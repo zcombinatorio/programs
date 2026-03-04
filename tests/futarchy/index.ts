@@ -3,6 +3,7 @@
 // Happy path tests
 import "./happy-path/moderator";
 import "./happy-path/lifecycle";
+import "./happy-path/claim-lock";
 
 // Error tests
 import "./errors/state-errors";

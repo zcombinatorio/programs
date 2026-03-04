@@ -4,7 +4,7 @@
  */
 
 import { Program, BN } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { Vault, VaultType } from "./types";
 
@@ -131,12 +131,32 @@ export function finalize(
   payer: PublicKey,
   owner: PublicKey,
   vaultPda: PublicKey,
+  claimLockPda: PublicKey,
   winningIdx: number
 ) {
   return program.methods.finalize(winningIdx).accountsPartial({
     payer,
     owner,
     vault: vaultPda,
+    claimLock: claimLockPda,
+    systemProgram: SystemProgram.programId,
+  });
+}
+
+export function finalizeWithLock(
+  program: Program<Vault>,
+  payer: PublicKey,
+  owner: PublicKey,
+  vaultPda: PublicKey,
+  claimLockPda: PublicKey,
+  winningIdx: number,
+  claimLockSeconds: number
+) {
+  return program.methods.finalizeWithLock(winningIdx, claimLockSeconds).accountsPartial({
+    payer,
+    owner,
+    vault: vaultPda,
+    claimLock: claimLockPda,
   });
 }
 
@@ -146,7 +166,8 @@ export function redeemWinnings(
   vaultPda: PublicKey,
   mint: PublicKey,
   condMints: PublicKey[],
-  vaultType: VaultType
+  vaultType: VaultType,
+  claimLockPda?: PublicKey
 ) {
   const vaultTypeArg = vaultType === VaultType.Base ? { base: {} } : { quote: {} };
 
@@ -157,14 +178,17 @@ export function redeemWinnings(
       vault: vaultPda,
       mint,
     })
-    .remainingAccounts(
-      condMints.flatMap((condMint) => [
+    .remainingAccounts([
+      ...condMints.flatMap((condMint) => [
         { pubkey: condMint, isSigner: false, isWritable: true },
         {
           pubkey: getAssociatedTokenAddressSync(condMint, signer),
           isSigner: false,
           isWritable: true,
         },
-      ])
-    );
+      ]),
+      ...(claimLockPda
+        ? [{ pubkey: claimLockPda, isSigner: false, isWritable: false }]
+        : []),
+    ]);
 }

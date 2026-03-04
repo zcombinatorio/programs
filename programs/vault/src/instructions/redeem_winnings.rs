@@ -22,7 +22,7 @@ use anchor_spl::token::TokenAccount;
 use crate::common::UserVaultAction;
 use crate::constants::*;
 use crate::errors::*;
-use crate::state::VaultState;
+use crate::state::{ClaimLockAccount, VaultState};
 use crate::utils::*;
 use crate::VaultType;
 
@@ -47,12 +47,34 @@ pub fn redeem_winnings_handler<'info>(
     };
 
     let num_options = vault.num_options as usize;
+    let expects_lock = vault.version >= VAULT_VERSION;
+    let expected_remaining_len = num_options * 2 + if expects_lock { 1 } else { 0 };
 
     // Validate we have the right number of remaining accounts
     require!(
-        ctx.remaining_accounts.len() == num_options * 2,
+        ctx.remaining_accounts.len() == expected_remaining_len,
         VaultError::InvalidNumberOfAccounts
     );
+
+    if expects_lock {
+        let lock_info = &ctx.remaining_accounts[num_options * 2];
+        let (expected_lock_pda, _) = Pubkey::find_program_address(
+            &[CLAIM_LOCK_SEED, vault.key().as_ref()],
+            &crate::id(),
+        );
+        require!(
+            lock_info.key() == expected_lock_pda,
+            VaultError::InvalidNumberOfAccounts
+        );
+        let lock = Account::<ClaimLockAccount>::try_from(lock_info)?;
+        require!(lock.vault == vault.key(), VaultError::InvalidState);
+
+        let clock = Clock::get()?;
+        require!(
+            clock.unix_timestamp >= lock.claims_available_at,
+            VaultError::ClaimsLocked
+        );
+    }
 
     let vault_cond_mints = if vault_type == VaultType::Base {
         vault.cond_base_mints

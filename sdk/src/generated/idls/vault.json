@@ -401,6 +401,105 @@
       ]
     },
     {
+      "name": "finalize_with_lock",
+      "discriminator": [
+        102,
+        76,
+        93,
+        110,
+        202,
+        155,
+        80,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer for account rent"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Owner of the vault — needs to sign"
+          ],
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "VaultAccount"
+              },
+              {
+                "kind": "account",
+                "path": "vault.nonce",
+                "account": "VaultAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "claim_lock",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109,
+                  95,
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "winning_idx",
+          "type": "u8"
+        },
+        {
+          "name": "claim_lock_seconds",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "initialize",
       "discriminator": [
         175,
@@ -991,6 +1090,19 @@
   ],
   "accounts": [
     {
+      "name": "ClaimLockAccount",
+      "discriminator": [
+        169,
+        147,
+        103,
+        56,
+        49,
+        167,
+        34,
+        245
+      ]
+    },
+    {
       "name": "VaultAccount",
       "discriminator": [
         230,
@@ -1055,6 +1167,19 @@
         213,
         163,
         0
+      ]
+    },
+    {
+      "name": "VaultFinalizedWithLock",
+      "discriminator": [
+        170,
+        220,
+        199,
+        155,
+        125,
+        23,
+        170,
+        249
       ]
     },
     {
@@ -1167,9 +1292,39 @@
       "code": 6013,
       "name": "InvalidMint",
       "msg": "Invalid mint for vault type"
+    },
+    {
+      "code": 6014,
+      "name": "ClaimsLocked",
+      "msg": "Claims are still locked"
+    },
+    {
+      "code": 6015,
+      "name": "MathOverflow",
+      "msg": "Math overflow"
     }
   ],
   "types": [
+    {
+      "name": "ClaimLockAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "claims_available_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
     {
       "name": "OptionAdded",
       "type": {
@@ -1349,6 +1504,34 @@
       }
     },
     {
+      "name": "VaultFinalizedWithLock",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "winning_idx",
+            "type": "u8"
+          },
+          {
+            "name": "claims_available_at",
+            "type": "i64"
+          },
+          {
+            "name": "winning_base_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "winning_quote_mint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "VaultInitialized",
       "type": {
         "kind": "struct",
@@ -1473,6 +1656,11 @@
   ],
   "constants": [
     {
+      "name": "CLAIM_LOCK_SEED",
+      "type": "bytes",
+      "value": "[99, 108, 97, 105, 109, 95, 108, 111, 99, 107]"
+    },
+    {
       "name": "CONDITIONAL_MINT_SEED",
       "type": "bytes",
       "value": "[99, 109, 105, 110, 116]"
@@ -1495,7 +1683,7 @@
     {
       "name": "VAULT_VERSION",
       "type": "u8",
-      "value": "1"
+      "value": "2"
     }
   ]
 }
