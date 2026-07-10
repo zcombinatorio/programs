@@ -12,3 +12,4 @@ sdk/dist/
 .blinker/
 .deploy-cache/
 .claude/
+member1.json

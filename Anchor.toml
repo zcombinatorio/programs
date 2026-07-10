@@ -8,18 +8,21 @@ skip-lint = false
 [programs.devnet]
 amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
 futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
+redemption = "rdm5xmgfjVn2WXCNrdEuBDoj3JJHt7K6M82jBnXf1Ef"
 svault = "GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy"
 vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 
 [programs.localnet]
 amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
 futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
+redemption = "rdm5xmgfjVn2WXCNrdEuBDoj3JJHt7K6M82jBnXf1Ef"
 svault = "GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy"
 vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 
 [programs.mainnet]
 amm = "AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx"
 futarchy = "FUTKPrt66uGGCTpk6f9tmRX2325cWgXzGCwvWhyyzjea"
+redemption = "rdm5xmgfjVn2WXCNrdEuBDoj3JJHt7K6M82jBnXf1Ef"
 svault = "GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy"
 vault = "VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU"
 
@@ -38,3 +41,4 @@ test-dao = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/dao/**/*.ts\
 test-fut = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/futarchy/**/*.ts\""
 test-vault = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/vault/**/*.ts\""
 test-svault = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/svault/**/*.ts\""
+test-redemption = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/redemption/**/*.ts"

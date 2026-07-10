@@ -1208,6 +1208,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "redemption"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
