@@ -6,6 +6,7 @@
 | amm | AMMSgtnttAKx5Ad2Y1socKJ3CcQYCB2ctg8U2SAHcVEx | 0.1.0 | |
 | vault | VLTEetGyPKtffi1u3Jr8btWATv33NeDyUuRsPENFPTU | 0.1.0 | |
 | svault | GmH3zEvgmWoC6Y6hxinYYRWLCuxUikRN5SAmVDVF4Jjy | 0.1.0 | |
+| redemption | rdm5xmgfjVn2WXCNrdEuBDoj3JJHt7K6M82jBnXf1Ef | 0.1.0 | |
 | vault | vLTgeZhLgcr4HvBGxKonSnmU4t7qLcgsVcVtUd3haZc | 0.0.0 | ❌ |
 
 Fee Authority: FEEnkcCNE2623LYCPtLf63LFzXpCFigBLTu4qZovRGZC

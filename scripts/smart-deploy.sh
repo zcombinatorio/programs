@@ -20,6 +20,7 @@ COL_AMM=$CYAN
 COL_FUTARCHY=$CYAN
 COL_VAULT=$CYAN
 COL_SVAULT=$CYAN
+COL_REDEMPTION=$CYAN
 
 # Box drawing
 LINE_H="${DIM}────────────────────────────────────────────────────${NC}"
@@ -32,7 +33,7 @@ DEPLOY_DIR="$ROOT_DIR/target/deploy"
 CACHE_DIR="$ROOT_DIR/.deploy-cache"
 
 # All programs to deploy
-ALL_PROGRAMS=("amm" "futarchy" "vault" "svault")
+ALL_PROGRAMS=("amm" "futarchy" "vault" "svault" "redemption")
 
 # Default options
 DRY_RUN=false
@@ -84,10 +85,11 @@ log_error() {
 get_prog_color() {
     local prog=$1
     case "$prog" in
-        amm)      echo "$COL_AMM" ;;
-        futarchy) echo "$COL_FUTARCHY" ;;
-        vault)    echo "$COL_VAULT" ;;
-        svault)   echo "$COL_SVAULT" ;;
+        amm)        echo "$COL_AMM" ;;
+        futarchy)   echo "$COL_FUTARCHY" ;;
+        vault)      echo "$COL_VAULT" ;;
+        svault)     echo "$COL_SVAULT" ;;
+        redemption) echo "$COL_REDEMPTION" ;;
         *)        echo "$CYAN" ;;
     esac
 }
