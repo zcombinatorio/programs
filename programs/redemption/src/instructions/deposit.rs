@@ -35,6 +35,7 @@ pub struct Deposit<'info> {
     )]
     pub vault: Account<'info, RedemptionVault>,
 
+    #[account(constraint = quote_mint.key() == vault.quote_mint @ RedemptionError::InvalidMint)]
     pub quote_mint: InterfaceAccount<'info, Mint>,
 
     #[account(

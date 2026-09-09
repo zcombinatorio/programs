@@ -34,7 +34,10 @@ pub struct Redeem<'info> {
     )]
     pub vault: Account<'info, RedemptionVault>,
 
+    #[account(constraint = base_mint.key() == vault.base_mint @ RedemptionError::InvalidMint)]
     pub base_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(constraint = quote_mint.key() == vault.quote_mint @ RedemptionError::InvalidMint)]
     pub quote_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -83,9 +86,12 @@ pub fn redeem_handler(ctx: Context<Redeem>, base_amount: u64) -> Result<()> {
     let vault = &ctx.accounts.vault;
 
     // Calculate quote amount: quote = base * price / 10^base_decimals
+    let scale = 10u128
+        .checked_pow(vault.base_decimals as u32)
+        .ok_or(RedemptionError::Overflow)?;
     let quote_amount = (base_amount as u128)
         .checked_mul(vault.price as u128)
-        .and_then(|v| v.checked_div(10u128.pow(vault.base_decimals as u32)))
+        .and_then(|v| v.checked_div(scale))
         .and_then(|v| u64::try_from(v).ok())
         .ok_or(RedemptionError::Overflow)?;
 

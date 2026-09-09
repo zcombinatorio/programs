@@ -15,12 +15,14 @@
  *
  *   npx tsx scripts/redemption-vault.ts deposit --... --amount-ui 1000
  *   npx tsx scripts/redemption-vault.ts withdraw --... --quote-amount-ui 100 --base-amount-ui 0
+ *   npx tsx scripts/redemption-vault.ts withdraw-all --...
  */
 
 import * as anchor from "@coral-xyz/anchor";
 import { BN, Program, Wallet } from "@coral-xyz/anchor";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAccount,
   getAssociatedTokenAddress,
   getOrCreateAssociatedTokenAccount,
 } from "@solana/spl-token";
@@ -31,7 +33,7 @@ import * as path from "path";
 const REDEMPTION_PROGRAM_ID = new PublicKey("rdm5xmgfjVn2WXCNrdEuBDoj3JJHt7K6M82jBnXf1Ef");
 const VAULT_SEED = Buffer.from("redemption");
 
-type Command = "init" | "deposit" | "withdraw";
+type Command = "init" | "deposit" | "withdraw" | "withdraw-all";
 
 interface Args {
   command: Command;
@@ -53,7 +55,8 @@ function usage(): never {
   console.error(`Usage:
   npx tsx scripts/redemption-vault.ts init --rpc <url> --wallet <path> --base-mint <mint> --quote-mint <mint> --base-decimals <n> --quote-decimals <n> --nonce <n> --price-ui <amount> --deposit-ui <amount>
   npx tsx scripts/redemption-vault.ts deposit --rpc <url> --wallet <path> --base-mint <mint> --quote-mint <mint> --base-decimals <n> --quote-decimals <n> --nonce <n> --amount-ui <amount>
-  npx tsx scripts/redemption-vault.ts withdraw --rpc <url> --wallet <path> --base-mint <mint> --quote-mint <mint> --base-decimals <n> --quote-decimals <n> --nonce <n> --quote-amount-ui <amount> --base-amount-ui <amount>`);
+  npx tsx scripts/redemption-vault.ts withdraw --rpc <url> --wallet <path> --base-mint <mint> --quote-mint <mint> --base-decimals <n> --quote-decimals <n> --nonce <n> --quote-amount-ui <amount> --base-amount-ui <amount>
+  npx tsx scripts/redemption-vault.ts withdraw-all --rpc <url> --wallet <path> --base-mint <mint> --quote-mint <mint> --base-decimals <n> --quote-decimals <n> --nonce <n>`);
   process.exit(1);
 }
 
@@ -75,7 +78,7 @@ function readIntegerFlag(flags: Map<string, string>, name: string): number {
 
 function parseArgs(): Args {
   const [commandRaw, ...rest] = process.argv.slice(2);
-  if (commandRaw !== "init" && commandRaw !== "deposit" && commandRaw !== "withdraw") usage();
+  if (commandRaw !== "init" && commandRaw !== "deposit" && commandRaw !== "withdraw" && commandRaw !== "withdraw-all") usage();
 
   const flags = new Map<string, string>();
   for (let i = 0; i < rest.length; i += 2) {
@@ -237,8 +240,16 @@ async function main() {
     return;
   }
 
-  const quoteAmount = decimalToRaw(args.quoteAmountUi ?? "0", args.quoteDecimals);
-  const baseAmount = decimalToRaw(args.baseAmountUi ?? "0", args.baseDecimals);
+  let quoteAmount = decimalToRaw(args.quoteAmountUi ?? "0", args.quoteDecimals);
+  let baseAmount = decimalToRaw(args.baseAmountUi ?? "0", args.baseDecimals);
+  if (args.command === "withdraw-all") {
+    const [quoteAccount, baseAccount] = await Promise.all([
+      getAccount(connection, vaultQuoteAta, "confirmed", quoteTokenProgram).catch(() => null),
+      getAccount(connection, vaultBaseAta, "confirmed", baseTokenProgram).catch(() => null),
+    ]);
+    quoteAmount = new BN((quoteAccount?.amount ?? 0n).toString());
+    baseAmount = new BN((baseAccount?.amount ?? 0n).toString());
+  }
   const adminQuoteAccount = await getOrCreateAssociatedTokenAccount(
     connection,
     walletKeypair,

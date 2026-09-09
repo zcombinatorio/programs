@@ -28,4 +28,8 @@ pub enum RedemptionError {
     InsufficientBalance,
     #[msg("Overflow")]
     Overflow,
+    #[msg("Mint does not match the vault")]
+    InvalidMint,
+    #[msg("Only the classic SPL Token program is supported")]
+    UnsupportedTokenProgram,
 }

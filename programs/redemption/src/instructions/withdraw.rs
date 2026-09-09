@@ -35,7 +35,10 @@ pub struct Withdraw<'info> {
     )]
     pub vault: Account<'info, RedemptionVault>,
 
+    #[account(constraint = base_mint.key() == vault.base_mint @ RedemptionError::InvalidMint)]
     pub base_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(constraint = quote_mint.key() == vault.quote_mint @ RedemptionError::InvalidMint)]
     pub quote_mint: InterfaceAccount<'info, Mint>,
 
     #[account(

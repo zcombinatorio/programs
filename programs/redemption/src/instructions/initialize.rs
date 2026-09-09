@@ -38,7 +38,10 @@ pub struct Initialize<'info> {
     )]
     pub vault: Account<'info, RedemptionVault>,
 
+    #[account(owner = anchor_spl::token::ID @ RedemptionError::UnsupportedTokenProgram)]
     pub base_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(owner = anchor_spl::token::ID @ RedemptionError::UnsupportedTokenProgram)]
     pub quote_mint: InterfaceAccount<'info, Mint>,
 
     /// Vault's ATA for holding quote tokens (what users receive)
